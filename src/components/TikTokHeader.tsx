@@ -14,20 +14,9 @@ export const TikTokHeader: React.FC = () => {
           <span className="text-foreground font-bold text-xl">Reel'It</span>
         </div>
 
-        {/* Center Navigation */}
-        <div className="flex items-center space-x-6">
-          <Button 
-            variant="ghost" 
-            className="text-primary font-semibold border-b-2 border-primary"
-          >
-            For You
-          </Button>
-          <Button 
-            variant="ghost" 
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Following
-          </Button>
+        {/* Center - simplified */}
+        <div className="flex items-center">
+          <span className="text-foreground font-semibold text-lg">For You</span>
         </div>
 
         {/* Right Actions */}
