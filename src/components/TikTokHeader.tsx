@@ -9,9 +9,9 @@ export const TikTokHeader: React.FC = () => {
         {/* Logo */}
         <div className="flex items-center space-x-2">
           <div className="gradient-primary rounded-lg p-2">
-            <span className="text-primary-foreground font-bold text-lg">V</span>
+            <span className="text-primary-foreground font-bold text-lg">R</span>
           </div>
-          <span className="text-foreground font-bold text-xl">VideoApp</span>
+          <span className="text-foreground font-bold text-xl">Reel'It</span>
         </div>
 
         {/* Center Navigation */}
