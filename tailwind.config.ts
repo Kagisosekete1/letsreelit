@@ -57,6 +57,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        tiktok: {
+          pink: "hsl(var(--tiktok-pink))",
+          blue: "hsl(var(--tiktok-blue))",
+          dark: "hsl(var(--tiktok-dark))",
+          gray: "hsl(var(--tiktok-gray))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
