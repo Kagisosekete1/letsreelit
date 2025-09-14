@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VideoFeed } from '@/components/VideoFeed';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { TikTokHeader } from '@/components/TikTokHeader';
+import SplashScreen from '@/components/SplashScreen';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
+  const [showSplash, setShowSplash] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Show splash screen for 3 seconds
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -31,6 +42,14 @@ const Index = () => {
         break;
     }
   };
+
+  if (showSplash) {
+    return (
+      <div className="h-screen w-full">
+        <SplashScreen />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
