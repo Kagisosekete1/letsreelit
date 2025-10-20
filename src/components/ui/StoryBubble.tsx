@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 
 interface StoryBubbleProps {
@@ -9,40 +8,32 @@ interface StoryBubbleProps {
   onClick: () => void;
 }
 
-const StoryBubble: React.FC<StoryBubbleProps> = ({ 
-  avatarUrl, 
-  username, 
-  isCurrentUser = false, 
-  onClick 
-}) => {
+const StoryBubble: React.FC<StoryBubbleProps> = ({ avatarUrl, username, isCurrentUser, onClick }) => {
   return (
-    <Button
-      variant="ghost"
-      className="flex flex-col items-center space-y-1 p-2 min-w-[70px] hover:bg-transparent"
+    <button
       onClick={onClick}
+      className="flex flex-col items-center space-y-2 flex-shrink-0 group"
     >
-      <div className="relative">
-        <div className={`w-16 h-16 rounded-full p-0.5 ${
-          isCurrentUser 
-            ? 'bg-gradient-to-r from-secondary to-muted' 
-            : 'bg-gradient-to-r from-primary to-accent'
-        }`}>
-          <img
-            src={avatarUrl}
-            alt={username}
-            className="w-full h-full rounded-full object-cover bg-secondary"
-          />
+      <div className="relative transition-transform group-hover:scale-110 duration-300">
+        <div className="w-18 h-18 rounded-full gradient-primary p-[3px] animate-pulse-glow">
+          <div className="w-full h-full rounded-full bg-background p-[3px]">
+            <img
+              src={avatarUrl}
+              alt={username}
+              className="w-full h-full rounded-full object-cover"
+            />
+          </div>
         </div>
         {isCurrentUser && (
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
-            <Plus className="w-3 h-3 text-primary-foreground" />
+          <div className="absolute -bottom-1 -right-1 gradient-primary rounded-full p-1.5 shadow-lg glow-primary">
+            <Plus className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
           </div>
         )}
       </div>
-      <span className="text-xs text-foreground font-medium truncate max-w-[70px]">
-        {isCurrentUser ? 'Your Story' : username}
+      <span className="text-xs font-medium text-foreground max-w-[72px] truncate">
+        {username}
       </span>
-    </Button>
+    </button>
   );
 };
 

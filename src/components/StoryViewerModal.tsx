@@ -50,13 +50,13 @@ const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ story, onClose }) =
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[400px] h-[600px] p-0 bg-black border-none">
+      <DialogContent className="sm:max-w-[400px] h-[680px] p-0 bg-black border-none overflow-hidden rounded-3xl shadow-2xl">
         <div className="relative h-full w-full">
           {/* Progress Bar */}
           <div className="absolute top-4 left-4 right-4 z-20">
-            <div className="w-full bg-foreground/20 rounded-full h-1">
+            <div className="w-full bg-white/20 rounded-full h-1 backdrop-blur-sm">
               <div 
-                className="bg-foreground h-1 rounded-full transition-all duration-100"
+                className="bg-gradient-to-r from-primary to-accent h-1 rounded-full transition-all duration-100 shadow-lg"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -64,21 +64,21 @@ const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ story, onClose }) =
 
           {/* Header */}
           <div className="absolute top-8 left-4 right-4 z-20 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 backdrop-blur-md bg-black/30 rounded-2xl px-4 py-2">
               <img
                 src={story.avatarUrl}
                 alt={story.username}
-                className="w-8 h-8 rounded-full border border-foreground/20"
+                className="w-9 h-9 rounded-full border-2 border-white/30 shadow-md"
               />
-              <span className="text-foreground font-medium">{story.username}</span>
+              <span className="text-white font-semibold drop-shadow-lg">{story.username}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="text-foreground hover:bg-foreground/10"
+              className="text-white hover:bg-white/20 backdrop-blur-md rounded-xl shadow-md"
               onClick={onClose}
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={2.5} />
             </Button>
           </div>
 
@@ -97,14 +97,14 @@ const StoryViewerModal: React.FC<StoryViewerModalProps> = ({ story, onClose }) =
 
           {/* Play/Pause Overlay */}
           {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20">
               <Button
                 variant="ghost"
                 size="lg"
-                className="bg-background/20 backdrop-blur-glass rounded-full p-4"
+                className="backdrop-blur-md bg-white/20 rounded-full p-6 hover:scale-110 transition-transform shadow-xl"
                 onClick={togglePlay}
               >
-                <Play className="w-6 h-6 text-foreground" fill="currentColor" />
+                <Play className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" strokeWidth={0} />
               </Button>
             </div>
           )}

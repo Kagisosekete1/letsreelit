@@ -66,14 +66,14 @@ const VideoCard: React.FC<VideoCardProps> = ({
       
       {/* Play/Pause Overlay */}
       {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/10">
           <Button
             variant="ghost"
             size="lg"
-            className="bg-background/20 backdrop-blur-glass rounded-full p-6 animate-pulse-glow"
+            className="backdrop-blur-glass rounded-full p-8 glow-primary hover:scale-110 transition-transform"
             onClick={togglePlay}
           >
-            <Play className="w-8 h-8 text-primary" fill="currentColor" />
+            <Play className="w-10 h-10 text-primary drop-shadow-lg" fill="currentColor" strokeWidth={0} />
           </Button>
         </div>
       )}
@@ -86,13 +86,13 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="bg-background/10 backdrop-blur-glass rounded-full p-2 mb-2"
+          className="backdrop-blur-glass rounded-xl p-2.5 hover:scale-110 transition-transform shadow-md"
           onClick={toggleMute}
         >
           {isMuted ? (
-            <VolumeX className="w-5 h-5 text-foreground" />
+            <VolumeX className="w-5 h-5 text-foreground drop-shadow-lg" strokeWidth={2.5} />
           ) : (
-            <Volume2 className="w-5 h-5 text-foreground" />
+            <Volume2 className="w-5 h-5 text-foreground drop-shadow-lg" strokeWidth={2.5} />
           )}
         </Button>
       </div>
@@ -126,9 +126,8 @@ const VideoCard: React.FC<VideoCardProps> = ({
             )}
             {!isFollowing && (
               <Button
-                variant="outline"
                 size="sm"
-                className="ml-2 border-foreground text-foreground hover:bg-foreground hover:text-background"
+                className="ml-2 gradient-primary text-primary-foreground hover:opacity-90 rounded-xl font-semibold shadow-md glow-primary"
                 onClick={() => toggleFollow(reel.user.id)}
               >
                 Follow
@@ -149,17 +148,20 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="absolute bottom-20 right-4 z-10 flex flex-col items-center space-y-6">
+      <div className="absolute bottom-24 right-4 z-10 flex flex-col items-center space-y-5">
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center space-y-1 bg-background/10 backdrop-blur-glass rounded-full p-3 hover:bg-background/20"
+          className={`flex flex-col items-center space-y-1.5 backdrop-blur-glass rounded-2xl p-3.5 transition-all hover:scale-110 shadow-md ${
+            isLiked ? 'glow-primary' : ''
+          }`}
           onClick={handleLike}
         >
           <Heart 
-            className={`w-7 h-7 ${isLiked ? 'text-primary fill-primary' : 'text-foreground'}`}
+            className={`w-7 h-7 transition-all ${isLiked ? 'text-primary fill-primary scale-110' : 'text-foreground'}`}
+            strokeWidth={2.5}
           />
-          <span className="text-xs text-foreground font-semibold">
+          <span className="text-xs text-foreground font-bold drop-shadow-md">
             {isLiked ? reel.stats.likes + 1 : reel.stats.likes}
           </span>
         </Button>
@@ -167,28 +169,28 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center space-y-1 bg-background/10 backdrop-blur-glass rounded-full p-3 hover:bg-background/20"
+          className="flex flex-col items-center space-y-1.5 backdrop-blur-glass rounded-2xl p-3.5 hover:scale-110 transition-all shadow-md"
           onClick={() => setScreen('video', { reelId: reel.id })}
         >
-          <MessageCircle className="w-7 h-7 text-foreground" />
-          <span className="text-xs text-foreground font-semibold">{reel.stats.comments}</span>
+          <MessageCircle className="w-7 h-7 text-foreground" strokeWidth={2.5} />
+          <span className="text-xs text-foreground font-bold drop-shadow-md">{reel.stats.comments}</span>
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center space-y-1 bg-background/10 backdrop-blur-glass rounded-full p-3 hover:bg-background/20"
+          className="flex flex-col items-center space-y-1.5 backdrop-blur-glass rounded-2xl p-3.5 hover:scale-110 transition-all shadow-md"
         >
-          <Share className="w-7 h-7 text-foreground" />
-          <span className="text-xs text-foreground font-semibold">{reel.stats.shares}</span>
+          <Share className="w-7 h-7 text-foreground" strokeWidth={2.5} />
+          <span className="text-xs text-foreground font-bold drop-shadow-md">{reel.stats.shares}</span>
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          className="bg-background/10 backdrop-blur-glass rounded-full p-3 hover:bg-background/20"
+          className="backdrop-blur-glass rounded-2xl p-3.5 hover:scale-110 transition-all shadow-md"
         >
-          <MoreHorizontal className="w-7 h-7 text-foreground" />
+          <MoreHorizontal className="w-7 h-7 text-foreground" strokeWidth={2.5} />
         </Button>
       </div>
     </div>

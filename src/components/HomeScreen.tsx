@@ -37,9 +37,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, reels
 
   return (
     <div className="h-full flex flex-col bg-background animate-fade-in">
-      {/* Stories Bar */}
-      <div className="flex-shrink-0 bg-tiktok-gray border-b border-border">
-        <div className="flex space-x-4 p-3 overflow-x-auto">
+      {/* Stories Bar with glass effect */}
+      <div className="flex-shrink-0 backdrop-blur-glass border-b border-border/50">
+        <div className="flex space-x-4 p-4 overflow-x-auto scrollbar-hide">
           <StoryBubble 
             avatarUrl="https://picsum.photos/id/1005/200"
             username="Story'It" 

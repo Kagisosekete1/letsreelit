@@ -32,36 +32,39 @@ const StoryUploadModal: React.FC<StoryUploadModalProps> = ({ isOpen, onClose }) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-card border-border">
+      <DialogContent className="sm:max-w-[425px] glass-card border-border/50 shadow-lg">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add to Your Story</DialogTitle>
+          <DialogTitle className="text-foreground text-xl font-bold">Add to Your Story</DialogTitle>
           <Button
             variant="ghost"
             size="sm"
-            className="absolute right-4 top-4"
+            className="absolute right-4 top-4 hover:bg-secondary/80 rounded-xl"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" strokeWidth={2.5} />
           </Button>
         </DialogHeader>
         
         <div className="space-y-4">
           {!selectedFile ? (
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">Upload a video for your story</p>
-                <div className="space-y-2">
+              <div className="border-2 border-dashed border-border/50 rounded-2xl p-10 text-center hover:border-primary/50 transition-colors">
+                <div className="w-16 h-16 gradient-primary rounded-2xl mx-auto mb-4 flex items-center justify-center glow-primary">
+                  <Upload className="w-8 h-8 text-primary-foreground" strokeWidth={2.5} />
+                </div>
+                <p className="text-foreground font-medium mb-2">Upload a video</p>
+                <p className="text-muted-foreground text-sm mb-6">Share your story with the world</p>
+                <div className="space-y-3">
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full rounded-xl border-border/50 hover:bg-secondary/80"
                     onClick={() => document.getElementById('file-upload')?.click()}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 mr-2" strokeWidth={2.5} />
                     Choose File
                   </Button>
-                  <Button variant="secondary" className="w-full">
-                    <Camera className="w-4 h-4 mr-2" />
+                  <Button className="w-full gradient-accent rounded-xl font-semibold shadow-md">
+                    <Camera className="w-4 h-4 mr-2" strokeWidth={2.5} />
                     Record Video
                   </Button>
                 </div>
@@ -76,8 +79,8 @@ const StoryUploadModal: React.FC<StoryUploadModalProps> = ({ isOpen, onClose }) 
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-secondary rounded-lg p-4">
-                <p className="text-foreground font-medium">{selectedFile.name}</p>
+              <div className="glass-card rounded-2xl p-5">
+                <p className="text-foreground font-semibold mb-1">{selectedFile.name}</p>
                 <p className="text-muted-foreground text-sm">
                   {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
@@ -87,14 +90,14 @@ const StoryUploadModal: React.FC<StoryUploadModalProps> = ({ isOpen, onClose }) 
                 placeholder="Add a caption..."
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                className="bg-secondary border-border"
+                className="bg-secondary/50 border-border/50 rounded-xl focus:border-primary"
               />
               
-              <div className="flex space-x-2">
-                <Button variant="outline" className="flex-1" onClick={onClose}>
+              <div className="flex space-x-3">
+                <Button variant="outline" className="flex-1 rounded-xl border-border/50" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button className="flex-1 gradient-primary" onClick={handleUpload}>
+                <Button className="flex-1 gradient-primary rounded-xl font-semibold shadow-md glow-primary" onClick={handleUpload}>
                   Share Story
                 </Button>
               </div>
