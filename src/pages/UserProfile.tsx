@@ -1,37 +1,46 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Share2, Grid3X3, Video, Bookmark } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
-import EditProfileModal from '@/components/EditProfileModal';
-import SettingsModal from '@/components/SettingsModal';
-import ShareProfileModal from '@/components/ShareProfileModal';
-import CreateReelModal from '@/components/CreateReelModal';
+import { mockReels } from '@/data/mockData';
 
-const Profile = () => {
+const UserProfile = () => {
+  const { username } = useParams();
+  const navigate = useNavigate();
+  const { currentUser, followUser, unfollowUser } = useUser();
   const [activeTab, setActiveTab] = useState('profile');
   const [contentTab, setContentTab] = useState('reels');
-  const navigate = useNavigate();
-  const { currentUser } = useUser();
   
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
+  // Find user from mock data
+  const userReel = mockReels.find(r => r.user.username === username);
+  const user = userReel?.user;
+  
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  if (!user) {
+    return <div>User not found</div>;
+  }
+
+  const handleFollow = () => {
+    if (isFollowing) {
+      unfollowUser(user.id);
+      setIsFollowing(false);
+    } else {
+      followUser(user.id);
+      setIsFollowing(true);
+    }
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    
     switch (tab) {
       case 'home':
         navigate('/');
         break;
       case 'tutorials':
         navigate('/tutorials');
-        break;
-      case 'create':
-        setIsCreateReelOpen(true);
         break;
       case 'inbox':
         navigate('/inbox');
@@ -47,12 +56,12 @@ const Profile = () => {
       <div className="pt-4 pb-20 h-full overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
-          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}>
-            <Settings className="w-6 h-6" />
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-6 h-6" />
           </Button>
-          <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          <Button variant="ghost" size="sm" onClick={() => setIsShareOpen(true)}>
-            <Share2 className="w-6 h-6" />
+          <h1 className="text-lg font-semibold">@{user.username}</h1>
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="w-6 h-6" />
           </Button>
         </div>
 
@@ -61,56 +70,48 @@ const Profile = () => {
           <div className="flex flex-col items-center mb-6">
             <div className="relative mb-3">
               <img
-                src={currentUser.avatarUrl}
-                alt="Profile"
+                src={user.avatarUrl}
+                alt={user.username}
                 className="w-24 h-24 rounded-full object-cover border-2 border-border"
               />
-              {currentUser.verified && (
+              {user.verified && (
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-xs text-primary-foreground font-bold">✓</span>
                 </div>
               )}
             </div>
             
-            <h2 className="text-xl font-bold mb-1">{currentUser.displayName}</h2>
-            <p className="text-muted-foreground text-sm mb-4">{currentUser.bio}</p>
+            <h2 className="text-xl font-bold mb-1">{user.displayName || `@${user.username}`}</h2>
+            <p className="text-muted-foreground text-sm mb-4">Dance Creator ✨</p>
             
             {/* Stats */}
             <div className="flex items-center gap-6 mb-4">
               <div className="text-center">
-                <p className="text-lg font-bold">{currentUser.stats.following}</p>
+                <p className="text-lg font-bold">0</p>
                 <p className="text-xs text-muted-foreground">Following</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold">{currentUser.stats.followers}</p>
+                <p className="text-lg font-bold">{user.followers?.toLocaleString() || 0}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold">{currentUser.stats.reels}</p>
+                <p className="text-lg font-bold">0</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 w-full">
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                Edit Profile
-              </Button>
-              <Button 
-                className="flex-1"
-                onClick={() => setIsShareOpen(true)}
-              >
-                Share Profile
-              </Button>
-            </div>
+            {/* Action Button */}
+            <Button 
+              className="w-full" 
+              variant={isFollowing ? "outline" : "default"}
+              onClick={handleFollow}
+            >
+              {isFollowing ? 'Following' : 'Follow'}
+            </Button>
           </div>
         </div>
 
-        {/* Content Tabs - Icons Only */}
+        {/* Content Tabs */}
         <div className="border-t border-border">
           <div className="flex items-center justify-center">
             <Button
@@ -148,7 +149,7 @@ const Profile = () => {
           {Array.from({ length: 9 }).map((_, index) => (
             <div
               key={index}
-              className="aspect-square bg-muted relative overflow-hidden cursor-pointer"
+              className="aspect-square bg-muted relative overflow-hidden"
             >
               <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
             </div>
@@ -157,18 +158,8 @@ const Profile = () => {
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-      
-      {/* Modals */}
-      <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <ShareProfileModal 
-        isOpen={isShareOpen} 
-        onClose={() => setIsShareOpen(false)}
-        username={currentUser.username}
-      />
-      <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
     </div>
   );
 };
 
-export default Profile;
+export default UserProfile;

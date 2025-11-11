@@ -63,8 +63,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, reels
           <VideoCard 
             key={reel.id} 
             reel={reel} 
-            setScreen={setScreen} 
-            currentScreen={currentScreen} 
             followingIds={followingIds} 
             toggleFollow={toggleFollow} 
           />

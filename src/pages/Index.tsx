@@ -32,8 +32,8 @@ const Index = () => {
         setCurrentScreen('home');
         navigate('/');
         break;
-      case 'discover':
-        navigate('/discover');
+      case 'tutorials':
+        navigate('/tutorials');
         break;
       case 'create':
         setCurrentScreen('create');
