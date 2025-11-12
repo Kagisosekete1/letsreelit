@@ -150,7 +150,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className={`flex flex-col items-center gap-1 backdrop-blur-sm rounded-full p-3 transition-all hover:scale-110 bg-black/20`}
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
           onClick={handleLike}
         >
           <Heart 
@@ -164,7 +164,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center gap-1 backdrop-blur-sm rounded-full p-3 hover:scale-110 transition-all bg-black/20"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
         >
           <MessageCircle className="w-7 h-7 text-white" />
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.comments}</span>
@@ -173,7 +173,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center gap-1 backdrop-blur-sm rounded-full p-3 hover:scale-110 transition-all bg-black/20"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
         >
           <Share className="w-7 h-7 text-white" />
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.shares}</span>
@@ -182,7 +182,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="backdrop-blur-sm rounded-full p-3 hover:scale-110 transition-all bg-black/20"
+          className="p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
         >
           <MoreHorizontal className="w-7 h-7 text-white" />
         </Button>

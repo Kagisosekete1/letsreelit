@@ -2,9 +2,37 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { mockReels } from '@/data/mockData';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const UserProfileMenu = () => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="w-6 h-6" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem className="text-destructive focus:text-destructive">
+          <AlertCircle className="w-4 h-4 mr-2" />
+          Report
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-destructive focus:text-destructive">
+          <Ban className="w-4 h-4 mr-2" />
+          Block
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 const UserProfile = () => {
   const { username } = useParams();
@@ -60,9 +88,7 @@ const UserProfile = () => {
             <ArrowLeft className="w-6 h-6" />
           </Button>
           <h1 className="text-lg font-semibold">@{user.username}</h1>
-          <Button variant="ghost" size="sm">
-            <MoreVertical className="w-6 h-6" />
-          </Button>
+          <UserProfileMenu />
         </div>
 
         {/* Profile Info */}
@@ -86,18 +112,30 @@ const UserProfile = () => {
             
             {/* Stats */}
             <div className="flex items-center gap-6 mb-4">
-              <div className="text-center">
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => console.log('View following')}
+              >
                 <p className="text-lg font-bold">0</p>
                 <p className="text-xs text-muted-foreground">Following</p>
-              </div>
-              <div className="text-center">
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => console.log('View followers')}
+              >
                 <p className="text-lg font-bold">{user.followers?.toLocaleString() || 0}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
-              </div>
-              <div className="text-center">
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => setContentTab('reels')}
+              >
                 <p className="text-lg font-bold">0</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
-              </div>
+              </Button>
             </div>
 
             {/* Action Button */}

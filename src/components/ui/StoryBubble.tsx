@@ -12,25 +12,25 @@ const StoryBubble: React.FC<StoryBubbleProps> = ({ avatarUrl, username, isCurren
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center space-y-2 flex-shrink-0 group"
+      className="flex flex-col items-center space-y-1.5 flex-shrink-0 group"
     >
-      <div className="relative transition-transform group-hover:scale-110 duration-300">
-        <div className="w-18 h-18 rounded-full gradient-primary p-[3px] animate-pulse-glow">
-          <div className="w-full h-full rounded-full bg-background p-[3px]">
+      <div className="relative transition-transform group-hover:scale-105 duration-200">
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/80 to-accent/80 p-[2px]">
+          <div className="w-full h-full rounded-xl bg-background p-[2px]">
             <img
               src={avatarUrl}
               alt={username}
-              className="w-full h-full rounded-full object-cover"
+              className="w-full h-full rounded-lg object-cover"
             />
           </div>
         </div>
         {isCurrentUser && (
-          <div className="absolute -bottom-1 -right-1 gradient-primary rounded-full p-1.5 shadow-lg glow-primary">
-            <Plus className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
+          <div className="absolute -bottom-0.5 -right-0.5 bg-primary rounded-full p-1 shadow-md">
+            <Plus className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
           </div>
         )}
       </div>
-      <span className="text-xs font-medium text-foreground max-w-[72px] truncate">
+      <span className="text-xs font-medium text-foreground max-w-[56px] truncate">
         {username}
       </span>
     </button>

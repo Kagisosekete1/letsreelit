@@ -77,18 +77,30 @@ const Profile = () => {
             
             {/* Stats */}
             <div className="flex items-center gap-6 mb-4">
-              <div className="text-center">
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => console.log('View following')}
+              >
                 <p className="text-lg font-bold">{currentUser.stats.following}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
-              </div>
-              <div className="text-center">
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => console.log('View followers')}
+              >
                 <p className="text-lg font-bold">{currentUser.stats.followers}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
-              </div>
-              <div className="text-center">
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
+                onClick={() => setContentTab('reels')}
+              >
                 <p className="text-lg font-bold">{currentUser.stats.reels}</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
-              </div>
+              </Button>
             </div>
 
             {/* Action Buttons */}

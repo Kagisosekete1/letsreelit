@@ -49,7 +49,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto bg-background/95 backdrop-blur-xl border-border rounded-3xl">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <Button
@@ -89,7 +89,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           <Button
             variant="destructive"
             className="w-full"
-            onClick={() => console.log('Logout')}
+            onClick={() => {
+              // Clear user session and redirect to auth
+              window.location.href = '/auth';
+            }}
           >
             <LogOut className="w-4 h-4 mr-2" />
             Log Out

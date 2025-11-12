@@ -143,6 +143,7 @@ const Inbox = () => {
                   key={message.id}
                   variant="ghost"
                   className="w-full p-4 h-auto justify-start rounded-xl hover:bg-secondary/50"
+                  onClick={() => navigate(`/user/${message.user}`)}
                 >
                   <div className="flex items-center space-x-3 w-full">
                     <div className="relative">
@@ -177,12 +178,13 @@ const Inbox = () => {
                   key={notification.id}
                   variant="ghost"
                   className="w-full p-4 h-auto justify-start rounded-xl hover:bg-secondary/50"
+                  onClick={() => navigate(`/user/${notification.user}`)}
                 >
                   <div className="flex items-center space-x-3 w-full">
                     <img
                       src={notification.avatar}
                       alt={notification.user}
-                      className="w-10 h-10 rounded-full"
+                      className="w-10 h-10 rounded-full cursor-pointer"
                     />
                     <div className="flex-1 text-left">
                       <div className="flex items-center justify-between">
