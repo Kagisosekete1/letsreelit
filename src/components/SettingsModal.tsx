@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +22,8 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+
   const settingsSections = [
     {
       title: 'Account',
@@ -41,15 +44,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       title: 'Support',
       items: [
         { icon: HelpCircle, label: 'Help Center', action: () => console.log('Help') },
-        { icon: Info, label: 'About', action: () => console.log('About') },
-        { icon: Shield, label: 'Terms & Policies', action: () => console.log('Terms') },
+        { icon: Info, label: 'About', action: () => { onClose(); navigate('/about'); } },
+        { icon: Shield, label: 'Terms & Policies', action: () => { onClose(); navigate('/terms'); } },
       ],
     },
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto bg-background/95 backdrop-blur-xl border-border rounded-3xl">
+      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto bg-background/98 backdrop-blur-2xl border-border/50 rounded-3xl shadow-2xl">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <Button
@@ -88,10 +91,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           {/* Logout Button */}
           <Button
             variant="destructive"
-            className="w-full"
+            className="w-full rounded-xl"
             onClick={() => {
-              // Clear user session and redirect to auth
-              window.location.href = '/auth';
+              onClose();
+              navigate('/auth');
             }}
           >
             <LogOut className="w-4 h-4 mr-2" />

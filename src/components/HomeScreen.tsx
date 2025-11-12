@@ -19,8 +19,6 @@ const mockStories: Story[] = [
     { id: 4, username: 'groove_goddess', avatarUrl: 'https://picsum.photos/id/1013/200', videoUrl: 'https://videos.pexels.com/video-files/3254011/3254011-hd_1080_1920_25fps.mp4' },
     { id: 5, username: 'dance_pro', avatarUrl: 'https://picsum.photos/id/1014/200', videoUrl: 'https://videos.pexels.com/video-files/4494433/4494433-hd_1080_1920_25fps.mp4' },
     { id: 6, username: 'rhythm_rebel', avatarUrl: 'https://picsum.photos/id/1015/200', videoUrl: 'https://videos.pexels.com/video-files/8053782/8053782-hd_1080_1920_25fps.mp4' },
-    { id: 7, username: 'piano_feet', avatarUrl: 'https://picsum.photos/id/1016/200', videoUrl: 'https://videos.pexels.com/video-files/4269192/4269192-hd_720_1366_24fps.mp4' },
-    { id: 8, username: 'sound_wave', avatarUrl: 'https://picsum.photos/id/1018/200', videoUrl: 'https://videos.pexels.com/video-files/7573215/7573215-hd_1080_1920_25fps.mp4' },
 ];
 
 interface HomeScreenProps {
@@ -51,6 +49,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, reels
               key={story.id}
               avatarUrl={story.avatarUrl}
               username={story.username}
+              userId={`user_${story.id}`}
               onClick={() => setViewingStory(story)}
             />
           ))}

@@ -50,10 +50,11 @@ const VideoCard: React.FC<VideoCardProps> = ({
   const isFollowing = followingIds.has(reel.user.id);
 
   return (
-    <div className="relative h-screen w-full bg-black snap-start flex items-center justify-center">
+    <div className="relative h-screen w-full bg-black snap-start flex items-center justify-center snap-always">
       <video
         ref={videoRef}
         className="w-full h-full object-cover"
+        style={{ objectFit: 'cover' }}
         src={reel.videoUrl}
         loop
         muted={isMuted}
@@ -150,11 +151,11 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
           onClick={handleLike}
         >
           <Heart 
-            className={`w-7 h-7 transition-all ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
+            className={`w-7 h-7 transition-all duration-200 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
           />
           <span className="text-xs text-white font-semibold drop-shadow-lg">
             {isLiked ? reel.stats.likes + 1 : reel.stats.likes}
@@ -164,18 +165,18 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
         >
-          <MessageCircle className="w-7 h-7 text-white" />
+          <MessageCircle className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.comments}</span>
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
         >
-          <Share className="w-7 h-7 text-white" />
+          <Share className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.shares}</span>
         </Button>
 

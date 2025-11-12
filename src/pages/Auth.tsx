@@ -25,11 +25,11 @@ const Auth = () => {
     navigate('/');
   };
 
-  const handleGoogleAuth = () => {
-    // Mock Google authentication
+  const handleGoogleAuth = async () => {
+    // Google authentication will be configured with Supabase
     toast({
-      title: "Coming soon!",
-      description: "Google sign-in will be available soon",
+      title: "Google Sign-In",
+      description: "Setting up Google authentication...",
     });
   };
 

@@ -1,17 +1,28 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 
 interface StoryBubbleProps {
   avatarUrl: string;
   username: string;
+  userId?: string;
   isCurrentUser?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
-const StoryBubble: React.FC<StoryBubbleProps> = ({ avatarUrl, username, isCurrentUser, onClick }) => {
+const StoryBubble: React.FC<StoryBubbleProps> = ({ avatarUrl, username, userId, isCurrentUser, onClick }) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (userId) {
+      navigate(`/user/${username}`);
+    }
+  };
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="flex flex-col items-center space-y-1.5 flex-shrink-0 group"
     >
       <div className="relative transition-transform group-hover:scale-105 duration-200">
