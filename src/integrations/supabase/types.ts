@@ -14,7 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      follows: {
+        Row: {
+          created_at: string | null
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string
+          followers_count: number | null
+          following_count: number | null
+          id: string
+          reels_count: number | null
+          updated_at: string | null
+          user_id: string | null
+          username: string
+          verified: boolean | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          reels_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username: string
+          verified?: boolean | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          reels_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      reels: {
+        Row: {
+          comments_count: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_portrait: boolean | null
+          likes_count: number | null
+          shares_count: number | null
+          thumbnail_url: string | null
+          title: string
+          user_id: string
+          video_url: string
+          views_count: number | null
+        }
+        Insert: {
+          comments_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_portrait?: boolean | null
+          likes_count?: number | null
+          shares_count?: number | null
+          thumbnail_url?: string | null
+          title: string
+          user_id: string
+          video_url: string
+          views_count?: number | null
+        }
+        Update: {
+          comments_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_portrait?: boolean | null
+          likes_count?: number | null
+          shares_count?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          user_id?: string
+          video_url?: string
+          views_count?: number | null
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          reason: string
+          reported_reel_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reason: string
+          reported_reel_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reason?: string
+          reported_reel_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reported_reel_id_fkey"
+            columns: ["reported_reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
