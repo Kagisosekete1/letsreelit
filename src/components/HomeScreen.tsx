@@ -1,37 +1,17 @@
 import React, { useState } from 'react';
-import { Screen, Reel } from '@/types';
-import VideoCard from './ui/VideoCard';
+import { Screen } from '@/types';
 import StoryBubble from './ui/StoryBubble';
 import StoryUploadModal from './StoryUploadModal';
-import StoryViewerModal from './StoryViewerModal';
-
-interface Story {
-  id: number;
-  username: string;
-  avatarUrl: string;
-  videoUrl: string;
-}
-
-const mockStories: Story[] = [
-    { id: 1, username: 'amapiano_king', avatarUrl: 'https://picsum.photos/id/1011/200', videoUrl: 'https://videos.pexels.com/video-files/5493215/5493215-hd_1080_1920_25fps.mp4' },
-    { id: 2, username: 'dancing_queen', avatarUrl: 'https://picsum.photos/id/1025/200', videoUrl: 'https://videos.pexels.com/video-files/7699943/7699943-hd_1080_1920_25fps.mp4' },
-    { id: 3, username: 'vibes_master', avatarUrl: 'https://picsum.photos/id/1012/200', videoUrl: 'https://videos.pexels.com/video-files/8134375/8134375-hd_1080_1920_30fps.mp4' },
-    { id: 4, username: 'groove_goddess', avatarUrl: 'https://picsum.photos/id/1013/200', videoUrl: 'https://videos.pexels.com/video-files/3254011/3254011-hd_1080_1920_25fps.mp4' },
-    { id: 5, username: 'dance_pro', avatarUrl: 'https://picsum.photos/id/1014/200', videoUrl: 'https://videos.pexels.com/video-files/4494433/4494433-hd_1080_1920_25fps.mp4' },
-    { id: 6, username: 'rhythm_rebel', avatarUrl: 'https://picsum.photos/id/1015/200', videoUrl: 'https://videos.pexels.com/video-files/8053782/8053782-hd_1080_1920_25fps.mp4' },
-];
+import { useUser } from '@/contexts/UserContext';
 
 interface HomeScreenProps {
   setScreen: (screen: Screen, payload?: any) => void;
   currentScreen: Screen;
-  reels: Reel[];
-  followingIds: Set<string>;
-  toggleFollow: (userId: string) => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, reels, followingIds, toggleFollow }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => {
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
-  const [viewingStory, setViewingStory] = useState<Story | null>(null);
+  const { currentUser } = useUser();
 
   return (
     <div className="h-full flex flex-col bg-background animate-fade-in">
@@ -39,46 +19,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, reels
       <div className="flex-shrink-0 backdrop-blur-glass border-b border-border/50">
         <div className="flex space-x-4 p-4 overflow-x-auto scrollbar-hide">
           <StoryBubble 
-            avatarUrl="https://picsum.photos/id/1005/200"
+            avatarUrl={currentUser?.avatarUrl || "https://picsum.photos/id/1005/200"}
             username="Story'It" 
             isCurrentUser={true}
             onClick={() => setIsStoryModalOpen(true)}
           />
-          {mockStories.map(story => (
-            <StoryBubble 
-              key={story.id}
-              avatarUrl={story.avatarUrl}
-              username={story.username}
-              userId={`user_${story.id}`}
-              onClick={() => setViewingStory(story)}
-            />
-          ))}
         </div>
       </div>
       
-      {/* Reels Feed */}
-      <div className="flex-1 snap-y snap-mandatory overflow-y-scroll">
-        {reels.map(reel => (
-          <VideoCard 
-            key={reel.id} 
-            reel={reel} 
-            followingIds={followingIds} 
-            toggleFollow={toggleFollow} 
-          />
-        ))}
+      {/* Empty Reels Feed */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
+          <svg className="w-10 h-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold mb-2 text-foreground">No reels yet</h2>
+        <p className="text-muted-foreground text-center text-sm">
+          Be the first to share your dance moves!
+        </p>
       </div>
 
       {isStoryModalOpen && (
         <StoryUploadModal 
           isOpen={isStoryModalOpen} 
           onClose={() => setIsStoryModalOpen(false)} 
-        />
-      )}
-
-      {viewingStory && (
-        <StoryViewerModal 
-          story={viewingStory}
-          onClose={() => setViewingStory(null)}
         />
       )}
     </div>

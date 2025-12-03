@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Video, Play } from 'lucide-react';
+import { Search, Video, Bell } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Tutorials = () => {
   const [activeTab, setActiveTab] = useState('tutorials');
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -28,63 +31,54 @@ const Tutorials = () => {
     }
   };
 
-  const trendingTutorials = [
-    { id: 1, title: 'Beginner Amapiano Steps', views: '2.1M', thumbnail: 'https://images.unsplash.com/photo-1547153760-18fc86324498?w=400' },
-    { id: 2, title: 'Advanced Footwork', views: '1.8M', thumbnail: 'https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=400' },
-    { id: 3, title: 'Body Isolation Techniques', views: '1.5M', thumbnail: 'https://images.unsplash.com/photo-1504609773096-104ff2c73ba4?w=400' },
-  ];
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      toast({
+        title: "Search",
+        description: `Searching for "${searchQuery}"...`,
+      });
+    }
+  };
+
+  const handleNotifications = () => {
+    navigate('/inbox');
+  };
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
       <div className="pt-8 pb-20 px-4 h-full overflow-y-auto">
         {/* Header */}
-        <h1 className="text-2xl font-bold mb-6">Tutorials</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Tutorials</h1>
+          <Button variant="ghost" size="sm" onClick={handleNotifications}>
+            <Bell className="w-5 h-5" />
+          </Button>
+        </div>
 
         {/* Search Bar */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
           <Input
             placeholder="Search dance tutorials..."
-            className="pl-10 bg-secondary border-border"
+            className="pl-10 bg-secondary border-border rounded-xl"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
         </div>
 
-        {/* Trending Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Trending Tutorials</h2>
+        {/* Empty State */}
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
+            <Video className="w-10 h-10 text-muted-foreground" />
           </div>
-
-          <div className="space-y-3">
-            {trendingTutorials.map((tutorial) => (
-              <Button
-                key={tutorial.id}
-                variant="ghost"
-                className="w-full h-auto p-0 justify-start"
-              >
-                <div className="flex gap-3 w-full">
-                  <div className="relative w-32 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                    <img 
-                      src={tutorial.thumbnail} 
-                      alt={tutorial.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                      <Play className="w-8 h-8 text-white" fill="white" />
-                    </div>
-                  </div>
-                  <div className="flex-1 text-left py-1">
-                    <p className="font-semibold line-clamp-2">{tutorial.title}</p>
-                    <p className="text-sm text-muted-foreground">{tutorial.views} views</p>
-                  </div>
-                </div>
-              </Button>
-            ))}
-          </div>
-
+          <h2 className="text-lg font-semibold mb-2">No tutorials yet</h2>
+          <p className="text-muted-foreground text-center text-sm mb-6">
+            Be the first to create a dance tutorial and share your moves with the community!
+          </p>
+          
           {/* Create Tutorial Button */}
-          <Button className="w-full mt-6" size="lg">
+          <Button className="rounded-xl" size="lg">
             <Video className="w-5 h-5 mr-2" />
             Create Tutorial
           </Button>

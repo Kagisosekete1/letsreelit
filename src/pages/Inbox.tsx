@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, MoreHorizontal, Heart, MessageCircle, Users } from 'lucide-react';
+import { Search, MessageCircle, Heart, Bell } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Inbox = () => {
   const [activeTab, setActiveTab] = useState('inbox');
   const [inboxTab, setInboxTab] = useState('messages');
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -17,11 +18,10 @@ const Inbox = () => {
       case 'home':
         navigate('/');
         break;
-      case 'discover':
-        navigate('/discover');
+      case 'tutorials':
+        navigate('/tutorials');
         break;
       case 'create':
-        console.log('Open camera/video creation');
         break;
       case 'inbox':
         navigate('/inbox');
@@ -32,59 +32,16 @@ const Inbox = () => {
     }
   };
 
-  const notifications = [
-    {
-      id: 1,
-      type: 'like',
-      user: 'sarah_dance',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face',
-      action: 'liked your video',
-      time: '2h',
-    },
-    {
-      id: 2,
-      type: 'follow',
-      user: 'mike_fitness',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face',
-      action: 'started following you',
-      time: '5h',
-    },
-    {
-      id: 3,
-      type: 'comment',
-      user: 'anna_art',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face',
-      action: 'commented on your video',
-      time: '1d',
-    },
-  ];
+  const handleSearch = () => {
+    toast({
+      title: "Search",
+      description: "Search functionality coming soon!",
+    });
+  };
 
-  const messages = [
-    {
-      id: 1,
-      user: 'alex_creator',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face',
-      message: 'Hey! Loved your latest dance video! 🔥',
-      time: '2m',
-      unread: true,
-    },
-    {
-      id: 2,
-      user: 'jenny_music',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face',
-      message: 'Can we collaborate on a music video?',
-      time: '1h',
-      unread: false,
-    },
-    {
-      id: 3,
-      user: 'brand_official',
-      avatar: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=50&h=50&fit=crop&crop=face',
-      message: 'We have a partnership opportunity for you!',
-      time: '3h',
-      unread: false,
-    },
-  ];
+  const handleNotifications = () => {
+    setInboxTab('notifications');
+  };
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
@@ -93,11 +50,11 @@ const Inbox = () => {
         <div className="flex items-center justify-between px-4 mb-6">
           <h1 className="text-xl font-bold text-foreground">Inbox</h1>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={handleSearch}>
               <Search className="w-5 h-5 text-foreground" />
             </Button>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="w-5 h-5 text-foreground" />
+            <Button variant="ghost" size="sm" onClick={handleNotifications}>
+              <Bell className="w-5 h-5 text-foreground" />
             </Button>
           </div>
         </div>
@@ -134,77 +91,25 @@ const Inbox = () => {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Empty Content */}
         <div className="px-4">
-          {inboxTab === 'messages' ? (
-            <div className="space-y-1">
-              {messages.map((message) => (
-                <Button
-                  key={message.id}
-                  variant="ghost"
-                  className="w-full p-4 h-auto justify-start rounded-xl hover:bg-secondary/50"
-                  onClick={() => navigate(`/user/${message.user}`)}
-                >
-                  <div className="flex items-center space-x-3 w-full">
-                    <div className="relative">
-                      <img
-                        src={message.avatar}
-                        alt={message.user}
-                        className="w-12 h-12 rounded-full"
-                      />
-                      {message.unread && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center justify-between">
-                        <h3 className={`font-medium ${message.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
-                          {message.user}
-                        </h3>
-                        <span className="text-xs text-muted-foreground">{message.time}</span>
-                      </div>
-                      <p className={`text-sm mt-1 ${message.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {message.message}
-                      </p>
-                    </div>
-                  </div>
-                </Button>
-              ))}
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
+              {inboxTab === 'messages' ? (
+                <MessageCircle className="w-10 h-10 text-muted-foreground" />
+              ) : (
+                <Heart className="w-10 h-10 text-muted-foreground" />
+              )}
             </div>
-          ) : (
-            <div className="space-y-1">
-              {notifications.map((notification) => (
-                <Button
-                  key={notification.id}
-                  variant="ghost"
-                  className="w-full p-4 h-auto justify-start rounded-xl hover:bg-secondary/50"
-                  onClick={() => navigate(`/user/${notification.user}`)}
-                >
-                  <div className="flex items-center space-x-3 w-full">
-                    <img
-                      src={notification.avatar}
-                      alt={notification.user}
-                      className="w-10 h-10 rounded-full cursor-pointer"
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium text-foreground">{notification.user}</span>
-                          <span className="text-muted-foreground ml-1">{notification.action}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{notification.time}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {notification.type === 'like' && <Heart className="w-4 h-4 text-primary" />}
-                      {notification.type === 'follow' && <Users className="w-4 h-4 text-accent" />}
-                      {notification.type === 'comment' && <MessageCircle className="w-4 h-4 text-muted-foreground" />}
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          )}
+            <h2 className="text-lg font-semibold mb-2">
+              {inboxTab === 'messages' ? 'No messages yet' : 'No activity yet'}
+            </h2>
+            <p className="text-muted-foreground text-center text-sm">
+              {inboxTab === 'messages' 
+                ? 'When you receive messages, they will appear here.'
+                : 'When someone interacts with your content, you\'ll see it here.'}
+            </p>
+          </div>
         </div>
       </div>
       

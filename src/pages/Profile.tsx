@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Share2, Grid3X3, Video, Bookmark } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -13,7 +13,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [contentTab, setContentTab] = useState('reels');
   const navigate = useNavigate();
-  const { currentUser } = useUser();
+  const { currentUser, loading } = useUser();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -42,6 +42,19 @@ const Profile = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    navigate('/auth');
+    return null;
+  }
+
   return (
     <div className="relative h-screen overflow-hidden bg-background">
       <div className="pt-4 pb-20 h-full overflow-y-auto">
@@ -51,9 +64,7 @@ const Profile = () => {
             <Settings className="w-6 h-6" />
           </Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          <Button variant="ghost" size="sm" onClick={() => setIsShareOpen(true)}>
-            <Share2 className="w-6 h-6" />
-          </Button>
+          <div className="w-10" /> {/* Spacer for alignment */}
         </div>
 
         {/* Profile Info */}
@@ -65,11 +76,6 @@ const Profile = () => {
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-2 border-border"
               />
-              {currentUser.verified && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-xs text-primary-foreground font-bold">✓</span>
-                </div>
-              )}
             </div>
             
             <h2 className="text-xl font-bold mb-1">{currentUser.displayName}</h2>
@@ -80,7 +86,7 @@ const Profile = () => {
               <Button 
                 variant="ghost" 
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => console.log('View following')}
+                onClick={() => navigate('/following')}
               >
                 <p className="text-lg font-bold">{currentUser.stats.following}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
@@ -88,7 +94,7 @@ const Profile = () => {
               <Button 
                 variant="ghost" 
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => console.log('View followers')}
+                onClick={() => navigate('/followers')}
               >
                 <p className="text-lg font-bold">{currentUser.stats.followers}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
@@ -107,13 +113,13 @@ const Profile = () => {
             <div className="flex gap-2 w-full">
               <Button 
                 variant="outline" 
-                className="flex-1"
+                className="flex-1 rounded-xl"
                 onClick={() => setIsEditModalOpen(true)}
               >
                 Edit Profile
               </Button>
               <Button 
-                className="flex-1"
+                className="flex-1 rounded-xl"
                 onClick={() => setIsShareOpen(true)}
               >
                 Share Profile
@@ -155,16 +161,20 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Video Grid */}
-        <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <div
-              key={index}
-              className="aspect-square bg-muted relative overflow-hidden cursor-pointer"
-            >
-              <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20" />
-            </div>
-          ))}
+        {/* Empty Video Grid */}
+        <div className="px-4 py-8">
+          <div className="text-center text-muted-foreground">
+            <p className="text-lg font-medium mb-2">No {contentTab} yet</p>
+            <p className="text-sm">Your {contentTab} will appear here</p>
+            {contentTab === 'reels' && (
+              <Button 
+                className="mt-4 rounded-xl"
+                onClick={() => setIsCreateReelOpen(true)}
+              >
+                Create your first reel
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       
