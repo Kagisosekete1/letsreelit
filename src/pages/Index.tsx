@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
-import { TikTokHeader } from '@/components/TikTokHeader';
 import HomeScreen from '@/components/HomeScreen';
 import SplashScreen from '@/components/SplashScreen';
 import { Screen } from '@/types';
@@ -40,8 +39,7 @@ const Index = () => {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
-      <TikTokHeader />
-      <div className="pt-16 pb-16 h-full">
+      <div className="pb-16 h-full">
         {currentScreen === 'home' && (
           <HomeScreen setScreen={setScreen} currentScreen={currentScreen} />
         )}
