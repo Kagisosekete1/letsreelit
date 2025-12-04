@@ -3,6 +3,7 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
+import logo from '@/assets/logo.jpg';
 
 interface HomeScreenProps {
   setScreen: (screen: Screen, payload?: any) => void;
@@ -195,10 +196,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
         <div className="relative flex-1">
           {/* Subtle App Logo Watermark */}
           <div className="absolute top-4 left-4 z-50 flex items-center space-x-2 opacity-20 pointer-events-none">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-black text-lg shadow-sm">
-              R
-            </div>
-            <span className="text-white font-bold text-lg">Reel'It</span>
+            <img src={logo} alt="Reel'It" className="w-10 h-10 object-contain" />
+            <span className="text-white font-bold text-lg drop-shadow-md">Reel'It</span>
           </div>
           
           <div 
