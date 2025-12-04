@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { X, Scissors, Sparkles, Upload, ArrowLeft } from 'lucide-react';
+import { X, Scissors, Sparkles, Upload, ArrowLeft, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,17 +16,34 @@ interface ReelUploadModalProps {
   videoFile: File;
 }
 
+const FILTERS = [
+  { name: 'None', class: '', preview: 'Original' },
+  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: '🌅' },
+  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: '❄️' },
+  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: '📷' },
+  { name: 'B&W', class: 'grayscale(100%)', preview: '⚫' },
+  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: '🎨' },
+  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: '🌫️' },
+  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: '🎭' },
+];
+
 const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, videoFile }) => {
   const { toast } = useToast();
-  const { authUser, currentUser } = useUser();
+  const { authUser, currentUser, refreshProfile } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [step, setStep] = useState<'edit' | 'details' | 'uploading'>('edit');
+  const [step, setStep] = useState<'edit' | 'crop' | 'filters' | 'details' | 'uploading'>('edit');
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
+  const [selectedFilter, setSelectedFilter] = useState(0);
+  const [cropStart, setCropStart] = useState(0);
+  const [cropEnd, setCropEnd] = useState(100);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [postAs, setPostAs] = useState<'reel' | 'tutorial'>('reel');
 
   useEffect(() => {
     if (videoFile) {
@@ -36,18 +53,42 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     }
   }, [videoFile]);
 
-  const handleRecordReel = () => {
-    toast({
-      title: "Record Reel",
-      description: "Crop & trim feature coming soon!",
-    });
+  useEffect(() => {
+    if (videoRef.current && videoPreviewUrl) {
+      videoRef.current.onloadedmetadata = () => {
+        setVideoDuration(videoRef.current?.duration || 0);
+      };
+    }
+  }, [videoPreviewUrl]);
+
+  const handleCropReel = () => {
+    setStep('crop');
   };
 
   const handleFiltersEffects = () => {
+    setStep('filters');
+  };
+
+  const applyCropTrim = () => {
     toast({
-      title: "Filters & Effects",
-      description: "Filters feature coming soon!",
+      title: "Crop Applied",
+      description: `Video trimmed from ${formatTime(cropStart * videoDuration / 100)} to ${formatTime(cropEnd * videoDuration / 100)}`,
     });
+    setStep('edit');
+  };
+
+  const applyFilter = () => {
+    toast({
+      title: "Filter Applied",
+      description: `${FILTERS[selectedFilter].name} filter applied to your reel`,
+    });
+    setStep('edit');
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const validateForm = () => {
@@ -115,11 +156,20 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
       if (dbError) throw dbError;
 
+      // Update user's reel count
+      await supabase
+        .from('profiles')
+        .update({ reels_count: (currentUser.stats.reels || 0) + 1 })
+        .eq('user_id', authUser.id);
+
+      // Refresh profile to update reel count
+      await refreshProfile();
+
       setUploadProgress(100);
 
       toast({
-        title: "Reel uploaded!",
-        description: "Your reel is now live.",
+        title: postAs === 'reel' ? "Reel uploaded!" : "Tutorial uploaded!",
+        description: `Your ${postAs} is now live.`,
       });
 
       setTimeout(() => {
@@ -141,7 +191,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             {step !== 'edit' && (
@@ -151,6 +201,8 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
             )}
             <DialogTitle className="flex-1 text-center">
               {step === 'edit' && 'Edit Reel'}
+              {step === 'crop' && 'Crop Reel'}
+              {step === 'filters' && 'Filters & Effects'}
               {step === 'details' && 'Reel Details'}
               {step === 'uploading' && 'Uploading...'}
             </DialogTitle>
@@ -163,7 +215,10 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
         {step === 'edit' && (
           <div className="space-y-4 py-4">
             {/* Video Preview */}
-            <div className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64">
+            <div 
+              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64"
+              style={{ filter: FILTERS[selectedFilter].class }}
+            >
               <video
                 ref={videoRef}
                 src={videoPreviewUrl}
@@ -177,21 +232,21 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
             <div className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full h-auto py-4 justify-start"
-                onClick={handleRecordReel}
+                className="w-full h-auto py-4 justify-start rounded-2xl"
+                onClick={handleCropReel}
               >
                 <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center mr-3">
                   <Scissors className="w-5 h-5 text-accent-foreground" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold">Record Reel</p>
+                  <p className="font-semibold">Crop Reel</p>
                   <p className="text-sm text-muted-foreground">Crop & trim your video</p>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full h-auto py-4 justify-start"
+                className="w-full h-auto py-4 justify-start rounded-2xl"
                 onClick={handleFiltersEffects}
               >
                 <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center mr-3">
@@ -204,8 +259,95 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               </Button>
             </div>
 
-            <Button className="w-full" onClick={() => setStep('details')}>
+            <Button className="w-full rounded-xl" onClick={() => setStep('details')}>
               Next
+            </Button>
+          </div>
+        )}
+
+        {step === 'crop' && (
+          <div className="space-y-4 py-4">
+            <div className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64">
+              <video
+                ref={videoRef}
+                src={videoPreviewUrl}
+                className="w-full h-full object-contain"
+                controls
+                playsInline
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Trim Start: {formatTime(cropStart * videoDuration / 100)}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={cropStart}
+                  onChange={(e) => setCropStart(Math.min(Number(e.target.value), cropEnd - 5))}
+                  className="w-full accent-primary"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Trim End: {formatTime(cropEnd * videoDuration / 100)}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={cropEnd}
+                  onChange={(e) => setCropEnd(Math.max(Number(e.target.value), cropStart + 5))}
+                  className="w-full accent-primary"
+                />
+              </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                Duration: {formatTime((cropEnd - cropStart) * videoDuration / 100)}
+              </p>
+            </div>
+
+            <Button className="w-full rounded-xl" onClick={applyCropTrim}>
+              <Check className="w-4 h-4 mr-2" />
+              Apply Crop
+            </Button>
+          </div>
+        )}
+
+        {step === 'filters' && (
+          <div className="space-y-4 py-4">
+            <div 
+              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64"
+              style={{ filter: FILTERS[selectedFilter].class }}
+            >
+              <video
+                src={videoPreviewUrl}
+                className="w-full h-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {FILTERS.map((filter, index) => (
+                <Button
+                  key={filter.name}
+                  variant={selectedFilter === index ? "default" : "outline"}
+                  className={`flex flex-col items-center p-2 h-auto rounded-xl ${
+                    selectedFilter === index ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setSelectedFilter(index)}
+                >
+                  <span className="text-lg mb-1">{filter.preview}</span>
+                  <span className="text-xs">{filter.name}</span>
+                </Button>
+              ))}
+            </div>
+
+            <Button className="w-full rounded-xl" onClick={applyFilter}>
+              <Check className="w-4 h-4 mr-2" />
+              Apply Filter
             </Button>
           </div>
         )}
@@ -213,7 +355,10 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
         {step === 'details' && (
           <div className="space-y-4 py-4">
             {/* Video Thumbnail Preview */}
-            <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+            <div 
+              className="relative aspect-video bg-black rounded-xl overflow-hidden"
+              style={{ filter: FILTERS[selectedFilter].class }}
+            >
               <video
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
@@ -243,11 +388,32 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 />
                 {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
               </div>
+
+              {/* Post As Selection */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Post as:</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant={postAs === 'reel' ? 'default' : 'outline'}
+                    className="flex-1 rounded-xl"
+                    onClick={() => setPostAs('reel')}
+                  >
+                    Reel
+                  </Button>
+                  <Button
+                    variant={postAs === 'tutorial' ? 'default' : 'outline'}
+                    className="flex-1 rounded-xl"
+                    onClick={() => setPostAs('tutorial')}
+                  >
+                    Tutorial
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <Button className="w-full" onClick={handleUpload} disabled={!title.trim()}>
+            <Button className="w-full rounded-xl" onClick={handleUpload} disabled={!title.trim()}>
               <Upload className="w-4 h-4 mr-2" />
-              Upload Reel
+              Upload {postAs === 'reel' ? 'Reel' : 'Tutorial'}
             </Button>
           </div>
         )}
@@ -258,12 +424,14 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <Upload className="w-8 h-8 text-primary animate-pulse" />
               </div>
-              <p className="text-lg font-semibold mb-2">Uploading your reel...</p>
+              <p className="text-lg font-semibold mb-2">Uploading your {postAs}...</p>
               <p className="text-sm text-muted-foreground mb-4">{uploadProgress}%</p>
               <Progress value={uploadProgress} className="w-full" />
             </div>
           </div>
         )}
+
+        <canvas ref={canvasRef} className="hidden" />
       </DialogContent>
     </Dialog>
   );

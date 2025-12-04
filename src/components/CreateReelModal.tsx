@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, Video, Radio, X } from 'lucide-react';
+import { Upload, Radio, X, Clock, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReelUploadModal from './ReelUploadModal';
+import GoLiveModal from './GoLiveModal';
+
+interface Draft {
+  id: string;
+  file: File;
+  title: string;
+  thumbnail: string;
+  createdAt: Date;
+}
 
 interface CreateReelModalProps {
   isOpen: boolean;
@@ -14,6 +23,24 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+
+  // Load drafts from localStorage
+  useEffect(() => {
+    const savedDrafts = localStorage.getItem('reelDrafts');
+    if (savedDrafts) {
+      try {
+        const parsed = JSON.parse(savedDrafts);
+        setDrafts(parsed.map((d: any) => ({
+          ...d,
+          createdAt: new Date(d.createdAt)
+        })));
+      } catch (e) {
+        console.error('Error loading drafts:', e);
+      }
+    }
+  }, [isOpen]);
 
   const handleUpload = () => {
     const input = document.createElement('input');
@@ -44,18 +71,32 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     input.click();
   };
 
-  const handleRecord = () => {
-    toast({ title: "Coming soon", description: "Camera recording feature coming soon!" });
-  };
-
   const handleGoLive = () => {
-    toast({ title: "Go Live", description: "Live streaming feature coming soon!" });
+    setShowGoLiveModal(true);
   };
 
   const handleUploadModalClose = () => {
     setShowUploadModal(false);
     setSelectedFile(null);
     onClose();
+  };
+
+  const handleDeleteDraft = (draftId: string) => {
+    const updatedDrafts = drafts.filter(d => d.id !== draftId);
+    setDrafts(updatedDrafts);
+    localStorage.setItem('reelDrafts', JSON.stringify(updatedDrafts));
+    toast({
+      title: "Draft deleted",
+      description: "The draft has been permanently removed.",
+    });
+  };
+
+  const handleContinueDraft = (draft: Draft) => {
+    // For now, show toast - in full implementation would restore the draft
+    toast({
+      title: "Continue editing",
+      description: `Continuing with "${draft.title || 'Untitled'}"...`,
+    });
   };
 
   const options = [
@@ -65,13 +106,6 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
       description: 'Choose a portrait reel from your device',
       color: 'bg-primary',
       action: handleUpload,
-    },
-    {
-      icon: Video,
-      title: 'Record Reel',
-      description: 'Record a new portrait reel',
-      color: 'bg-destructive',
-      action: handleRecord,
     },
     {
       icon: Radio,
@@ -92,9 +126,21 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     );
   }
 
+  if (showGoLiveModal) {
+    return (
+      <GoLiveModal
+        isOpen={showGoLiveModal}
+        onClose={() => {
+          setShowGoLiveModal(false);
+          onClose();
+        }}
+      />
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] rounded-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Create Reel</DialogTitle>
@@ -113,7 +159,7 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
             <Button
               key={idx}
               variant="outline"
-              className="w-full h-auto py-4 justify-start"
+              className="w-full h-auto py-4 justify-start rounded-2xl"
               onClick={option.action}
             >
               <div className={`w-10 h-10 rounded-lg ${option.color} flex items-center justify-center mr-3`}>
@@ -125,6 +171,50 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
               </div>
             </Button>
           ))}
+
+          {/* Drafts Section */}
+          {drafts.length > 0 && (
+            <div className="pt-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">Drafts</p>
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {drafts.map((draft) => (
+                  <div
+                    key={draft.id}
+                    className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl"
+                  >
+                    <Button
+                      variant="ghost"
+                      className="flex-1 justify-start p-0 h-auto hover:bg-transparent"
+                      onClick={() => handleContinueDraft(draft)}
+                    >
+                      <div className="w-12 h-16 bg-muted rounded-lg mr-3 overflow-hidden">
+                        {draft.thumbnail && (
+                          <img src={draft.thumbnail} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium">{draft.title || 'Untitled'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {draft.createdAt.toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteDraft(draft.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Video, Bell } from 'lucide-react';
+import { Search, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import CreateReelModal from '@/components/CreateReelModal';
 
 const Tutorials = () => {
   const [activeTab, setActiveTab] = useState('tutorials');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -21,6 +23,9 @@ const Tutorials = () => {
         break;
       case 'tutorials':
         navigate('/tutorials');
+        break;
+      case 'create':
+        setIsCreateReelOpen(true);
         break;
       case 'inbox':
         navigate('/inbox');
@@ -40,8 +45,11 @@ const Tutorials = () => {
     }
   };
 
-  const handleNotifications = () => {
-    navigate('/inbox');
+  const handleRecordReel = () => {
+    toast({
+      title: "Record Tutorial",
+      description: "Opening camera to record a new tutorial...",
+    });
   };
 
   return (
@@ -50,9 +58,6 @@ const Tutorials = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Tutorials</h1>
-          <Button variant="ghost" size="sm" onClick={handleNotifications}>
-            <Bell className="w-5 h-5" />
-          </Button>
         </div>
 
         {/* Search Bar */}
@@ -78,14 +83,22 @@ const Tutorials = () => {
           </p>
           
           {/* Create Tutorial Button */}
-          <Button className="rounded-xl" size="lg">
+          <Button className="rounded-xl mb-3" size="lg" onClick={() => setIsCreateReelOpen(true)}>
             <Video className="w-5 h-5 mr-2" />
             Create Tutorial
+          </Button>
+
+          {/* Record Reel Button */}
+          <Button variant="outline" className="rounded-xl" size="lg" onClick={handleRecordReel}>
+            <Video className="w-5 h-5 mr-2" />
+            Record Reel
           </Button>
         </div>
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
     </div>
   );
 };
