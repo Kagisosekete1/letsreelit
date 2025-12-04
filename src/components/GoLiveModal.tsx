@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, MessageCircle, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface Comment {
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
-  const { currentUser } = useUser();
+  const { currentUser, authUser, refreshProfile } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -31,7 +32,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [liveTitle, setLiveTitle] = useState('');
-  const [step, setStep] = useState<'setup' | 'live'>('setup');
+  const [step, setStep] = useState<'setup' | 'live' | 'ended'>('setup');
+  const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
+  const [liveDuration, setLiveDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     return () => {
@@ -40,6 +45,22 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       }
     };
   }, [stream]);
+
+  // Update live duration
+  useEffect(() => {
+    if (isLive && liveStartTime) {
+      const interval = setInterval(() => {
+        setLiveDuration(Math.floor((Date.now() - liveStartTime.getTime()) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isLive, liveStartTime]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const startCamera = async () => {
     try {
@@ -51,6 +72,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
+
+      // Start recording
+      const mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      recordedChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(1000);
     } catch (error) {
       toast({
         title: "Camera access denied",
@@ -73,6 +107,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     await startCamera();
     setStep('live');
     setIsLive(true);
+    setLiveStartTime(new Date());
     
     // Simulate viewers joining
     const viewerInterval = setInterval(() => {
@@ -90,13 +125,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     const commentInterval = setInterval(() => {
       if (Math.random() > 0.6) {
         const sampleComments = [
-          "Amazing moves! 🔥",
+          "Amazing moves!",
           "Love this!",
           "You're so talented!",
           "Keep going!",
-          "💪💪💪",
           "This is fire!",
-          "❤️❤️❤️",
         ];
         const newSimComment: Comment = {
           id: Date.now().toString(),
@@ -115,17 +148,70 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     };
   };
 
-  const handleEndLive = () => {
+  const handleEndLive = async () => {
+    // Stop recording
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+    }
+
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
     setStream(null);
     setIsLive(false);
-    toast({
-      title: "Live ended",
-      description: `You were live for ${viewerCount} viewers with ${likeCount} likes!`,
-    });
-    onClose();
+    setStep('ended');
+  };
+
+  const saveLiveToTutorial = async () => {
+    if (!authUser || !currentUser) {
+      toast({ title: "Error", description: "Please sign in", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // Create blob from recorded chunks
+      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+      const file = new File([blob], `live_${Date.now()}.webm`, { type: 'video/webm' });
+
+      // Upload to storage
+      const fileName = `${authUser.id}/live_${Date.now()}.webm`;
+      const { error: uploadError } = await supabase.storage
+        .from('reels')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('reels')
+        .getPublicUrl(fileName);
+
+      // Save to database as tutorial
+      const { error: dbError } = await supabase
+        .from('reels')
+        .insert({
+          user_id: authUser.id,
+          title: liveTitle,
+          description: `Live stream with ${viewerCount} viewers and ${likeCount} likes`,
+          video_url: publicUrl,
+          is_portrait: true,
+        });
+
+      if (dbError) throw dbError;
+
+      await refreshProfile();
+
+      toast({
+        title: "Live saved!",
+        description: "Your live has been saved to Tutorials.",
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Save failed",
+        description: error.message || "Failed to save live",
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleMute = () => {
@@ -217,6 +303,61 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     );
   }
 
+  if (step === 'ended') {
+    return (
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Live Ended</h2>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="space-y-6 py-4">
+            {/* Live Results */}
+            <div className="bg-secondary/30 rounded-2xl p-6">
+              <h3 className="text-lg font-semibold mb-4 text-center">Live Results</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold">{formatDuration(liveDuration)}</p>
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{viewerCount}</p>
+                  <p className="text-sm text-muted-foreground">Viewers</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-pink-500">{likeCount}</p>
+                  <p className="text-sm text-muted-foreground">Likes</p>
+                </div>
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-sm text-muted-foreground">{comments.length} comments received</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Button 
+                className="w-full rounded-xl"
+                onClick={saveLiveToTutorial}
+              >
+                Save to Tutorials
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full rounded-xl"
+                onClick={onClose}
+              >
+                Discard
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
@@ -240,6 +381,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-black/50 px-3 py-1 rounded-full flex items-center gap-1">
                 <Users className="w-3 h-3 text-white" />
                 <span className="text-white text-sm">{viewerCount}</span>
+              </div>
+              <div className="bg-black/50 px-3 py-1 rounded-full">
+                <span className="text-white text-sm">{formatDuration(liveDuration)}</span>
               </div>
             </div>
             <Button

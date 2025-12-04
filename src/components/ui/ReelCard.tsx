@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX } from 'lucide-react';
-import { Reel } from '@/types';
+import { Heart, MessageCircle, Share, MoreHorizontal, Play, Volume2, VolumeX, Download, Flag, Ban } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +9,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+
+interface Reel {
+  id: string;
+  videoUrl: string;
+  thumbnailUrl: string;
+  title: string;
+  description?: string;
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    verified: boolean;
+  };
+  stats: {
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+  soundTrack?: {
+    title: string;
+    artist: string;
+  };
+  isLiked?: boolean;
+}
 
 interface ReelCardProps {
   reel: Reel;
@@ -32,6 +56,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
+  const [likeCount, setLikeCount] = useState(reel.stats.likes);
 
   // Auto-play/pause based on active state
   useEffect(() => {
@@ -70,16 +95,72 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   const handleLike = () => {
     setIsLiked(!isLiked);
+    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
   };
 
   const handleUserClick = () => {
     navigate(`/user/${reel.user.username}`);
   };
 
+  const handleComment = () => {
+    toast({
+      title: "Comments",
+      description: "Comments feature coming soon!",
+    });
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: reel.title,
+        text: `Check out this dance by @${reel.user.username}`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copied",
+        description: "Share link copied to clipboard!",
+      });
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(reel.videoUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reel.user.username}_${reel.id}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download started",
+        description: "Your video is being downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Could not download video.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleReport = () => {
     toast({
       title: "Report submitted",
       description: "Thank you for reporting this content. We'll review it shortly.",
+    });
+  };
+
+  const handleBlock = () => {
+    toast({
+      title: "User blocked",
+      description: `@${reel.user.username} has been blocked.`,
     });
   };
 
@@ -182,40 +263,62 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - TikTok Style */}
       <div className="absolute bottom-24 right-4 z-10 flex flex-col items-center space-y-5">
+        {/* Like */}
         <Button
           variant="ghost"
           size="sm"
           className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
           onClick={handleLike}
         >
-          <Heart 
-            className={`w-7 h-7 transition-all duration-200 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
-          />
-          <span className="text-xs text-white font-semibold drop-shadow-lg">
-            {isLiked ? reel.stats.likes + 1 : reel.stats.likes}
-          </span>
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/20' : 'bg-black/30'}`}>
+            <Heart 
+              className={`w-7 h-7 transition-all duration-200 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
+            />
+          </div>
+          <span className="text-xs text-white font-semibold drop-shadow-lg">{likeCount}</span>
         </Button>
 
+        {/* Comment */}
         <Button
           variant="ghost"
           size="sm"
           className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+          onClick={handleComment}
         >
-          <MessageCircle className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
+            <MessageCircle className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          </div>
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.comments}</span>
         </Button>
 
+        {/* Share */}
         <Button
           variant="ghost"
           size="sm"
           className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+          onClick={handleShare}
         >
-          <Share className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
+            <Share className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          </div>
           <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.shares}</span>
         </Button>
 
+        {/* Download */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+          onClick={handleDownload}
+        >
+          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
+            <Download className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          </div>
+        </Button>
+
+        {/* More Options */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -223,12 +326,19 @@ const ReelCard: React.FC<ReelCardProps> = ({
               size="sm"
               className="p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
             >
-              <MoreHorizontal className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
+                <MoreHorizontal className="w-7 h-7 text-white" />
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl">
             <DropdownMenuItem onClick={handleReport} className="text-destructive">
+              <Flag className="w-4 h-4 mr-2" />
               Report
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleBlock} className="text-destructive">
+              <Ban className="w-4 h-4 mr-2" />
+              Block User
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

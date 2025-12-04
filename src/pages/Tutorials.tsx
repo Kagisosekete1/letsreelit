@@ -45,12 +45,6 @@ const Tutorials = () => {
     }
   };
 
-  const handleRecordReel = () => {
-    toast({
-      title: "Record Tutorial",
-      description: "Opening camera to record a new tutorial...",
-    });
-  };
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
@@ -83,15 +77,9 @@ const Tutorials = () => {
           </p>
           
           {/* Create Tutorial Button */}
-          <Button className="rounded-xl mb-3" size="lg" onClick={() => setIsCreateReelOpen(true)}>
+          <Button className="rounded-xl" size="lg" onClick={() => setIsCreateReelOpen(true)}>
             <Video className="w-5 h-5 mr-2" />
-            Create Tutorial
-          </Button>
-
-          {/* Record Reel Button */}
-          <Button variant="outline" className="rounded-xl" size="lg" onClick={handleRecordReel}>
-            <Video className="w-5 h-5 mr-2" />
-            Record Reel
+            Create Reel
           </Button>
         </div>
       </div>
