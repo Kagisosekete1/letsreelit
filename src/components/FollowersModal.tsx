@@ -93,7 +93,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ isOpen, onClose, userId
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[400px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[400px] max-h-[80vh] rounded-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>{type === 'followers' ? 'Followers' : 'Following'}</DialogTitle>

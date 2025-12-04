@@ -17,14 +17,14 @@ interface ReelUploadModalProps {
 }
 
 const FILTERS = [
-  { name: 'None', class: '', preview: 'Original' },
-  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: '🌅' },
-  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: '❄️' },
-  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: '📷' },
-  { name: 'B&W', class: 'grayscale(100%)', preview: '⚫' },
-  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: '🎨' },
-  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: '🌫️' },
-  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: '🎭' },
+  { name: 'None', class: '', preview: 'N' },
+  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: 'W' },
+  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: 'C' },
+  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: 'V' },
+  { name: 'B&W', class: 'grayscale(100%)', preview: 'BW' },
+  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: 'Vi' },
+  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: 'F' },
+  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: 'D' },
 ];
 
 const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, videoFile }) => {
@@ -193,7 +193,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto rounded-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             {step !== 'edit' && (
               <Button variant="ghost" size="sm" onClick={() => setStep(step === 'uploading' ? 'details' : 'edit')}>
                 <ArrowLeft className="h-5 w-5" />
@@ -206,9 +206,6 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               {step === 'details' && 'Reel Details'}
               {step === 'uploading' && 'Uploading...'}
             </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose} disabled={uploading}>
-              <X className="h-5 w-5" />
-            </Button>
           </div>
         </DialogHeader>
 
@@ -369,7 +366,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
             <div className="space-y-3">
               <div>
                 <Input
-                  placeholder="Add a title..."
+                  placeholder="Add dance style..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}

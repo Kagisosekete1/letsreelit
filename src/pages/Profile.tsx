@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, Play } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -10,6 +10,15 @@ import ShareProfileModal from '@/components/ShareProfileModal';
 import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ReelData {
+  id: string;
+  title: string;
+  video_url: string;
+  thumbnail_url: string | null;
+  views_count: number;
+}
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -24,6 +33,25 @@ const Profile = () => {
   const [followersModal, setFollowersModal] = useState(false);
   const [followingModal, setFollowingModal] = useState(false);
   const [reelsModal, setReelsModal] = useState(false);
+  const [userReels, setUserReels] = useState<ReelData[]>([]);
+  const [selectedReel, setSelectedReel] = useState<ReelData | null>(null);
+
+  useEffect(() => {
+    if (authUser) {
+      fetchUserReels();
+    }
+  }, [authUser]);
+
+  const fetchUserReels = async () => {
+    if (!authUser) return;
+    const { data } = await supabase
+      .from('reels')
+      .select('id, title, video_url, thumbnail_url, views_count')
+      .eq('user_id', authUser.id)
+      .order('created_at', { ascending: false });
+    
+    if (data) setUserReels(data);
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -45,6 +73,10 @@ const Profile = () => {
         navigate('/profile');
         break;
     }
+  };
+
+  const handleReelClick = (reel: ReelData) => {
+    setSelectedReel(reel);
   };
 
   if (loading) {
@@ -166,22 +198,87 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Empty Content Grid */}
-        <div className="px-4 py-8">
-          <div className="text-center text-muted-foreground">
-            <p className="text-lg font-medium mb-2">No {contentTab} yet</p>
-            <p className="text-sm">Your {contentTab} will appear here</p>
-            {contentTab === 'reels' && (
-              <Button 
-                className="mt-4 rounded-xl"
-                onClick={() => setIsCreateReelOpen(true)}
-              >
-                Create your first reel
-              </Button>
-            )}
+        {/* Reels Grid */}
+        {contentTab === 'reels' && (
+          userReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No reels yet</p>
+                <p className="text-sm">Your reels will appear here</p>
+                <Button 
+                  className="mt-4 rounded-xl"
+                  onClick={() => setIsCreateReelOpen(true)}
+                >
+                  Create your first reel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {userReels.map((reel) => (
+                <div
+                  key={reel.id}
+                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  onClick={() => handleReelClick(reel)}
+                >
+                  <video
+                    src={reel.video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white" fill="currentColor" />
+                  </div>
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
+                    <Play className="w-3 h-3 text-white" fill="currentColor" />
+                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {contentTab === 'tutorials' && (
+          <div className="px-4 py-8">
+            <div className="text-center text-muted-foreground">
+              <p className="text-lg font-medium mb-2">No tutorials yet</p>
+              <p className="text-sm">Your tutorials will appear here</p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {contentTab === 'saved' && (
+          <div className="px-4 py-8">
+            <div className="text-center text-muted-foreground">
+              <p className="text-lg font-medium mb-2">No saved reels</p>
+              <p className="text-sm">Your saved reels will appear here</p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Full Screen Reel Player */}
+      {selectedReel && (
+        <div className="fixed inset-0 z-50 bg-black">
+          <video
+            src={selectedReel.video_url}
+            className="w-full h-full object-contain"
+            controls
+            autoPlay
+            playsInline
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full"
+            onClick={() => setSelectedReel(null)}
+          >
+            ✕
+          </Button>
+        </div>
+      )}
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       

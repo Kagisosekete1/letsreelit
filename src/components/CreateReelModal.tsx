@@ -142,12 +142,7 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] rounded-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Create Reel</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+          <DialogTitle>Create Reel</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-3 py-4">
