@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useUser } from '@/contexts/UserContext';
-import { Mail, User, Calendar, Trash2 } from 'lucide-react';
+import { Mail, User, Calendar, Trash2, Edit2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AccountInfoModalProps {
@@ -11,14 +12,60 @@ interface AccountInfoModalProps {
 }
 
 const AccountInfoModal: React.FC<AccountInfoModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser, authUser } = useUser();
+  const { currentUser, authUser, updateUser } = useUser();
   const { toast } = useToast();
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState(currentUser?.username || '');
+  const [saving, setSaving] = useState(false);
 
   const handleDeleteAccount = () => {
     toast({
       title: "Delete Account",
       description: "To delete your account, please contact support@se-mogroup.com",
     });
+  };
+
+  const handleSaveUsername = async () => {
+    if (!newUsername.trim()) {
+      toast({
+        title: "Error",
+        description: "Username cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newUsername.length < 3) {
+      toast({
+        title: "Error",
+        description: "Username must be at least 3 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateUser({ username: newUsername.trim() });
+      toast({
+        title: "Success",
+        description: "Username updated successfully",
+      });
+      setIsEditingUsername(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update username",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNewUsername(currentUser?.username || '');
+    setIsEditingUsername(false);
   };
 
   return (
@@ -30,12 +77,55 @@ const AccountInfoModal: React.FC<AccountInfoModalProps> = ({ isOpen, onClose }) 
         
         <div className="space-y-4 py-4">
           <div className="space-y-3 bg-secondary/30 rounded-2xl p-4">
-            <div className="flex items-center gap-3 py-2">
-              <User className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Username</p>
-                <p className="font-medium text-foreground">@{currentUser?.username || 'Not set'}</p>
+            {/* Username - Editable */}
+            <div className="flex items-center justify-between gap-3 py-2">
+              <div className="flex items-center gap-3 flex-1">
+                <User className="w-5 h-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Username</p>
+                  {isEditingUsername ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        className="h-8 text-sm"
+                        placeholder="Enter username"
+                        maxLength={30}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleSaveUsername}
+                        disabled={saving}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Check className="w-4 h-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="font-medium text-foreground">@{currentUser?.username || 'Not set'}</p>
+                  )}
+                </div>
               </div>
+              {!isEditingUsername && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingUsername(true)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Edit2 className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              )}
             </div>
             
             <div className="flex items-center gap-3 py-2 border-t border-border/50">

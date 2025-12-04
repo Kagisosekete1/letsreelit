@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Search, MessageCircle, Heart, Bell } from 'lucide-react';
+import { Search, MessageCircle, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import CreateReelModal from '@/components/CreateReelModal';
 
 const Inbox = () => {
   const [activeTab, setActiveTab] = useState('inbox');
   const [inboxTab, setInboxTab] = useState('messages');
+  const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -22,6 +24,7 @@ const Inbox = () => {
         navigate('/tutorials');
         break;
       case 'create':
+        setIsCreateReelOpen(true);
         break;
       case 'inbox':
         navigate('/inbox');
@@ -39,24 +42,15 @@ const Inbox = () => {
     });
   };
 
-  const handleNotifications = () => {
-    setInboxTab('notifications');
-  };
-
   return (
     <div className="relative h-screen overflow-hidden bg-background">
       <div className="pt-8 pb-20 h-full overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-6">
           <h1 className="text-xl font-bold text-foreground">Inbox</h1>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={handleSearch}>
-              <Search className="w-5 h-5 text-foreground" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleNotifications}>
-              <Bell className="w-5 h-5 text-foreground" />
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={handleSearch}>
+            <Search className="w-5 h-5 text-foreground" />
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -114,6 +108,8 @@ const Inbox = () => {
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
     </div>
   );
 };
