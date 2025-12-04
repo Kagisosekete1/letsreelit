@@ -192,43 +192,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           </p>
         </div>
       ) : (
-        <div 
-          ref={containerRef}
-          className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-          onScroll={handleScroll}
-        >
-          {reels.map((reel, index) => (
-            <ReelCard
-              key={reel.id}
-              reel={{
-                id: reel.id,
-                videoUrl: reel.video_url,
-                thumbnailUrl: reel.thumbnail_url || '',
-                title: reel.title,
-                description: reel.description || '',
-                user: {
-                  id: reel.user_id,
-                  profileId: reel.profile?.id || '',
-                  username: reel.profile?.username || 'user',
-                  displayName: reel.profile?.display_name || 'User',
-                  avatarUrl: reel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
-                  verified: reel.profile?.verified || false,
-                },
-                stats: {
-                  likes: reel.likes_count || 0,
-                  comments: reel.comments_count || 0,
-                  shares: reel.shares_count || 0,
-                  views: reel.views_count || 0,
-                },
-                isLiked: false,
-              }}
-              followingIds={followingIds}
-              toggleFollow={toggleFollow}
-              isActive={index === activeReelIndex}
-              isOwner={authUser?.id === reel.user_id}
-              onDelete={handleDeleteReel}
-            />
-          ))}
+        <div className="relative flex-1">
+          {/* Subtle App Logo Watermark */}
+          <div className="absolute top-4 left-4 z-50 flex items-center space-x-2 opacity-20 pointer-events-none">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-black text-lg shadow-sm">
+              R
+            </div>
+            <span className="text-white font-bold text-lg">Reel'It</span>
+          </div>
+          
+          <div 
+            ref={containerRef}
+            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+            onScroll={handleScroll}
+          >
+            {reels.map((reel, index) => (
+              <ReelCard
+                key={reel.id}
+                reel={{
+                  id: reel.id,
+                  videoUrl: reel.video_url,
+                  thumbnailUrl: reel.thumbnail_url || '',
+                  title: reel.title,
+                  description: reel.description || '',
+                  user: {
+                    id: reel.user_id,
+                    profileId: reel.profile?.id || '',
+                    username: reel.profile?.username || 'user',
+                    displayName: reel.profile?.display_name || 'User',
+                    avatarUrl: reel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
+                    verified: reel.profile?.verified || false,
+                  },
+                  stats: {
+                    likes: reel.likes_count || 0,
+                    comments: reel.comments_count || 0,
+                    shares: reel.shares_count || 0,
+                    views: reel.views_count || 0,
+                  },
+                  isLiked: false,
+                }}
+                followingIds={followingIds}
+                toggleFollow={toggleFollow}
+                isActive={index === activeReelIndex}
+                isOwner={authUser?.id === reel.user_id}
+                onDelete={handleDeleteReel}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
