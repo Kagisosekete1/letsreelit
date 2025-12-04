@@ -117,15 +117,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   };
 
-  const toggleFollow = async (userId: string) => {
-    if (followingIds.has(userId)) {
+  const toggleFollow = async (profileId: string) => {
+    if (!authUser) return;
+
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', authUser.id)
+      .single();
+
+    if (!myProfile) return;
+
+    if (followingIds.has(profileId)) {
+      // Unfollow
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', myProfile.id)
+        .eq('following_id', profileId);
+
       setFollowingIds(prev => {
         const next = new Set(prev);
-        next.delete(userId);
+        next.delete(profileId);
         return next;
       });
     } else {
-      setFollowingIds(prev => new Set([...prev, userId]));
+      // Follow
+      await supabase
+        .from('follows')
+        .insert({
+          follower_id: myProfile.id,
+          following_id: profileId,
+        });
+
+      setFollowingIds(prev => new Set([...prev, profileId]));
     }
   };
 

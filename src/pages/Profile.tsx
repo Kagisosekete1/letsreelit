@@ -20,6 +20,12 @@ interface ReelData {
   views_count: number;
 }
 
+interface SavedReelData {
+  id: string;
+  reel_id: string;
+  reel?: ReelData;
+}
+
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [contentTab, setContentTab] = useState('reels');
@@ -34,11 +40,13 @@ const Profile = () => {
   const [followingModal, setFollowingModal] = useState(false);
   const [reelsModal, setReelsModal] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
+  const [savedReels, setSavedReels] = useState<ReelData[]>([]);
   const [selectedReel, setSelectedReel] = useState<ReelData | null>(null);
 
   useEffect(() => {
     if (authUser) {
       fetchUserReels();
+      fetchSavedReels();
     }
   }, [authUser]);
 
@@ -51,6 +59,27 @@ const Profile = () => {
       .order('created_at', { ascending: false });
     
     if (data) setUserReels(data);
+  };
+
+  const fetchSavedReels = async () => {
+    if (!authUser) return;
+    const { data: savedData } = await supabase
+      .from('saved_reels')
+      .select('reel_id')
+      .eq('user_id', authUser.id)
+      .order('created_at', { ascending: false });
+    
+    if (savedData && savedData.length > 0) {
+      const reelIds = savedData.map(s => s.reel_id);
+      const { data: reelsData } = await supabase
+        .from('reels')
+        .select('id, title, video_url, thumbnail_url, views_count')
+        .in('id', reelIds);
+      
+      if (reelsData) setSavedReels(reelsData);
+    } else {
+      setSavedReels([]);
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -250,12 +279,38 @@ const Profile = () => {
         )}
 
         {contentTab === 'saved' && (
-          <div className="px-4 py-8">
-            <div className="text-center text-muted-foreground">
-              <p className="text-lg font-medium mb-2">No saved reels</p>
-              <p className="text-sm">Your saved reels will appear here</p>
+          savedReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No saved reels</p>
+                <p className="text-sm">Your saved reels will appear here</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {savedReels.map((reel) => (
+                <div
+                  key={reel.id}
+                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  onClick={() => handleReelClick(reel)}
+                >
+                  <video
+                    src={reel.video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white" fill="currentColor" />
+                  </div>
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
+                    <Play className="w-3 h-3 text-white" fill="currentColor" />
+                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
