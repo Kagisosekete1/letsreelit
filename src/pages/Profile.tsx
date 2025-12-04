@@ -8,17 +8,22 @@ import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
 import ShareProfileModal from '@/components/ShareProfileModal';
 import CreateReelModal from '@/components/CreateReelModal';
+import FollowersModal from '@/components/FollowersModal';
+import ReelsModal from '@/components/ReelsModal';
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [contentTab, setContentTab] = useState('reels');
   const navigate = useNavigate();
-  const { currentUser, loading } = useUser();
+  const { currentUser, authUser, loading } = useUser();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
+  const [followersModal, setFollowersModal] = useState(false);
+  const [followingModal, setFollowingModal] = useState(false);
+  const [reelsModal, setReelsModal] = useState(false);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -86,7 +91,7 @@ const Profile = () => {
               <Button 
                 variant="ghost" 
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => navigate('/following')}
+                onClick={() => setFollowingModal(true)}
               >
                 <p className="text-lg font-bold">{currentUser.stats.following}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
@@ -94,7 +99,7 @@ const Profile = () => {
               <Button 
                 variant="ghost" 
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => navigate('/followers')}
+                onClick={() => setFollowersModal(true)}
               >
                 <p className="text-lg font-bold">{currentUser.stats.followers}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
@@ -102,7 +107,7 @@ const Profile = () => {
               <Button 
                 variant="ghost" 
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => setContentTab('reels')}
+                onClick={() => setReelsModal(true)}
               >
                 <p className="text-lg font-bold">{currentUser.stats.reels}</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
@@ -161,7 +166,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Empty Video Grid */}
+        {/* Empty Content Grid */}
         <div className="px-4 py-8">
           <div className="text-center text-muted-foreground">
             <p className="text-lg font-medium mb-2">No {contentTab} yet</p>
@@ -189,6 +194,29 @@ const Profile = () => {
         username={currentUser.username}
       />
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
+      
+      {/* Stats Modals */}
+      <FollowersModal
+        isOpen={followersModal}
+        onClose={() => setFollowersModal(false)}
+        userId={authUser?.id || ''}
+        type="followers"
+        count={currentUser.stats.followers}
+      />
+      <FollowersModal
+        isOpen={followingModal}
+        onClose={() => setFollowingModal(false)}
+        userId={authUser?.id || ''}
+        type="following"
+        count={currentUser.stats.following}
+      />
+      <ReelsModal
+        isOpen={reelsModal}
+        onClose={() => setReelsModal(false)}
+        userId={authUser?.id || ''}
+        count={currentUser.stats.reels}
+        isOwnProfile={true}
+      />
     </div>
   );
 };

@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { 
-  Upload, 
-  Video, 
-  Scissors, 
-  Crop,
-  Sparkles,
-  Radio,
-  X
-} from 'lucide-react';
+import { Upload, Video, Radio, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ReelUploadModal from './ReelUploadModal';
 
 interface CreateReelModalProps {
   isOpen: boolean;
@@ -20,11 +13,12 @@ interface CreateReelModalProps {
 const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handleUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'video/mp4,video/quicktime';
+    input.accept = 'video/mp4,video/quicktime,video/webm';
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -34,17 +28,15 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
         video.onloadedmetadata = () => {
           if (video.videoHeight > video.videoWidth) {
             setSelectedFile(file);
-            toast({
-              title: "Video uploaded",
-              description: "Your video is ready for editing!",
-            });
+            setShowUploadModal(true);
           } else {
             toast({
               title: "Invalid orientation",
-              description: "Please upload a portrait video (vertical)",
+              description: "Please upload a portrait reel (vertical)",
               variant: "destructive",
             });
           }
+          URL.revokeObjectURL(video.src);
         };
         video.src = URL.createObjectURL(file);
       }
@@ -52,62 +44,69 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     input.click();
   };
 
+  const handleRecord = () => {
+    toast({ title: "Coming soon", description: "Camera recording feature coming soon!" });
+  };
+
+  const handleGoLive = () => {
+    toast({ title: "Go Live", description: "Live streaming feature coming soon!" });
+  };
+
+  const handleUploadModalClose = () => {
+    setShowUploadModal(false);
+    setSelectedFile(null);
+    onClose();
+  };
+
   const options = [
     {
       icon: Upload,
       title: 'Upload from Gallery',
-      description: 'Choose a video from your device',
+      description: 'Choose a portrait reel from your device',
       color: 'bg-primary',
       action: handleUpload,
     },
     {
       icon: Video,
-      title: 'Record Video',
-      description: 'Record a new video',
+      title: 'Record Reel',
+      description: 'Record a new portrait reel',
       color: 'bg-destructive',
-      action: () => toast({ title: "Coming soon", description: "Camera feature coming soon!" }),
-    },
-    {
-      icon: Crop,
-      title: 'Crop & Trim',
-      description: 'Edit your video length',
-      color: 'bg-accent',
-      action: () => toast({ title: "Coming soon", description: "Crop feature coming soon!" }),
-    },
-    {
-      icon: Sparkles,
-      title: 'Filters & Effects',
-      description: 'Add stunning filters',
-      color: 'bg-purple-500',
-      action: () => toast({ title: "Coming soon", description: "Filters coming soon!" }),
+      action: handleRecord,
     },
     {
       icon: Radio,
       title: 'Go Live',
-      description: 'Start a live stream',
+      description: 'Start a live stream for your fans',
       color: 'bg-pink-500',
-      action: () => toast({ title: "Coming soon", description: "Live streaming coming soon!" }),
+      action: handleGoLive,
     },
   ];
+
+  if (showUploadModal && selectedFile) {
+    return (
+      <ReelUploadModal
+        isOpen={showUploadModal}
+        onClose={handleUploadModalClose}
+        videoFile={selectedFile}
+      />
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Reel</DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-4 top-4"
-            onClick={onClose}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Create Reel</DialogTitle>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </DialogHeader>
         
         <div className="space-y-3 py-4">
           <p className="text-sm text-muted-foreground px-1">
-            Portrait videos only (vertical orientation)
+            Portrait reels only (vertical orientation)
           </p>
           
           {options.map((option, idx) => (

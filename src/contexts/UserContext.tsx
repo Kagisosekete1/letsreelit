@@ -11,6 +11,7 @@ interface UserContextType {
   signOut: () => Promise<void>;
   followUser: (userId: string) => void;
   unfollowUser: (userId: string) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -41,6 +42,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           reels: data.reels_count || 0,
         },
       });
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (authUser) {
+      await fetchProfile(authUser.id);
     }
   };
 
@@ -85,16 +92,73 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthUser(null);
   };
 
-  const followUser = (userId: string) => {
-    setCurrentUser(prev => prev ? { ...prev, stats: { ...prev.stats, following: prev.stats.following + 1 } } : null);
+  const followUser = async (targetProfileId: string) => {
+    if (!authUser || !currentUser) return;
+
+    try {
+      // Get current user's profile id
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .single();
+
+      if (!myProfile) return;
+
+      // Insert follow record
+      const { error } = await supabase
+        .from('follows')
+        .insert({
+          follower_id: myProfile.id,
+          following_id: targetProfileId,
+        });
+
+      if (!error) {
+        // Update local state
+        setCurrentUser(prev => prev ? {
+          ...prev,
+          stats: { ...prev.stats, following: prev.stats.following + 1 }
+        } : null);
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
   };
 
-  const unfollowUser = (userId: string) => {
-    setCurrentUser(prev => prev ? { ...prev, stats: { ...prev.stats, following: Math.max(0, prev.stats.following - 1) } } : null);
+  const unfollowUser = async (targetProfileId: string) => {
+    if (!authUser || !currentUser) return;
+
+    try {
+      // Get current user's profile id
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .single();
+
+      if (!myProfile) return;
+
+      // Delete follow record
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', myProfile.id)
+        .eq('following_id', targetProfileId);
+
+      if (!error) {
+        // Update local state
+        setCurrentUser(prev => prev ? {
+          ...prev,
+          stats: { ...prev.stats, following: Math.max(0, prev.stats.following - 1) }
+        } : null);
+      }
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+    }
   };
 
   return (
-    <UserContext.Provider value={{ currentUser, authUser, loading, updateUser, signOut, followUser, unfollowUser }}>
+    <UserContext.Provider value={{ currentUser, authUser, loading, updateUser, signOut, followUser, unfollowUser, refreshProfile }}>
       {children}
     </UserContext.Provider>
   );
