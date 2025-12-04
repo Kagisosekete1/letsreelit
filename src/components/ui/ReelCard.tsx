@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Play, Volume2, VolumeX, Download, Flag, Ban } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX, Download, Flag, Ban, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Reel {
   id: string;
@@ -18,6 +19,7 @@ interface Reel {
   description?: string;
   user: {
     id: string;
+    profileId: string;
     username: string;
     displayName: string;
     avatarUrl: string;
@@ -27,6 +29,7 @@ interface Reel {
     likes: number;
     comments: number;
     shares: number;
+    views: number;
   };
   soundTrack?: {
     title: string;
@@ -40,7 +43,9 @@ interface ReelCardProps {
   followingIds: Set<string>;
   toggleFollow: (userId: string) => void;
   isActive?: boolean;
+  isOwner?: boolean;
   onPause?: () => void;
+  onDelete?: (reelId: string) => void;
 }
 
 const ReelCard: React.FC<ReelCardProps> = ({ 
@@ -48,26 +53,37 @@ const ReelCard: React.FC<ReelCardProps> = ({
   followingIds, 
   toggleFollow,
   isActive = false,
+  isOwner = false,
   onPause,
+  onDelete,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
+  const [commentCount, setCommentCount] = useState(reel.stats.comments);
+  const [shareCount, setShareCount] = useState(reel.stats.shares);
 
-  // Auto-play/pause based on active state
+  // Auto-play/pause based on active state with sound management
   useEffect(() => {
     if (videoRef.current) {
       if (isActive) {
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        videoRef.current.currentTime = 0;
         videoRef.current.muted = false;
         setIsMuted(false);
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+          // Autoplay blocked, try muted
+          videoRef.current!.muted = true;
+          setIsMuted(true);
+          videoRef.current!.play().then(() => setIsPlaying(true)).catch(() => {});
+        });
       } else {
         videoRef.current.pause();
         videoRef.current.muted = true;
+        videoRef.current.currentTime = 0;
         setIsPlaying(false);
         setIsMuted(true);
       }
@@ -86,16 +102,24 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
   };
 
-  const toggleMute = () => {
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+  const handleLike = async () => {
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikeCount(prev => newIsLiked ? prev + 1 : prev - 1);
+    
+    // Update in database
+    await supabase
+      .from('reels')
+      .update({ likes_count: newIsLiked ? likeCount + 1 : likeCount - 1 })
+      .eq('id', reel.id);
   };
 
   const handleUserClick = () => {
@@ -109,7 +133,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
     });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    setShareCount(prev => prev + 1);
+    await supabase
+      .from('reels')
+      .update({ shares_count: shareCount + 1 })
+      .eq('id', reel.id);
+
     if (navigator.share) {
       navigator.share({
         title: reel.title,
@@ -150,7 +180,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
   };
 
-  const handleReport = () => {
+  const handleReport = async () => {
     toast({
       title: "Report submitted",
       description: "Thank you for reporting this content. We'll review it shortly.",
@@ -164,14 +194,42 @@ const ReelCard: React.FC<ReelCardProps> = ({
     });
   };
 
-  const isFollowing = followingIds.has(reel.user.id);
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('reels')
+        .delete()
+        .eq('id', reel.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Reel deleted",
+        description: "Your reel has been removed.",
+      });
+      onDelete?.(reel.id);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete reel.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isFollowing = followingIds.has(reel.user.profileId);
+
+  const formatCount = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+  };
 
   return (
     <div className="relative h-screen w-full bg-black snap-start flex items-center justify-center snap-always">
       <video
         ref={videoRef}
         className="w-full h-full object-cover"
-        style={{ objectFit: 'cover' }}
         src={reel.videoUrl}
         loop
         muted={isMuted}
@@ -180,168 +238,158 @@ const ReelCard: React.FC<ReelCardProps> = ({
         onClick={togglePlay}
       />
       
-      {/* Play/Pause Overlay */}
-      {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-          <Button
-            variant="ghost"
-            size="lg"
-            className="backdrop-blur-sm rounded-full p-8 hover:scale-110 transition-transform"
-            onClick={togglePlay}
-          >
-            <Play className="w-10 h-10 text-white drop-shadow-lg" fill="currentColor" strokeWidth={0} />
-          </Button>
+      {/* Play/Pause Center Icon */}
+      <div 
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ opacity: isPlaying ? 0 : 1, transition: 'opacity 0.2s' }}
+      >
+        <div className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <Play className="w-8 h-8 text-white ml-1" fill="white" />
         </div>
-      )}
+      </div>
 
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-      {/* Top Right Controls */}
+      {/* Top Controls - Mute Button */}
       <div className="absolute top-4 right-4 z-10">
         <Button
           variant="ghost"
           size="sm"
-          className="backdrop-blur-sm rounded-full p-2 hover:scale-110 transition-transform bg-black/20"
+          className="rounded-full p-2 bg-black/20 backdrop-blur-sm hover:bg-black/40"
           onClick={toggleMute}
         >
           {isMuted ? (
-            <VolumeX className="w-5 h-5 text-white drop-shadow-lg" />
+            <VolumeX className="w-4 h-4 text-white" />
           ) : (
-            <Volume2 className="w-5 h-5 text-white drop-shadow-lg" />
+            <Volume2 className="w-4 h-4 text-white" />
           )}
         </Button>
       </div>
 
-      {/* Reel Info */}
-      <div className="absolute bottom-20 left-4 right-20 z-10">
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              className="p-0 h-auto hover:bg-transparent"
-              onClick={handleUserClick}
-            >
+      {/* User Info & Description - Bottom Left */}
+      <div className="absolute bottom-24 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <button onClick={handleUserClick} className="flex items-center space-x-2">
               <img
                 src={reel.user.avatarUrl}
                 alt={reel.user.username}
-                className="w-10 h-10 rounded-full border-2 border-white/30"
+                className="w-8 h-8 rounded-full border border-white/30"
               />
-            </Button>
-            <Button
-              variant="ghost"
-              className="p-0 h-auto hover:bg-transparent"
-              onClick={handleUserClick}
-            >
-              <span className="text-white font-semibold drop-shadow-lg">@{reel.user.username}</span>
-            </Button>
+              <span className="text-white font-semibold text-sm">@{reel.user.username}</span>
+            </button>
             {reel.user.verified && (
-              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-xs text-white">✓</span>
+              <div className="w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-[10px] text-white">✓</span>
               </div>
             )}
-            {!isFollowing && (
+            {!isFollowing && !isOwner && (
               <Button
                 size="sm"
-                className="ml-2 bg-primary text-white hover:bg-primary/90 rounded-lg font-semibold shadow-button"
-                onClick={() => toggleFollow(reel.user.id)}
+                className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md"
+                onClick={() => toggleFollow(reel.user.profileId)}
               >
                 Follow
               </Button>
             )}
           </div>
-          <p className="text-white text-sm leading-relaxed drop-shadow-lg">{reel.title}</p>
+          <p className="text-white text-xs leading-relaxed line-clamp-2">{reel.title}</p>
           {reel.description && (
-            <p className="text-white/80 text-sm drop-shadow-lg">{reel.description}</p>
-          )}
-          {reel.soundTrack && (
-            <div className="flex items-center space-x-2 text-white/70 text-sm drop-shadow-lg">
-              <span>♪</span>
-              <span>{reel.soundTrack.title} - {reel.soundTrack.artist}</span>
-            </div>
+            <p className="text-white/70 text-xs line-clamp-1">{reel.description}</p>
           )}
         </div>
       </div>
 
-      {/* Action Buttons - TikTok Style */}
-      <div className="absolute bottom-24 right-4 z-10 flex flex-col items-center space-y-5">
+      {/* Action Buttons - Right Side (TikTok Style, Smaller & Lower) */}
+      <div className="absolute bottom-28 right-2 z-10 flex flex-col items-center space-y-4" style={{ opacity: 0.85 }}>
+        {/* User Avatar */}
+        <button onClick={handleUserClick} className="relative mb-2">
+          <img
+            src={reel.user.avatarUrl}
+            alt={reel.user.username}
+            className="w-10 h-10 rounded-full border-2 border-white"
+          />
+        </button>
+
         {/* Like */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+        <button
+          className="flex flex-col items-center"
           onClick={handleLike}
         >
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/20' : 'bg-black/30'}`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/30' : 'bg-black/20'}`}>
             <Heart 
-              className={`w-7 h-7 transition-all duration-200 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
+              className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`}
             />
           </div>
-          <span className="text-xs text-white font-semibold drop-shadow-lg">{likeCount}</span>
-        </Button>
+          <span className="text-[10px] text-white mt-0.5">{formatCount(likeCount)}</span>
+        </button>
 
         {/* Comment */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+        <button
+          className="flex flex-col items-center"
           onClick={handleComment}
         >
-          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
-            <MessageCircle className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          <div className="w-9 h-9 rounded-full bg-black/20 flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.comments}</span>
-        </Button>
+          <span className="text-[10px] text-white mt-0.5">{formatCount(commentCount)}</span>
+        </button>
 
         {/* Share */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+        <button
+          className="flex flex-col items-center"
           onClick={handleShare}
         >
-          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
-            <Share className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          <div className="w-9 h-9 rounded-full bg-black/20 flex items-center justify-center">
+            <Share className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xs text-white font-semibold drop-shadow-lg">{reel.stats.shares}</span>
-        </Button>
+          <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
+        </button>
 
         {/* Download */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex flex-col items-center gap-1 p-0 h-auto hover:bg-transparent transition-transform"
+        <button
+          className="flex flex-col items-center"
           onClick={handleDownload}
         >
-          <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
-            <Download className="w-7 h-7 text-white transition-transform duration-200 active:scale-110" />
+          <div className="w-9 h-9 rounded-full bg-black/20 flex items-center justify-center">
+            <Download className="w-5 h-5 text-white" />
           </div>
-        </Button>
+        </button>
 
         {/* More Options */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-0 h-auto hover:bg-transparent active:scale-95 transition-transform"
-            >
-              <div className="w-12 h-12 rounded-full bg-black/30 flex items-center justify-center">
-                <MoreHorizontal className="w-7 h-7 text-white" />
+            <button className="flex flex-col items-center">
+              <div className="w-9 h-9 rounded-full bg-black/20 flex items-center justify-center">
+                <MoreHorizontal className="w-5 h-5 text-white" />
               </div>
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl">
+            {isOwner && (
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Reel
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleReport} className="text-destructive">
               <Flag className="w-4 h-4 mr-2" />
               Report
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBlock} className="text-destructive">
-              <Ban className="w-4 h-4 mr-2" />
-              Block User
-            </DropdownMenuItem>
+            {!isOwner && (
+              <DropdownMenuItem onClick={handleBlock} className="text-destructive">
+                <Ban className="w-4 h-4 mr-2" />
+                Block User
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      {/* Views Count - Bottom */}
+      <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
+        <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
       </div>
     </div>
   );
