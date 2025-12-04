@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Tutorials from "./pages/Tutorials";
 import Profile from "./pages/Profile";
@@ -26,9 +27,21 @@ const App = () => (
           <div className="bg-background min-h-screen">
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/tutorials" element={<Tutorials />} />
-              <Route path="/inbox" element={<Inbox />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/tutorials" element={
+                <ProtectedRoute>
+                  <Tutorials />
+                </ProtectedRoute>
+              } />
+              <Route path="/inbox" element={
+                <ProtectedRoute>
+                  <Inbox />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } />
               <Route path="/user/:username" element={<UserProfile />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/terms" element={<Terms />} />
