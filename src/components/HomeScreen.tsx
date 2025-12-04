@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Screen } from '@/types';
-import StoryBubble from './ui/StoryBubble';
-import StoryUploadModal from './StoryUploadModal';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
@@ -20,9 +18,11 @@ interface ReelData {
   likes_count: number;
   comments_count: number;
   shares_count: number;
+  views_count: number;
   user_id: string;
   created_at: string;
   profile?: {
+    id: string;
     username: string;
     display_name: string;
     avatar_url: string | null;
@@ -31,33 +31,53 @@ interface ReelData {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => {
-  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewedReels = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     fetchReels();
     if (authUser) fetchFollowing();
   }, [authUser]);
 
+  // Track view when reel becomes active (only for non-owners)
+  useEffect(() => {
+    const currentReel = reels[activeReelIndex];
+    if (currentReel && authUser && currentReel.user_id !== authUser.id && !viewedReels.current.has(currentReel.id)) {
+      viewedReels.current.add(currentReel.id);
+      incrementViewCount(currentReel.id);
+    }
+  }, [activeReelIndex, reels, authUser]);
+
+  const incrementViewCount = async (reelId: string) => {
+    try {
+      await supabase.rpc('increment_view_count', { reel_id: reelId });
+    } catch {
+      // Fallback: direct update
+      const currentReel = reels.find(r => r.id === reelId);
+      await supabase
+        .from('reels')
+        .update({ views_count: (currentReel?.views_count || 0) + 1 })
+        .eq('id', reelId);
+    }
+  };
+
   const fetchReels = async () => {
     try {
-      // Fetch reels
       const { data: reelsData } = await supabase
         .from('reels')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (reelsData && reelsData.length > 0) {
-        // Fetch profiles separately
         const userIds = [...new Set(reelsData.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, username, display_name, avatar_url, verified')
+          .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
@@ -65,7 +85,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           ...r,
           profile: profileMap.get(r.user_id)
         }));
-        setReels(reelsWithProfiles as ReelData[]);
+        
+        // Shuffle reels randomly
+        const shuffled = [...reelsWithProfiles].sort(() => Math.random() - 0.5);
+        setReels(shuffled as ReelData[]);
       }
     } catch (error) {
       console.error('Error fetching reels:', error);
@@ -95,7 +118,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   };
 
   const toggleFollow = async (userId: string) => {
-    // Simplified follow toggle
     if (followingIds.has(userId)) {
       setFollowingIds(prev => {
         const next = new Set(prev);
@@ -107,39 +129,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   };
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleDeleteReel = async (reelId: string) => {
+    setReels(prev => prev.filter(r => r.id !== reelId));
+  };
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const scrollTop = container.scrollTop;
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
-    if (newIndex !== activeReelIndex) {
+    if (newIndex !== activeReelIndex && newIndex >= 0 && newIndex < reels.length) {
       setActiveReelIndex(newIndex);
     }
-  };
+  }, [activeReelIndex, reels.length]);
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-background">
+      <div className="h-full flex items-center justify-center bg-black">
         <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-background animate-fade-in">
-      {/* Stories Bar with glass effect */}
-      <div className="flex-shrink-0 backdrop-blur-glass border-b border-border/50 z-10">
-        <div className="flex space-x-4 p-4 overflow-x-auto scrollbar-hide">
-          <StoryBubble 
-            avatarUrl={currentUser?.avatarUrl || "https://picsum.photos/id/1005/200"}
-            username="Story'It" 
-            isCurrentUser={true}
-            onClick={() => setIsStoryModalOpen(true)}
-          />
-        </div>
-      </div>
-      
-      {/* Reels Feed */}
+    <div className="h-full flex flex-col bg-black animate-fade-in">
+      {/* Reels Feed - Full Screen */}
       {reels.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
@@ -147,8 +161,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold mb-2 text-foreground">No reels yet</h2>
-          <p className="text-muted-foreground text-center text-sm">
+          <h2 className="text-lg font-semibold mb-2 text-white">No reels yet</h2>
+          <p className="text-white/60 text-center text-sm">
             Be the first to share your dance moves!
           </p>
         </div>
@@ -169,6 +183,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                 description: reel.description || '',
                 user: {
                   id: reel.user_id,
+                  profileId: reel.profile?.id || '',
                   username: reel.profile?.username || 'user',
                   displayName: reel.profile?.display_name || 'User',
                   avatarUrl: reel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
@@ -178,22 +193,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   likes: reel.likes_count || 0,
                   comments: reel.comments_count || 0,
                   shares: reel.shares_count || 0,
+                  views: reel.views_count || 0,
                 },
                 isLiked: false,
               }}
               followingIds={followingIds}
               toggleFollow={toggleFollow}
               isActive={index === activeReelIndex}
+              isOwner={authUser?.id === reel.user_id}
+              onDelete={handleDeleteReel}
             />
           ))}
         </div>
-      )}
-
-      {isStoryModalOpen && (
-        <StoryUploadModal 
-          isOpen={isStoryModalOpen} 
-          onClose={() => setIsStoryModalOpen(false)} 
-        />
       )}
     </div>
   );

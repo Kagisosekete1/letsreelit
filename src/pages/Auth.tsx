@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Mail, Lock, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { authSchema, signUpSchema } from '@/lib/validations';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,6 +15,7 @@ const Auth = () => {
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -35,9 +37,30 @@ const Auth = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     setLoading(true);
 
     try {
+      // Validate with zod schema
+      const schema = isSignUp ? signUpSchema : authSchema;
+      const dataToValidate = isSignUp 
+        ? { email, password, username, displayName: displayName || undefined }
+        : { email, password };
+      
+      const result = schema.safeParse(dataToValidate);
+      
+      if (!result.success) {
+        const fieldErrors: Record<string, string> = {};
+        result.error.issues.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        setLoading(false);
+        return;
+      }
+
       if (isSignUp) {
         // Check if username exists
         const { data: existingUser } = await supabase
@@ -47,11 +70,7 @@ const Auth = () => {
           .single();
 
         if (existingUser) {
-          toast({
-            title: "Username taken",
-            description: "This username is already in use. Please choose another.",
-            variant: "destructive",
-          });
+          setErrors({ username: 'This username is already taken' });
           setLoading(false);
           return;
         }
@@ -140,11 +159,13 @@ const Auth = () => {
                       type="text"
                       placeholder="yourhandle"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                      className="pl-10 rounded-xl"
-                      required={isSignUp}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      className={`pl-10 rounded-xl ${errors.username ? 'border-destructive' : ''}`}
                     />
                   </div>
+                  {errors.username && (
+                    <p className="text-xs text-destructive">{errors.username}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -159,9 +180,12 @@ const Auth = () => {
                       placeholder="Your Name"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="pl-10 rounded-xl"
+                      className={`pl-10 rounded-xl ${errors.displayName ? 'border-destructive' : ''}`}
                     />
                   </div>
+                  {errors.displayName && (
+                    <p className="text-xs text-destructive">{errors.displayName}</p>
+                  )}
                 </div>
               </>
             )}
@@ -178,10 +202,12 @@ const Auth = () => {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 rounded-xl"
-                  required
+                  className={`pl-10 rounded-xl ${errors.email ? 'border-destructive' : ''}`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -196,11 +222,12 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 rounded-xl"
-                  required
-                  minLength={6}
+                  className={`pl-10 rounded-xl ${errors.password ? 'border-destructive' : ''}`}
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password}</p>
+              )}
             </div>
 
             <Button type="submit" className="w-full rounded-xl" disabled={loading}>
@@ -212,7 +239,10 @@ const Auth = () => {
             <Button
               type="button"
               variant="link"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setErrors({});
+              }}
               className="text-sm"
             >
               {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}

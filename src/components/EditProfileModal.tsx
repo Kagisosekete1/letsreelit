@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Camera } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { profileSchema } from '@/lib/validations';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     username: currentUser?.username || '',
     displayName: currentUser?.displayName || '',
@@ -33,15 +34,12 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
     const file = e.target.files?.[0];
     if (!file || !authUser) return;
 
-    // Preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Upload to storage would go here
-    // For now, we'll use the preview URL
     toast({
       title: "Photo selected",
       description: "Your photo will be saved when you click Save Changes",
@@ -50,9 +48,29 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
 
   const handleSave = async () => {
     if (!currentUser) return;
+    setErrors({});
     setLoading(true);
 
     try {
+      // Validate with zod schema
+      const result = profileSchema.safeParse({
+        username: formData.username,
+        displayName: formData.displayName,
+        bio: formData.bio || undefined,
+      });
+
+      if (!result.success) {
+        const fieldErrors: Record<string, string> = {};
+        result.error.issues.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        setLoading(false);
+        return;
+      }
+
       await updateUser({
         username: formData.username,
         displayName: formData.displayName,
@@ -123,10 +141,13 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
               <label className="text-sm font-medium text-foreground">Username</label>
               <Input
                 value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
                 placeholder="@username"
-                className="mt-1 rounded-xl"
+                className={`mt-1 rounded-xl ${errors.username ? 'border-destructive' : ''}`}
               />
+              {errors.username && (
+                <p className="text-xs text-destructive mt-1">{errors.username}</p>
+              )}
             </div>
 
             <div>
@@ -135,8 +156,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
                 value={formData.displayName}
                 onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                 placeholder="Your Name"
-                className="mt-1 rounded-xl"
+                className={`mt-1 rounded-xl ${errors.displayName ? 'border-destructive' : ''}`}
               />
+              {errors.displayName && (
+                <p className="text-xs text-destructive mt-1">{errors.displayName}</p>
+              )}
             </div>
 
             <div>
@@ -145,9 +169,12 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Tell us about yourself..."
-                className="mt-1 resize-none rounded-xl"
+                className={`mt-1 resize-none rounded-xl ${errors.bio ? 'border-destructive' : ''}`}
                 rows={3}
               />
+              {errors.bio && (
+                <p className="text-xs text-destructive mt-1">{errors.bio}</p>
+              )}
             </div>
           </div>
 
