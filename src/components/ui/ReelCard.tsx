@@ -73,6 +73,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [commentCount, setCommentCount] = useState(reel.stats.comments);
   const [shareCount, setShareCount] = useState(reel.stats.shares);
   const [showComments, setShowComments] = useState(false);
+  const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const lastTapRef = useRef<number>(0);
 
   // Check if user has liked/saved this reel
   useEffect(() => {
@@ -114,6 +116,42 @@ const ReelCard: React.FC<ReelCardProps> = ({
       }
     }
   }, [isActive]);
+
+  const handleVideoTap = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap - like
+      handleDoubleTapLike();
+      lastTapRef.current = 0;
+    } else {
+      // Single tap - play/pause
+      lastTapRef.current = now;
+      setTimeout(() => {
+        if (lastTapRef.current !== 0 && Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
+          togglePlay();
+        }
+      }, DOUBLE_TAP_DELAY);
+    }
+  };
+
+  const handleDoubleTapLike = async () => {
+    // Show heart animation
+    setShowDoubleTapHeart(true);
+    setTimeout(() => setShowDoubleTapHeart(false), 800);
+
+    // Like if not already liked
+    if (!isLiked) {
+      setIsLiked(true);
+      setLikeCount(prev => prev + 1);
+      
+      if (authUser) {
+        await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
+        await supabase.from('reels').update({ likes_count: likeCount + 1 }).eq('id', reel.id);
+      }
+    }
+  };
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -253,8 +291,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
         muted={isMuted}
         playsInline
         poster={reel.thumbnailUrl}
-        onClick={togglePlay}
+        onClick={handleVideoTap}
       />
+      
+      {/* Double-tap Heart Animation */}
+      {showDoubleTapHeart && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+          <Heart 
+            className="w-24 h-24 text-red-500 fill-red-500 animate-ping" 
+            style={{ animationDuration: '0.6s' }}
+          />
+        </div>
+      )}
       
       {/* Play/Pause Center Icon */}
       <div 
@@ -282,7 +330,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
       </div>
 
       {/* User Info & Description - Bottom Left */}
-      <div className="absolute bottom-24 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
+      <div className="absolute bottom-16 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <button onClick={handleUserClick} className="flex items-center space-x-2">
@@ -316,7 +364,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
       </div>
 
       {/* Action Buttons - Right Side */}
-      <div className="absolute bottom-28 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
+      <div className="absolute bottom-20 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
         {/* User Avatar */}
         <button onClick={handleUserClick} className="relative mb-1">
           <img
