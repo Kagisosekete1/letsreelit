@@ -247,7 +247,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     <div className="relative h-screen w-full bg-black snap-start flex items-center justify-center snap-always">
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain md:object-contain"
         src={reel.videoUrl}
         loop
         muted={isMuted}

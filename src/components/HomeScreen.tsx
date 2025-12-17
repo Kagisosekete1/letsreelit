@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, TouchEvent } from 'react';
 import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +38,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
+  const touchStartY = useRef<number>(0);
+  const touchEndY = useRef<number>(0);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -171,6 +173,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   }, [activeReelIndex, reels.length]);
 
+  // Touch swipe handlers
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchStartY.current - touchEndY.current;
+    const threshold = 50; // Minimum swipe distance
+
+    if (Math.abs(swipeDistance) > threshold) {
+      if (swipeDistance > 0 && activeReelIndex < reels.length - 1) {
+        // Swipe up - next reel
+        goToReel(activeReelIndex + 1);
+      } else if (swipeDistance < 0 && activeReelIndex > 0) {
+        // Swipe down - previous reel
+        goToReel(activeReelIndex - 1);
+      }
+    }
+  };
+
+  const goToReel = (index: number) => {
+    if (containerRef.current) {
+      const itemHeight = containerRef.current.clientHeight;
+      containerRef.current.scrollTo({
+        top: index * itemHeight,
+        behavior: 'smooth'
+      });
+      setActiveReelIndex(index);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-black">
@@ -195,49 +232,55 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           </p>
         </div>
       ) : (
-        <div className="relative flex-1">
-          {/* Subtle App Logo Watermark */}
-          <div className="absolute top-4 left-4 z-50 pointer-events-none">
-            <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
-          </div>
-          
-          <div 
-            ref={containerRef}
-            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-            onScroll={handleScroll}
-          >
-            {reels.map((reel, index) => (
-              <ReelCard
-                key={reel.id}
-                reel={{
-                  id: reel.id,
-                  videoUrl: reel.video_url,
-                  thumbnailUrl: reel.thumbnail_url || '',
-                  title: reel.title,
-                  description: reel.description || '',
-                  user: {
-                    id: reel.user_id,
-                    profileId: reel.profile?.id || '',
-                    username: reel.profile?.username || 'user',
-                    displayName: reel.profile?.display_name || 'User',
-                    avatarUrl: reel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
-                    verified: reel.profile?.verified || false,
-                  },
-                  stats: {
-                    likes: reel.likes_count || 0,
-                    comments: reel.comments_count || 0,
-                    shares: reel.shares_count || 0,
-                    views: reel.views_count || 0,
-                  },
-                  isLiked: false,
-                }}
-                followingIds={followingIds}
-                toggleFollow={toggleFollow}
-                isActive={index === activeReelIndex}
-                isOwner={authUser?.id === reel.user_id}
-                onDelete={handleDeleteReel}
-              />
-            ))}
+        <div className="relative flex-1 flex items-center justify-center">
+          {/* Desktop Container with Black Sides */}
+          <div className="relative h-full w-full md:w-auto md:max-w-[400px] lg:max-w-[450px] md:aspect-[9/16] md:mx-auto bg-black">
+            {/* Subtle App Logo Watermark */}
+            <div className="absolute top-4 left-4 z-50 pointer-events-none">
+              <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
+            </div>
+            
+            <div 
+              ref={containerRef}
+              className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide touch-pan-y"
+              onScroll={handleScroll}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {reels.map((reel, index) => (
+                <ReelCard
+                  key={reel.id}
+                  reel={{
+                    id: reel.id,
+                    videoUrl: reel.video_url,
+                    thumbnailUrl: reel.thumbnail_url || '',
+                    title: reel.title,
+                    description: reel.description || '',
+                    user: {
+                      id: reel.user_id,
+                      profileId: reel.profile?.id || '',
+                      username: reel.profile?.username || 'user',
+                      displayName: reel.profile?.display_name || 'User',
+                      avatarUrl: reel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
+                      verified: reel.profile?.verified || false,
+                    },
+                    stats: {
+                      likes: reel.likes_count || 0,
+                      comments: reel.comments_count || 0,
+                      shares: reel.shares_count || 0,
+                      views: reel.views_count || 0,
+                    },
+                    isLiked: false,
+                  }}
+                  followingIds={followingIds}
+                  toggleFollow={toggleFollow}
+                  isActive={index === activeReelIndex}
+                  isOwner={authUser?.id === reel.user_id}
+                  onDelete={handleDeleteReel}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
