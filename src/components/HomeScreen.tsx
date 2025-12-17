@@ -3,7 +3,6 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
-import logo from '@/assets/logo.jpg';
 
 interface HomeScreenProps {
   setScreen: (screen: Screen, payload?: any) => void;
@@ -40,10 +39,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
 
+  // Sync reels when screen becomes active or on mount
   useEffect(() => {
-    fetchReels();
-    if (authUser) fetchFollowing();
-  }, [authUser]);
+    if (currentScreen === 'home') {
+      fetchReels();
+      if (authUser) fetchFollowing();
+    }
+  }, [currentScreen, authUser]);
 
   // Track view when reel becomes active (only for non-owners)
   useEffect(() => {
@@ -195,9 +197,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       ) : (
         <div className="relative flex-1">
           {/* Subtle App Logo Watermark */}
-          <div className="absolute top-4 left-4 z-50 flex items-center space-x-2 opacity-20 pointer-events-none">
-            <img src={logo} alt="Reel'It" className="w-10 h-10 object-contain" />
-            <span className="text-white font-bold text-lg drop-shadow-md">Reel'It</span>
+          <div className="absolute top-4 left-4 z-50 pointer-events-none">
+            <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
           </div>
           
           <div 
