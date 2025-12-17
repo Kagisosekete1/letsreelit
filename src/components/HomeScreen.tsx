@@ -168,7 +168,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     const scrollTop = container.scrollTop;
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
+    
+    // Update immediately when index changes
     if (newIndex !== activeReelIndex && newIndex >= 0 && newIndex < reels.length) {
+      // Force all videos to check their active state
       setActiveReelIndex(newIndex);
     }
   }, [activeReelIndex, reels.length]);
