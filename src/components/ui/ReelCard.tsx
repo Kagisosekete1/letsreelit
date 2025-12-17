@@ -95,16 +95,34 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsSaved(!!saveData);
   };
 
+  const pauseOtherReelVideos = (opts?: { except?: HTMLVideoElement }) => {
+    const except = opts?.except;
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]'));
+    videos.forEach(v => {
+      if (except && v === except) return;
+      try {
+        v.pause();
+        v.muted = true;
+        v.currentTime = 0;
+      } catch {
+        // ignore
+      }
+    });
+  };
+
   // Auto-play/pause based on active state with sound management
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     if (isActive) {
-      // This is the active reel - play with sound
+      // Ensure ONLY this video is allowed to play/unmute
+      pauseOtherReelVideos({ except: video });
+
       video.currentTime = 0;
       video.muted = false;
       setIsMuted(false);
+
       video.play().then(() => setIsPlaying(true)).catch(() => {
         // Browser autoplay policy - try muted
         video.muted = true;
@@ -120,14 +138,38 @@ const ReelCard: React.FC<ReelCardProps> = ({
       setIsMuted(true);
     }
 
-    // Cleanup: ensure video is stopped when component updates or unmounts
     return () => {
-      if (!isActive && video) {
+      // On unmount / change: always silence this instance
+      try {
         video.pause();
         video.muted = true;
+      } catch {
+        // ignore
       }
     };
   }, [isActive, reel.id]);
+
+  // Safety net: whenever THIS video plays or is unmuted, silence others.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onPlay = () => {
+      pauseOtherReelVideos({ except: video });
+    };
+
+    const onVolumeChange = () => {
+      if (!video.muted) pauseOtherReelVideos({ except: video });
+    };
+
+    video.addEventListener('play', onPlay);
+    video.addEventListener('volumechange', onVolumeChange);
+
+    return () => {
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('volumechange', onVolumeChange);
+    };
+  }, [reel.id]);
 
   const handleVideoTap = () => {
     const now = Date.now();
@@ -166,22 +208,41 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-        onPause?.();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.pause();
+      onPause?.();
+      setIsPlaying(false);
+      return;
     }
+
+    // Ensure no other reel keeps playing in the background
+    pauseOtherReelVideos({ except: video });
+
+    video.play().then(() => {
+      setIsPlaying(true);
+    }).catch(() => {
+      // ignore
+    });
   };
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+
+    // Never allow muting/unmuting on an inactive reel
+    if (!isActive) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const nextMuted = !isMuted;
+    video.muted = nextMuted;
+    setIsMuted(nextMuted);
+
+    if (!nextMuted) {
+      pauseOtherReelVideos({ except: video });
     }
   };
 
@@ -297,6 +358,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     <div className="absolute inset-0 bg-black flex items-center justify-center">
       <video
         ref={videoRef}
+        data-reel-video="true"
         className="w-full h-full object-cover"
         src={reel.videoUrl}
         loop
