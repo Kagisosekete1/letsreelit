@@ -74,7 +74,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [shareCount, setShareCount] = useState(reel.stats.shares);
   const [showComments, setShowComments] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isClearScreen, setIsClearScreen] = useState(false);
   const lastTapRef = useRef<number>(0);
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isHoldingRef = useRef(false);
 
   // Check if user has liked/saved this reel
   useEffect(() => {
@@ -162,14 +166,40 @@ const ReelCard: React.FC<ReelCardProps> = ({
       if (!video.muted) pauseOtherReelVideos({ except: video });
     };
 
+    const onTimeUpdate = () => {
+      if (video.duration) {
+        setProgress((video.currentTime / video.duration) * 100);
+      }
+    };
+
     video.addEventListener('play', onPlay);
     video.addEventListener('volumechange', onVolumeChange);
+    video.addEventListener('timeupdate', onTimeUpdate);
 
     return () => {
       video.removeEventListener('play', onPlay);
       video.removeEventListener('volumechange', onVolumeChange);
+      video.removeEventListener('timeupdate', onTimeUpdate);
     };
   }, [reel.id]);
+
+  // Hold-to-clear screen handlers
+  const handleTouchStart = () => {
+    isHoldingRef.current = true;
+    holdTimerRef.current = setTimeout(() => {
+      if (isHoldingRef.current) {
+        setIsClearScreen(prev => !prev);
+      }
+    }, 500); // Toggle clear screen after 500ms hold
+  };
+
+  const handleTouchEnd = () => {
+    isHoldingRef.current = false;
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  };
 
   const handleVideoTap = () => {
     const now = Date.now();
@@ -314,12 +344,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${reel.user.username}_${reel.id}.mp4`;
+      // Watermark filename like TikTok/Instagram: "Reel'it_username_id.mp4"
+      a.download = `Reel'it_@${reel.user.username}_${reel.id}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: 'Download started', description: 'Your video is being downloaded.' });
+      toast({ title: 'Download started', description: "Your Reel'it video is being downloaded." });
     } catch {
       toast({ title: 'Download failed', description: 'Could not download video.', variant: 'destructive' });
     }
@@ -355,7 +386,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const iconSize = variant === 'profile' ? 'w-4 h-4' : 'w-5 h-5';
 
   return (
-    <div className="absolute inset-0 bg-black flex items-center justify-center">
+    <div 
+      className="absolute inset-0 bg-black flex items-center justify-center"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleTouchStart}
+      onMouseUp={handleTouchEnd}
+      onMouseLeave={handleTouchEnd}
+    >
       <video
         ref={videoRef}
         data-reel-video="true"
@@ -378,7 +416,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       )}
       
-      {/* Play/Pause Center Icon */}
+      {/* Play/Pause Center Icon - Always visible */}
       <div 
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{ opacity: isPlaying ? 0 : 1, transition: 'opacity 0.2s' }}
@@ -388,141 +426,155 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       </div>
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
+      {/* UI Elements - Hidden in clear screen mode */}
+      <div 
+        className="transition-opacity duration-300"
+        style={{ opacity: isClearScreen ? 0 : 1, pointerEvents: isClearScreen ? 'none' : 'auto' }}
+      >
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-      {/* Top Controls - Mute Button */}
-      <div className="absolute top-4 right-4 z-10">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-full p-2 bg-black/20 backdrop-blur-sm hover:bg-black/40"
-          onClick={toggleMute}
-        >
-          {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
-        </Button>
-      </div>
+        {/* Top Controls - Mute Button */}
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full p-2 bg-black/20 backdrop-blur-sm hover:bg-black/40"
+            onClick={toggleMute}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
+          </Button>
+        </div>
 
-      {/* User Info & Description - Bottom Left */}
-      <div className="absolute bottom-16 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <button onClick={handleUserClick} className="flex items-center space-x-2">
-              <img
-                src={reel.user.avatarUrl}
-                alt={reel.user.username}
-                className="w-8 h-8 rounded-full border border-white/30"
-              />
-              <span className="text-white font-semibold text-sm">@{reel.user.username}</span>
-            </button>
-            {reel.user.verified && (
-              <div className="w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-[10px] text-white">✓</span>
-              </div>
-            )}
-            {!isFollowing && !isOwner && (
-              <Button
-                size="sm"
-                className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md"
-                onClick={() => toggleFollow(reel.user.profileId)}
-              >
-                Follow
-              </Button>
+        {/* User Info & Description - Bottom Left */}
+        <div className="absolute bottom-16 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <button onClick={handleUserClick} className="flex items-center space-x-2">
+                <img
+                  src={reel.user.avatarUrl}
+                  alt={reel.user.username}
+                  className="w-8 h-8 rounded-full border border-white/30"
+                />
+                <span className="text-white font-semibold text-sm">@{reel.user.username}</span>
+              </button>
+              {reel.user.verified && (
+                <div className="w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-[10px] text-white">✓</span>
+                </div>
+              )}
+              {!isFollowing && !isOwner && (
+                <Button
+                  size="sm"
+                  className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md"
+                  onClick={() => toggleFollow(reel.user.profileId)}
+                >
+                  Follow
+                </Button>
+              )}
+            </div>
+            <p className="text-white text-xs leading-relaxed line-clamp-2">{reel.title}</p>
+            {reel.description && (
+              <p className="text-white/70 text-xs line-clamp-1">{reel.description}</p>
             )}
           </div>
-          <p className="text-white text-xs leading-relaxed line-clamp-2">{reel.title}</p>
-          {reel.description && (
-            <p className="text-white/70 text-xs line-clamp-1">{reel.description}</p>
-          )}
+        </div>
+
+        {/* Action Buttons - Right Side */}
+        <div className="absolute bottom-20 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
+          {/* User Avatar */}
+          <button onClick={handleUserClick} className="relative mb-1">
+            <img
+              src={reel.user.avatarUrl}
+              alt={reel.user.username}
+              className="w-10 h-10 rounded-full border-2 border-white"
+            />
+          </button>
+
+          {/* Like */}
+          <button className="flex flex-col items-center" onClick={handleLike}>
+            <div className={`${buttonSize} rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/30' : 'bg-black/20'}`}>
+              <Heart className={`${iconSize} ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{formatCount(likeCount)}</span>
+          </button>
+
+          {/* Comment */}
+          <button className="flex flex-col items-center" onClick={handleComment}>
+            <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
+              <MessageCircle className={`${iconSize} text-white`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{formatCount(commentCount)}</span>
+          </button>
+
+          {/* Save */}
+          <button className="flex flex-col items-center" onClick={handleSave}>
+            <div className={`${buttonSize} rounded-full flex items-center justify-center ${isSaved ? 'bg-yellow-500/30' : 'bg-black/20'}`}>
+              {isSaved ? (
+                <BookmarkCheck className={`${iconSize} text-yellow-500`} />
+              ) : (
+                <Bookmark className={`${iconSize} text-white`} />
+              )}
+            </div>
+          </button>
+
+          {/* Share */}
+          <button className="flex flex-col items-center" onClick={handleShare}>
+            <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
+              <Share className={`${iconSize} text-white`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
+          </button>
+
+          {/* Download */}
+          <button className="flex flex-col items-center" onClick={handleDownload}>
+            <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
+              <Download className={`${iconSize} text-white`} />
+            </div>
+          </button>
+
+          {/* More Options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex flex-col items-center">
+                <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
+                  <MoreHorizontal className={`${iconSize} text-white`} />
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl">
+              {isOwner && (
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Reel
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleReport} className="text-destructive">
+                <Flag className="w-4 h-4 mr-2" />
+                Report
+              </DropdownMenuItem>
+              {!isOwner && (
+                <DropdownMenuItem onClick={handleBlock} className="text-destructive">
+                  <Ban className="w-4 h-4 mr-2" />
+                  Block User
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Views Count - Bottom */}
+        <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
+          <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
         </div>
       </div>
 
-      {/* Action Buttons - Right Side */}
-      <div className="absolute bottom-20 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
-        {/* User Avatar */}
-        <button onClick={handleUserClick} className="relative mb-1">
-          <img
-            src={reel.user.avatarUrl}
-            alt={reel.user.username}
-            className="w-10 h-10 rounded-full border-2 border-white"
-          />
-        </button>
-
-        {/* Like */}
-        <button className="flex flex-col items-center" onClick={handleLike}>
-          <div className={`${buttonSize} rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/30' : 'bg-black/20'}`}>
-            <Heart className={`${iconSize} ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
-          </div>
-          <span className="text-[10px] text-white mt-0.5">{formatCount(likeCount)}</span>
-        </button>
-
-        {/* Comment */}
-        <button className="flex flex-col items-center" onClick={handleComment}>
-          <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-            <MessageCircle className={`${iconSize} text-white`} />
-          </div>
-          <span className="text-[10px] text-white mt-0.5">{formatCount(commentCount)}</span>
-        </button>
-
-        {/* Save */}
-        <button className="flex flex-col items-center" onClick={handleSave}>
-          <div className={`${buttonSize} rounded-full flex items-center justify-center ${isSaved ? 'bg-yellow-500/30' : 'bg-black/20'}`}>
-            {isSaved ? (
-              <BookmarkCheck className={`${iconSize} text-yellow-500`} />
-            ) : (
-              <Bookmark className={`${iconSize} text-white`} />
-            )}
-          </div>
-        </button>
-
-        {/* Share */}
-        <button className="flex flex-col items-center" onClick={handleShare}>
-          <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-            <Share className={`${iconSize} text-white`} />
-          </div>
-          <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
-        </button>
-
-        {/* Download */}
-        <button className="flex flex-col items-center" onClick={handleDownload}>
-          <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-            <Download className={`${iconSize} text-white`} />
-          </div>
-        </button>
-
-        {/* More Options */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex flex-col items-center">
-              <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-                <MoreHorizontal className={`${iconSize} text-white`} />
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="rounded-xl">
-            {isOwner && (
-              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Reel
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={handleReport} className="text-destructive">
-              <Flag className="w-4 h-4 mr-2" />
-              Report
-            </DropdownMenuItem>
-            {!isOwner && (
-              <DropdownMenuItem onClick={handleBlock} className="text-destructive">
-                <Ban className="w-4 h-4 mr-2" />
-                Block User
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Views Count - Bottom */}
-      <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
-        <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
+      {/* Progress Bar - Always visible at the very bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20">
+        <div 
+          className="h-full bg-white transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       {/* Comments Modal */}
