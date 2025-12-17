@@ -97,25 +97,37 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   // Auto-play/pause based on active state with sound management
   useEffect(() => {
-    if (videoRef.current) {
-      if (isActive) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.muted = false;
-        setIsMuted(false);
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-          videoRef.current!.muted = true;
-          setIsMuted(true);
-          videoRef.current!.play().then(() => setIsPlaying(true)).catch(() => {});
-        });
-      } else {
-        videoRef.current.pause();
-        videoRef.current.muted = true;
-        videoRef.current.currentTime = 0;
-        setIsPlaying(false);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      // This is the active reel - play with sound
+      video.currentTime = 0;
+      video.muted = false;
+      setIsMuted(false);
+      video.play().then(() => setIsPlaying(true)).catch(() => {
+        // Browser autoplay policy - try muted
+        video.muted = true;
         setIsMuted(true);
-      }
+        video.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
+    } else {
+      // Not active - immediately stop and mute
+      video.pause();
+      video.muted = true;
+      video.currentTime = 0;
+      setIsPlaying(false);
+      setIsMuted(true);
     }
-  }, [isActive]);
+
+    // Cleanup: ensure video is stopped when component updates or unmounts
+    return () => {
+      if (!isActive && video) {
+        video.pause();
+        video.muted = true;
+      }
+    };
+  }, [isActive, reel.id]);
 
   const handleVideoTap = () => {
     const now = Date.now();
