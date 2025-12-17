@@ -234,7 +234,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       ) : (
         <div className="relative flex-1 flex items-center justify-center">
           {/* Desktop Container with Black Sides */}
-          <div className="relative h-full w-full md:w-auto md:max-w-[400px] lg:max-w-[450px] md:aspect-[9/16] md:mx-auto bg-black">
+          <div className="relative h-full w-full md:w-auto md:max-w-[420px] lg:max-w-[460px] md:mx-auto bg-black">
             {/* Subtle App Logo Watermark */}
             <div className="absolute top-4 left-4 z-50 pointer-events-none">
               <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
@@ -242,7 +242,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             
             <div 
               ref={containerRef}
-              className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide touch-pan-y"
+              className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-y-contain"
               onScroll={handleScroll}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
