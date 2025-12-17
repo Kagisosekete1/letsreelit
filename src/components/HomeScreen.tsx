@@ -232,25 +232,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           </p>
         </div>
       ) : (
-        <div className="relative flex-1 flex items-center justify-center">
-          {/* Desktop Container with Black Sides */}
-          <div className="relative h-full w-full md:w-auto md:max-w-[420px] lg:max-w-[460px] md:mx-auto bg-black">
-            {/* Subtle App Logo Watermark */}
-            <div className="absolute top-4 left-4 z-50 pointer-events-none">
-              <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
-            </div>
-            
-            <div 
-              ref={containerRef}
-              className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-y-contain"
-              onScroll={handleScroll}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              {reels.map((reel, index) => (
+        <div className="relative flex-1 h-full">
+          {/* Subtle App Logo Watermark */}
+          <div className="absolute top-4 left-4 z-50 pointer-events-none">
+            <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
+          </div>
+          
+          <div 
+            ref={containerRef}
+            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-y-contain"
+            onScroll={handleScroll}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {reels.map((reel, index) => (
+              <div key={reel.id} className="relative h-full w-full flex-none">
                 <ReelCard
-                  key={reel.id}
                   reel={{
                     id: reel.id,
                     videoUrl: reel.video_url,
@@ -279,8 +277,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
                 />
-              ))}
-            </div>
+                
+                {/* Swipe Hint - Only on first reel */}
+                {index === 0 && activeReelIndex === 0 && (
+                  <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center animate-bounce pointer-events-none">
+                    <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    <span className="text-white/70 text-xs mt-1">Swipe up</span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

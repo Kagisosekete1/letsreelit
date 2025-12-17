@@ -244,10 +244,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const iconSize = variant === 'profile' ? 'w-4 h-4' : 'w-5 h-5';
 
   return (
-    <div className="relative h-full w-full flex-none bg-black snap-start flex items-center justify-center snap-always">
+    <div className="absolute inset-0 bg-black flex items-center justify-center">
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
         src={reel.videoUrl}
         loop
         muted={isMuted}
