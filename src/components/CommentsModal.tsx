@@ -202,10 +202,13 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-1 h-auto"
-                    onClick={() => handleDelete(comment.id)}
+                    className="p-1 h-auto hover:bg-destructive/20 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(comment.id);
+                    }}
                   >
-                    <Trash2 className="w-3 h-3 text-muted-foreground" />
+                    <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 )}
               </div>
