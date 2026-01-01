@@ -48,6 +48,8 @@ interface ReelCardProps {
   isOwner?: boolean;
   onPause?: () => void;
   onDelete?: (reelId: string) => void;
+  onEnded?: () => void;
+  autoAdvance?: boolean;
   variant?: 'home' | 'profile';
 }
 
@@ -59,6 +61,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
   isOwner = false,
   onPause,
   onDelete,
+  onEnded,
+  autoAdvance = false,
   variant = 'home',
 }) => {
   const navigate = useNavigate();
@@ -80,6 +84,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoldingRef = useRef(false);
   const [videoSrc, setVideoSrc] = useState<string | undefined>(isActive ? reel.videoUrl : undefined);
+  const [isBuffering, setIsBuffering] = useState(false);
 
   // Check if user has liked/saved this reel
   useEffect(() => {
@@ -171,7 +176,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     };
   }, [isActive, reel.id, reel.videoUrl]);
 
-  // Safety net: whenever THIS video plays or is unmuted, silence others.
+  // Safety net: whenever THIS video plays or is unmuted, silence others. Also handle buffering & ended.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -190,16 +195,34 @@ const ReelCard: React.FC<ReelCardProps> = ({
       }
     };
 
+    const onWaiting = () => setIsBuffering(true);
+    const onPlaying = () => setIsBuffering(false);
+    const onCanPlay = () => setIsBuffering(false);
+
+    const onVideoEnded = () => {
+      if (autoAdvance && onEnded) {
+        onEnded();
+      }
+    };
+
     video.addEventListener('play', onPlay);
     video.addEventListener('volumechange', onVolumeChange);
     video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('ended', onVideoEnded);
 
     return () => {
       video.removeEventListener('play', onPlay);
       video.removeEventListener('volumechange', onVolumeChange);
       video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('ended', onVideoEnded);
     };
-  }, [reel.id]);
+  }, [reel.id, autoAdvance, onEnded]);
 
   const triggerHaptic = () => {
     // PWA/mobile friendly haptic (best-effort)
@@ -433,7 +456,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         className="w-full h-full object-cover"
         src={videoSrc}
         preload={isActive ? 'auto' : 'none'}
-        loop
+        loop={!autoAdvance}
         muted={isMuted}
         playsInline
         poster={reel.thumbnailUrl}
@@ -450,14 +473,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       )}
       
-      {/* Play/Pause Center Icon - Always visible */}
+      {/* Play/Pause Center Icon + Buffering Indicator */}
       <div 
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{ opacity: isPlaying ? 0 : 1, transition: 'opacity 0.2s' }}
+        style={{ opacity: isPlaying && !isBuffering ? 0 : 1, transition: 'opacity 0.2s' }}
       >
-        <div className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
-          <Play className="w-8 h-8 text-white ml-1" fill="white" />
-        </div>
+        {isBuffering && isActive ? (
+          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
+            <Play className="w-8 h-8 text-white ml-1" fill="white" />
+          </div>
+        )}
       </div>
 
       {/* UI Elements - Hidden in clear screen mode */}
@@ -501,7 +528,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 <Button
                   size="sm"
                   className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md"
-                  onClick={() => toggleFollow(reel.user.profileId)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFollow(reel.user.profileId);
+                  }}
                 >
                   Follow
                 </Button>
