@@ -115,6 +115,24 @@ const UserProfile = () => {
       setUserReels(reelsData);
     }
 
+    // Live follow/following counts (recalculated from follows table)
+    const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
+      supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', profileData.id),
+      supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('follower_id', profileData.id),
+    ]);
+
+    setUser(prev => prev ? {
+      ...prev,
+      followers_count: followersCount || 0,
+      following_count: followingCount || 0,
+    } : prev);
+
     // Check if current user is following this user
     if (authUser && currentUser) {
       const { data: myProfile } = await supabase
@@ -142,25 +160,35 @@ const UserProfile = () => {
   const handleFollow = async () => {
     if (!authUser || !user) return;
 
+    // Optimistic UI first (instant)
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowingIds(!wasFollowing ? new Set([user.id]) : new Set());
+    setUser(prev => prev ? {
+      ...prev,
+      followers_count: Math.max(0, (prev.followers_count || 0) + (wasFollowing ? -1 : 1)),
+    } : prev);
+
     const { data: myProfile } = await supabase
       .from('profiles')
       .select('id')
       .eq('user_id', authUser.id)
       .single();
 
-    if (!myProfile) return;
+    if (!myProfile) {
+      // Revert if we can't resolve profile
+      setIsFollowing(wasFollowing);
+      setFollowingIds(wasFollowing ? new Set([user.id]) : new Set());
+      await fetchUserProfile();
+      return;
+    }
 
-    if (isFollowing) {
-      // Unfollow
+    if (wasFollowing) {
       await supabase
         .from('follows')
         .delete()
         .eq('follower_id', myProfile.id)
         .eq('following_id', user.id);
-
-      setIsFollowing(false);
-      setFollowingIds(new Set());
-      setUser(prev => prev ? { ...prev, followers_count: Math.max(0, prev.followers_count - 1) } : null);
 
       toast({ title: 'Unfollowed', description: `You unfollowed @${user.username}` });
       return;
@@ -183,15 +211,11 @@ const UserProfile = () => {
         });
     }
 
-    setIsFollowing(true);
-    setFollowingIds(new Set([user.id]));
-    setUser(prev => prev ? { ...prev, followers_count: prev.followers_count + 1 } : null);
-
     toast({ title: 'Following', description: `You are now following @${user.username}` });
   };
 
-  const toggleFollow = async (profileId: string) => {
-    handleFollow();
+  const toggleFollow = async (_profileId: string) => {
+    await handleFollow();
   };
 
   const handleReport = () => {

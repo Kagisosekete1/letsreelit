@@ -155,31 +155,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     if (!authUser) return;
     if (!profileId) return;
 
+    // Optimistic UI first (feels instant)
+    const wasFollowing = followingIds.has(profileId);
+    setFollowingIds(prev => {
+      const next = new Set(prev);
+      if (wasFollowing) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
+
     const { data: myProfile } = await supabase
       .from('profiles')
       .select('id')
       .eq('user_id', authUser.id)
       .single();
 
-    if (!myProfile) return;
-
-    if (followingIds.has(profileId)) {
-      // Unfollow
-      await supabase
-        .from('follows')
-        .delete()
-        .eq('follower_id', myProfile.id)
-        .eq('following_id', profileId);
-
+    if (!myProfile) {
+      // Revert if we can't resolve the current user's profile
       setFollowingIds(prev => {
         const next = new Set(prev);
-        next.delete(profileId);
+        if (wasFollowing) next.add(profileId);
+        else next.delete(profileId);
         return next;
       });
       return;
     }
 
-    // Follow (idempotent: if it already exists, just update UI)
+    if (wasFollowing) {
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', myProfile.id)
+        .eq('following_id', profileId);
+      return;
+    }
+
+    // Follow (idempotent)
     const { data: existing } = await supabase
       .from('follows')
       .select('id')
@@ -195,8 +206,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           following_id: profileId,
         });
     }
-
-    setFollowingIds(prev => new Set([...prev, profileId]));
   };
 
   const handleDeleteReel = async (reelId: string) => {
