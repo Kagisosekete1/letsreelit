@@ -269,33 +269,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         <DialogContent className="sm:max-w-[425px] rounded-3xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Go Live</h2>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
           </div>
 
           <div className="space-y-4">
             <div className="aspect-[9/16] bg-muted rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <Radio className="w-12 h-12 text-pink-500 mx-auto mb-2" />
-                <p className="text-muted-foreground">Camera preview will appear here</p>
+              <div className="text-center px-4">
+                <Radio className="w-12 h-12 text-pink-500 mx-auto mb-3" />
+                <p className="text-lg font-semibold mb-2">Coming Soon!</p>
+                <p className="text-muted-foreground text-sm">Live streaming is under development. Stay tuned for updates!</p>
               </div>
             </div>
 
-            <Input
-              placeholder="Add a title for your live..."
-              value={liveTitle}
-              onChange={(e) => setLiveTitle(e.target.value)}
-              className="rounded-xl"
-              maxLength={100}
-            />
-
             <Button 
-              className="w-full bg-pink-500 hover:bg-pink-600 rounded-xl"
-              onClick={handleGoLive}
+              variant="outline"
+              className="w-full rounded-xl"
+              onClick={onClose}
             >
-              <Radio className="w-4 h-4 mr-2" />
-              Go Live
+              Got it
             </Button>
           </div>
         </DialogContent>

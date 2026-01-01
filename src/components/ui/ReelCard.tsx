@@ -474,18 +474,21 @@ const ReelCard: React.FC<ReelCardProps> = ({
       onMouseUp={handleTouchEnd}
       onMouseLeave={handleTouchEnd}
     >
-      <video
-        ref={videoRef}
-        data-reel-video="true"
-        className="w-full h-full object-cover"
-        src={videoSrc}
-        preload={isActive ? 'auto' : 'none'}
-        loop={!autoAdvance}
-        muted={isMuted}
-        playsInline
-        poster={reel.thumbnailUrl}
-        onClick={handleVideoTap}
-      />
+      {/* Video container - ensures portrait video fills correctly on all devices */}
+      <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
+        <video
+          ref={videoRef}
+          data-reel-video="true"
+          className="w-full h-full object-contain sm:object-cover"
+          src={videoSrc}
+          preload={isActive ? 'auto' : 'none'}
+          loop={!autoAdvance}
+          muted={isMuted}
+          playsInline
+          poster={reel.thumbnailUrl}
+          onClick={handleVideoTap}
+        />
+      </div>
       
       {/* Double-tap Heart Animation */}
       {showDoubleTapHeart && (
