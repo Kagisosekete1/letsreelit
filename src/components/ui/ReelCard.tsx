@@ -77,8 +77,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
   const lastTapRef = useRef<number>(0);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoldingRef = useRef(false);
+  const [videoSrc, setVideoSrc] = useState<string | undefined>(isActive ? reel.videoUrl : undefined);
 
   // Check if user has liked/saved this reel
   useEffect(() => {
@@ -114,18 +115,27 @@ const ReelCard: React.FC<ReelCardProps> = ({
     });
   };
 
-  // Auto-play/pause based on active state with sound management
+  // Auto-play/pause + true "single active" behavior (lazy src + no preload for inactive)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     if (isActive) {
+      setVideoSrc(reel.videoUrl);
+
       // Ensure ONLY this video is allowed to play/unmute
       pauseOtherReelVideos({ except: video });
 
       video.currentTime = 0;
       video.muted = false;
       setIsMuted(false);
+
+      // Ensure the element has the latest src loaded
+      try {
+        video.load();
+      } catch {
+        // ignore
+      }
 
       video.play().then(() => setIsPlaying(true)).catch(() => {
         // Browser autoplay policy - try muted
@@ -134,10 +144,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
     } else {
-      // Not active - immediately stop and mute
-      video.pause();
-      video.muted = true;
-      video.currentTime = 0;
+      // Not active - immediately stop, mute, and stop loading
+      try {
+        video.pause();
+        video.muted = true;
+        video.currentTime = 0;
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        // ignore
+      }
+
+      setVideoSrc(undefined);
       setIsPlaying(false);
       setIsMuted(true);
     }
@@ -151,7 +169,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         // ignore
       }
     };
-  }, [isActive, reel.id]);
+  }, [isActive, reel.id, reel.videoUrl]);
 
   // Safety net: whenever THIS video plays or is unmuted, silence others.
   useEffect(() => {
@@ -183,14 +201,29 @@ const ReelCard: React.FC<ReelCardProps> = ({
     };
   }, [reel.id]);
 
-  // Hold-to-clear screen handlers
+  const triggerHaptic = () => {
+    // PWA/mobile friendly haptic (best-effort)
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      (navigator as Navigator & { vibrate?: (pattern: number | number[]) => boolean }).vibrate?.(20);
+    }
+  };
+
+  // Hold-to-clear screen: hold 0.5s to hide UI; when hidden, hold 3s to show UI again
   const handleTouchStart = () => {
+    if (!isActive) return;
+
     isHoldingRef.current = true;
+
+    const delayMs = isClearScreen ? 3000 : 500;
+
     holdTimerRef.current = setTimeout(() => {
-      if (isHoldingRef.current) {
-        setIsClearScreen(prev => !prev);
-      }
-    }, 500); // Toggle clear screen after 500ms hold
+      if (!isHoldingRef.current) return;
+      setIsClearScreen(prev => {
+        const next = !prev;
+        triggerHaptic();
+        return next;
+      });
+    }, delayMs);
   };
 
   const handleTouchEnd = () => {
@@ -398,7 +431,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         ref={videoRef}
         data-reel-video="true"
         className="w-full h-full object-cover"
-        src={reel.videoUrl}
+        src={videoSrc}
+        preload={isActive ? 'auto' : 'none'}
         loop
         muted={isMuted}
         playsInline

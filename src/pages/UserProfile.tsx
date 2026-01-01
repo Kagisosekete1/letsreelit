@@ -161,23 +161,33 @@ const UserProfile = () => {
       setIsFollowing(false);
       setFollowingIds(new Set());
       setUser(prev => prev ? { ...prev, followers_count: Math.max(0, prev.followers_count - 1) } : null);
-      
+
       toast({ title: 'Unfollowed', description: `You unfollowed @${user.username}` });
-    } else {
-      // Follow
+      return;
+    }
+
+    // Follow (idempotent)
+    const { data: existing } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', myProfile.id)
+      .eq('following_id', user.id)
+      .maybeSingle();
+
+    if (!existing) {
       await supabase
         .from('follows')
         .insert({
           follower_id: myProfile.id,
           following_id: user.id,
         });
-
-      setIsFollowing(true);
-      setFollowingIds(new Set([user.id]));
-      setUser(prev => prev ? { ...prev, followers_count: prev.followers_count + 1 } : null);
-      
-      toast({ title: 'Following', description: `You are now following @${user.username}` });
     }
+
+    setIsFollowing(true);
+    setFollowingIds(new Set([user.id]));
+    setUser(prev => prev ? { ...prev, followers_count: prev.followers_count + 1 } : null);
+
+    toast({ title: 'Following', description: `You are now following @${user.username}` });
   };
 
   const toggleFollow = async (profileId: string) => {

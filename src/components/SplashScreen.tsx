@@ -6,8 +6,8 @@ const SplashScreen: React.FC = () => {
       <div className="text-center space-y-6 px-8 animate-scale-in">
         <div className="space-y-2">
           <h1 className="text-5xl font-bold text-foreground" 
-              style={{fontFamily: "'Inter', sans-serif", fontWeight: 800}}>
-            Reel'It
+              style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800 }}>
+            Let’s Reel'it
           </h1>
           <p className="text-muted-foreground text-lg font-medium">
             Your Stage, Your Story

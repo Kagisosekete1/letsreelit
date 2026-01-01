@@ -94,6 +94,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const followUser = async (targetProfileId: string) => {
     if (!authUser || !currentUser) return;
+    if (!targetProfileId) return;
 
     try {
       // Get current user's profile id
@@ -105,16 +106,24 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!myProfile) return;
 
-      // Insert follow record
-      const { error } = await supabase
+      // Idempotent follow
+      const { data: existing } = await supabase
         .from('follows')
-        .insert({
-          follower_id: myProfile.id,
-          following_id: targetProfileId,
-        });
+        .select('id')
+        .eq('follower_id', myProfile.id)
+        .eq('following_id', targetProfileId)
+        .maybeSingle();
 
-      if (!error) {
-        // Update local state
+      if (!existing) {
+        const { error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: myProfile.id,
+            following_id: targetProfileId,
+          });
+
+        if (error) return;
+
         setCurrentUser(prev => prev ? {
           ...prev,
           stats: { ...prev.stats, following: prev.stats.following + 1 }
@@ -127,6 +136,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const unfollowUser = async (targetProfileId: string) => {
     if (!authUser || !currentUser) return;
+    if (!targetProfileId) return;
 
     try {
       // Get current user's profile id

@@ -124,6 +124,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
 
   const toggleFollow = async (profileId: string) => {
     if (!authUser) return;
+    if (!profileId) return;
 
     const { data: myProfile } = await supabase
       .from('profiles')
@@ -146,35 +147,69 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
         next.delete(profileId);
         return next;
       });
-    } else {
-      // Follow
+      return;
+    }
+
+    // Follow (idempotent: if it already exists, just update UI)
+    const { data: existing } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', myProfile.id)
+      .eq('following_id', profileId)
+      .maybeSingle();
+
+    if (!existing) {
       await supabase
         .from('follows')
         .insert({
           follower_id: myProfile.id,
           following_id: profileId,
         });
-
-      setFollowingIds(prev => new Set([...prev, profileId]));
     }
+
+    setFollowingIds(prev => new Set([...prev, profileId]));
   };
 
   const handleDeleteReel = async (reelId: string) => {
     setReels(prev => prev.filter(r => r.id !== reelId));
   };
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const scrollTop = container.scrollTop;
-    const itemHeight = container.clientHeight;
-    const newIndex = Math.round(scrollTop / itemHeight);
-    
-    // Update immediately when index changes
-    if (newIndex !== activeReelIndex && newIndex >= 0 && newIndex < reels.length) {
-      // Force all videos to check their active state
-      setActiveReelIndex(newIndex);
-    }
-  }, [activeReelIndex, reels.length]);
+  const handleScroll = useCallback(() => {
+    // IntersectionObserver drives the active index (more stable than scroll math).
+    // Keep this handler as a no-op to avoid mid-swipe index flicker.
+  }, []);
+
+  // Determine active reel by visibility (TikTok-style: only the centered reel becomes active)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const items = Array.from(container.querySelectorAll<HTMLElement>('[data-reel-item="true"]'));
+    if (items.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the most visible item
+        const best = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0))[0];
+
+        if (!best?.target) return;
+        const idx = Number((best.target as HTMLElement).dataset.reelIndex);
+        if (!Number.isFinite(idx)) return;
+
+        setActiveReelIndex((prev) => (prev === idx ? prev : idx));
+      },
+      {
+        root: container,
+        threshold: [0.6, 0.75, 0.9],
+      }
+    );
+
+    items.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [reels.length]);
 
   // Touch swipe handlers
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
@@ -250,7 +285,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             onTouchEnd={handleTouchEnd}
           >
             {reels.map((reel, index) => (
-              <div key={reel.id} className="relative h-full w-full flex-none">
+              <div
+                key={reel.id}
+                className="relative h-full w-full flex-none"
+                data-reel-item="true"
+                data-reel-index={index}
+              >
                 <ReelCard
                   reel={{
                     id: reel.id,
