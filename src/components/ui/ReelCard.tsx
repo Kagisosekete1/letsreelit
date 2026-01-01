@@ -43,7 +43,7 @@ interface Reel {
 interface ReelCardProps {
   reel: Reel;
   followingIds: Set<string>;
-  toggleFollow: (userId: string) => void;
+  toggleFollow: (userId: string) => Promise<void>;
   isActive?: boolean;
   isOwner?: boolean;
   onPause?: () => void;
@@ -80,6 +80,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
+  const [isFollowPending, setIsFollowPending] = useState(false);
   const lastTapRef = useRef<number>(0);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoldingRef = useRef(false);
@@ -527,13 +528,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
               {!isFollowing && !isOwner && (
                 <Button
                   size="sm"
-                  className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md"
-                  onClick={(e) => {
+                  disabled={isFollowPending}
+                  className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md disabled:opacity-60"
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    toggleFollow(reel.user.profileId);
+                    if (isFollowPending) return;
+                    setIsFollowPending(true);
+                    try {
+                      await toggleFollow(reel.user.profileId);
+                    } finally {
+                      setIsFollowPending(false);
+                    }
                   }}
                 >
-                  Follow
+                  {isFollowPending ? '...' : 'Follow'}
                 </Button>
               )}
             </div>
