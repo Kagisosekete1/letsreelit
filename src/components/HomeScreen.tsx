@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, TouchEvent } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,8 +27,12 @@ interface ReelData {
     display_name: string;
     avatar_url: string | null;
     verified: boolean;
+    followers_count?: number;
+    following_count?: number;
   };
 }
+
+const AUTO_ADVANCE_KEY = 'reelit_auto_advance';
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => {
   const { currentUser, authUser } = useUser();
@@ -36,10 +40,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [autoAdvance, setAutoAdvance] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(AUTO_ADVANCE_KEY) === 'true';
+    }
+    return false;
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
-  const touchStartY = useRef<number>(0);
-  const touchEndY = useRef<number>(0);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -85,7 +93,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        // Fetch live follow counts for all profiles
+        const profileIds = profiles?.map(p => p.id) || [];
+        const [{ data: followersData }, { data: followingData }] = await Promise.all([
+          supabase.from('follows').select('following_id').in('following_id', profileIds),
+          supabase.from('follows').select('follower_id').in('follower_id', profileIds),
+        ]);
+
+        const followersCountMap = new Map<string, number>();
+        const followingCountMap = new Map<string, number>();
+
+        (followersData || []).forEach(f => {
+          followersCountMap.set(f.following_id, (followersCountMap.get(f.following_id) || 0) + 1);
+        });
+        (followingData || []).forEach(f => {
+          followingCountMap.set(f.follower_id, (followingCountMap.get(f.follower_id) || 0) + 1);
+        });
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, {
+          ...p,
+          followers_count: followersCountMap.get(p.id) || 0,
+          following_count: followingCountMap.get(p.id) || 0,
+        }]) || []);
         const reelsWithProfiles = reelsData.map(r => ({
           ...r,
           profile: profileMap.get(r.user_id)
@@ -211,32 +240,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     return () => observer.disconnect();
   }, [reels.length]);
 
-  // Touch swipe handlers
-  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    touchEndY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = () => {
-    const swipeDistance = touchStartY.current - touchEndY.current;
-    const threshold = 50; // Minimum swipe distance
-
-    if (Math.abs(swipeDistance) > threshold) {
-      if (swipeDistance > 0 && activeReelIndex < reels.length - 1) {
-        // Swipe up - next reel
-        goToReel(activeReelIndex + 1);
-      } else if (swipeDistance < 0 && activeReelIndex > 0) {
-        // Swipe down - previous reel
-        goToReel(activeReelIndex - 1);
-      }
-    }
-  };
-
-  const goToReel = (index: number) => {
-    if (containerRef.current) {
+  const goToReel = useCallback((index: number) => {
+    if (containerRef.current && index >= 0 && index < reels.length) {
       const itemHeight = containerRef.current.clientHeight;
       containerRef.current.scrollTo({
         top: index * itemHeight,
@@ -244,6 +249,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       });
       setActiveReelIndex(index);
     }
+  }, [reels.length]);
+
+  const handleReelEnded = useCallback(() => {
+    if (activeReelIndex < reels.length - 1) {
+      goToReel(activeReelIndex + 1);
+    }
+  }, [activeReelIndex, reels.length, goToReel]);
+
+  const toggleAutoAdvance = () => {
+    setAutoAdvance(prev => {
+      const next = !prev;
+      localStorage.setItem(AUTO_ADVANCE_KEY, String(next));
+      return next;
+    });
   };
 
   if (loading) {
@@ -275,21 +294,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           <div className="absolute top-4 left-4 z-50 pointer-events-none">
             <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
           </div>
+
+          {/* Auto-advance toggle */}
+          <button 
+            onClick={toggleAutoAdvance}
+            className="absolute top-4 right-14 z-50 px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
+          >
+            {autoAdvance ? 'Auto: On' : 'Auto: Off'}
+          </button>
           
           <div 
             ref={containerRef}
-            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-y-contain"
+            className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-none"
+            style={{ scrollSnapStop: 'always' }}
             onScroll={handleScroll}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             {reels.map((reel, index) => (
               <div
                 key={reel.id}
-                className="relative h-full w-full flex-none"
+                className="relative h-full w-full snap-start snap-always"
                 data-reel-item="true"
                 data-reel-index={index}
+                style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
               >
                 <ReelCard
                   reel={{
@@ -319,17 +345,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   isActive={index === activeReelIndex}
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
+                  autoAdvance={autoAdvance}
+                  onEnded={handleReelEnded}
                 />
-                
-                {/* Swipe Hint - Only on first reel */}
-                {index === 0 && activeReelIndex === 0 && (
-                  <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center animate-bounce pointer-events-none">
-                    <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                    <span className="text-white/70 text-xs mt-1">Swipe up</span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
