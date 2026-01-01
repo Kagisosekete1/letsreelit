@@ -106,15 +106,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsSaved(!!saveData);
   };
 
-  const pauseOtherReelVideos = (opts?: { except?: HTMLVideoElement }) => {
+  const pauseOtherReelVideos = (opts?: { except?: HTMLMediaElement }) => {
     const except = opts?.except;
-    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]'));
-    videos.forEach(v => {
-      if (except && v === except) return;
+    const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
+    media.forEach(m => {
+      if (except && m === except) return;
       try {
-        v.pause();
-        v.muted = true;
-        v.currentTime = 0;
+        m.pause();
+        if ('muted' in m) {
+          (m as HTMLVideoElement).muted = true;
+        }
+        m.currentTime = 0;
       } catch {
         // ignore
       }
@@ -183,10 +185,31 @@ const ReelCard: React.FC<ReelCardProps> = ({
     if (!video) return;
 
     const onPlay = () => {
+      // If an inactive reel ever starts playing, force it to stop immediately.
+      if (!isActive) {
+        try {
+          video.pause();
+          video.muted = true;
+          video.currentTime = 0;
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
       pauseOtherReelVideos({ except: video });
     };
 
     const onVolumeChange = () => {
+      if (!isActive) {
+        try {
+          video.muted = true;
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
       if (!video.muted) pauseOtherReelVideos({ except: video });
     };
 
@@ -223,7 +246,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('ended', onVideoEnded);
     };
-  }, [reel.id, autoAdvance, onEnded]);
+  }, [reel.id, autoAdvance, onEnded, isActive]);
 
   const triggerHaptic = () => {
     // PWA/mobile friendly haptic (best-effort)
@@ -564,7 +587,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </button>
 
           {/* Like */}
-          <button className="flex flex-col items-center" onClick={handleLike}>
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLike();
+            }}
+          >
             <div className={`${buttonSize} rounded-full flex items-center justify-center ${isLiked ? 'bg-red-500/30' : 'bg-black/20'}`}>
               <Heart className={`${iconSize} ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
             </div>
@@ -572,7 +601,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </button>
 
           {/* Comment */}
-          <button className="flex flex-col items-center" onClick={handleComment}>
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleComment();
+            }}
+          >
             <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
               <MessageCircle className={`${iconSize} text-white`} />
             </div>
@@ -580,7 +615,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </button>
 
           {/* Save */}
-          <button className="flex flex-col items-center" onClick={handleSave}>
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSave();
+            }}
+          >
             <div className={`${buttonSize} rounded-full flex items-center justify-center ${isSaved ? 'bg-yellow-500/30' : 'bg-black/20'}`}>
               {isSaved ? (
                 <BookmarkCheck className={`${iconSize} text-yellow-500`} />
@@ -591,7 +632,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </button>
 
           {/* Share */}
-          <button className="flex flex-col items-center" onClick={handleShare}>
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShare();
+            }}
+          >
             <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
               <Share className={`${iconSize} text-white`} />
             </div>
@@ -599,7 +646,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </button>
 
           {/* Download */}
-          <button className="flex flex-col items-center" onClick={handleDownload}>
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownload();
+            }}
+          >
             <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
               <Download className={`${iconSize} text-white`} />
             </div>
