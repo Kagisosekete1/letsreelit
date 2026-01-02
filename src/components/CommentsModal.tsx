@@ -132,24 +132,41 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
   };
 
   const handleDelete = async (commentId: string) => {
+    // Optimistic UI
+    const previous = comments;
+    const next = comments.filter(c => c.id !== commentId);
+    setComments(next);
+    onCommentCountChange?.(next.length);
+
     const { error } = await supabase
       .from('comments')
       .delete()
       .eq('id', commentId);
 
-    if (!error) {
-      // Update reel comments_count
-      const { data: reel } = await supabase
-        .from('reels')
-        .select('comments_count')
-        .eq('id', reelId)
-        .single();
-      
-      await supabase
-        .from('reels')
-        .update({ comments_count: Math.max(0, (reel?.comments_count || 1) - 1) })
-        .eq('id', reelId);
+    if (error) {
+      setComments(previous);
+      onCommentCountChange?.(previous.length);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete comment',
+        variant: 'destructive',
+      });
+      return;
     }
+
+    // Update reel comments_count (best effort)
+    const { data: reel } = await supabase
+      .from('reels')
+      .select('comments_count')
+      .eq('id', reelId)
+      .single();
+
+    await supabase
+      .from('reels')
+      .update({ comments_count: Math.max(0, (reel?.comments_count || 1) - 1) })
+      .eq('id', reelId);
+
+    toast({ title: 'Deleted', description: 'Comment removed.' });
   };
 
   const formatTime = (dateString: string) => {

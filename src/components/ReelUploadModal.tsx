@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { X, Scissors, Sparkles, Upload, ArrowLeft, Check } from 'lucide-react';
+import { X, Scissors, Sparkles, Upload, ArrowLeft, Check, Music2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import { reelSchema } from '@/lib/validations';
+import MusicLibraryModal, { type PlaceholderSong } from '@/components/MusicLibraryModal';
 
 interface ReelUploadModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   const [cropEnd, setCropEnd] = useState(100);
   const [videoDuration, setVideoDuration] = useState(0);
   const [postAs, setPostAs] = useState<'reel' | 'tutorial'>('reel');
+  const [showMusicLibrary, setShowMusicLibrary] = useState(false);
+  const [selectedSong, setSelectedSong] = useState<PlaceholderSong | null>(null);
 
   useEffect(() => {
     if (videoFile) {
@@ -364,6 +367,28 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
             </div>
 
             <div className="space-y-3">
+              {/* Music (placeholder UI for future platform integration) */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between rounded-2xl"
+                onClick={() => setShowMusicLibrary(true)}
+              >
+                <div className="flex items-center gap-2">
+                  <Music2 className="w-4 h-4" />
+                  <span className="font-medium">Add sound</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {selectedSong ? `${selectedSong.title} • ${selectedSong.artist}` : 'Choose'}
+                </span>
+              </Button>
+
+              {selectedSong && (
+                <div className="text-xs text-muted-foreground px-1">
+                  Selected: <span className="font-medium text-foreground">{selectedSong.title}</span> — {selectedSong.artist}
+                </div>
+              )}
+
               <div>
                 <Input
                   placeholder="Add dance style..."
@@ -412,6 +437,18 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <Upload className="w-4 h-4 mr-2" />
               Upload {postAs === 'reel' ? 'Reel' : 'Tutorial'}
             </Button>
+
+            <MusicLibraryModal
+              isOpen={showMusicLibrary}
+              onClose={() => setShowMusicLibrary(false)}
+              onSelect={(song) => {
+                setSelectedSong(song);
+                toast({
+                  title: 'Sound selected',
+                  description: `${song.title} — ${song.artist}`,
+                });
+              }}
+            />
           </div>
         )}
 
