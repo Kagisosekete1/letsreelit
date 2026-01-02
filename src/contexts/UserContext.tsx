@@ -28,21 +28,37 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .eq('user_id', userId)
       .single();
 
-    if (data && !error) {
-      setCurrentUser({
-        id: data.id,
-        username: data.username,
-        displayName: data.display_name,
-        avatarUrl: data.avatar_url,
-        bio: data.bio || '',
-        verified: data.verified || false,
-        stats: {
-          following: data.following_count || 0,
-          followers: data.followers_count || 0,
-          reels: data.reels_count || 0,
-        },
-      });
-    }
+    if (!data || error) return;
+
+    // Always compute live counts from the database so Following/Followers are accurate
+    const [{ count: followingCount }, { count: followersCount }, { count: reelsCount }] = await Promise.all([
+      supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('follower_id', data.id),
+      supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', data.id),
+      supabase
+        .from('reels')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId),
+    ]);
+
+    setCurrentUser({
+      id: data.id,
+      username: data.username,
+      displayName: data.display_name,
+      avatarUrl: data.avatar_url,
+      bio: data.bio || '',
+      verified: data.verified || false,
+      stats: {
+        following: followingCount || 0,
+        followers: followersCount || 0,
+        reels: reelsCount || 0,
+      },
+    });
   };
 
   const refreshProfile = async () => {

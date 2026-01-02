@@ -509,10 +509,21 @@ const ReelCard: React.FC<ReelCardProps> = ({
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
       <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
+        {/* Crossfade between thumbnail and active video */}
+        {reel.thumbnailUrl && (
+          <img
+            src={reel.thumbnailUrl}
+            alt={reel.title}
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+            style={{ opacity: isActive ? 0 : 1 }}
+            draggable={false}
+          />
+        )}
         <video
           ref={videoRef}
           data-reel-video="true"
-          className="w-full h-full object-contain sm:object-cover"
+          className="w-full h-full object-contain sm:object-cover transition-opacity duration-300"
+          style={{ opacity: isActive ? 1 : 0 }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'none'}
           loop={!autoAdvance}
@@ -583,25 +594,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 <div className="w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-[10px] text-white">✓</span>
                 </div>
-              )}
-              {!isFollowing && !isOwner && (
-                <Button
-                  size="sm"
-                  disabled={isFollowPending}
-                  className="ml-1 h-6 px-3 text-xs bg-primary text-white hover:bg-primary/90 rounded-md disabled:opacity-60"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (isFollowPending) return;
-                    setIsFollowPending(true);
-                    try {
-                      await toggleFollow(reel.user.profileId);
-                    } finally {
-                      setIsFollowPending(false);
-                    }
-                  }}
-                >
-                  {isFollowPending ? '...' : 'Follow'}
-                </Button>
               )}
             </div>
             <p className="text-white text-xs leading-relaxed line-clamp-2">{reel.title}</p>
