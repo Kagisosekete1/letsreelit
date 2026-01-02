@@ -134,7 +134,7 @@ const UserProfile = () => {
     } : prev);
 
     // Check if current user is following this user
-    if (authUser && currentUser) {
+    if (authUser) {
       const { data: myProfile } = await supabase
         .from('profiles')
         .select('id')

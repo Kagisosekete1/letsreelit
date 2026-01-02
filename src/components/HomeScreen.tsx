@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +40,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [feedTab, setFeedTab] = useState<'forYou' | 'following'>('forYou');
   const [autoAdvance, setAutoAdvance] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(AUTO_ADVANCE_KEY) === 'true';
@@ -48,6 +49,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
+
+  const displayedReels = useMemo(() => {
+    if (feedTab === 'forYou') return reels;
+    return reels.filter(r => (r.profile?.id ? followingIds.has(r.profile.id) : false));
+  }, [feedTab, reels, followingIds]);
+
+  // Reset position when switching tabs
+  useEffect(() => {
+    setActiveReelIndex(0);
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, [feedTab]);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -59,12 +73,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
 
   // Track view when reel becomes active (only for non-owners)
   useEffect(() => {
-    const currentReel = reels[activeReelIndex];
+    const currentReel = displayedReels[activeReelIndex];
     if (currentReel && authUser && currentReel.user_id !== authUser.id && !viewedReels.current.has(currentReel.id)) {
       viewedReels.current.add(currentReel.id);
       incrementViewCount(currentReel.id);
     }
-  }, [activeReelIndex, reels, authUser]);
+  }, [activeReelIndex, displayedReels, authUser]);
 
   const incrementViewCount = async (reelId: string) => {
     try {
@@ -250,7 +264,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   }, [reels.length]);
 
   const goToReel = useCallback((index: number) => {
-    if (containerRef.current && index >= 0 && index < reels.length) {
+    if (containerRef.current && index >= 0 && index < displayedReels.length) {
       const itemHeight = containerRef.current.clientHeight;
       containerRef.current.scrollTo({
         top: index * itemHeight,
@@ -258,13 +272,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       });
       setActiveReelIndex(index);
     }
-  }, [reels.length]);
+  }, [displayedReels.length]);
 
   const handleReelEnded = useCallback(() => {
-    if (activeReelIndex < reels.length - 1) {
+    if (activeReelIndex < displayedReels.length - 1) {
       goToReel(activeReelIndex + 1);
     }
-  }, [activeReelIndex, reels.length, goToReel]);
+  }, [activeReelIndex, displayedReels.length, goToReel]);
 
   const toggleAutoAdvance = () => {
     setAutoAdvance(prev => {
@@ -285,16 +299,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   return (
     <div className="h-full flex flex-col bg-black animate-fade-in">
       {/* Reels Feed - Full Screen */}
-      {reels.length === 0 ? (
+      {displayedReels.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
             <svg className="w-10 h-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold mb-2 text-white">No reels yet</h2>
+          <h2 className="text-lg font-semibold mb-2 text-white">
+            {feedTab === 'following' ? 'No reels from people you follow' : 'No reels yet'}
+          </h2>
           <p className="text-white/60 text-center text-sm">
-            Be the first to share your dance moves!
+            {feedTab === 'following'
+              ? (authUser ? 'Follow creators to see their reels here.' : 'Sign in and follow creators to build your Following feed.')
+              : 'Be the first to share your dance moves!'}
           </p>
         </div>
       ) : (
@@ -302,6 +320,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           {/* Subtle App Logo Watermark */}
           <div className="absolute top-4 left-4 z-50 pointer-events-none">
             <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
+          </div>
+
+          {/* Feed Tabs */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full p-1">
+            <button
+              onClick={() => setFeedTab('forYou')}
+              className={`px-3 py-1 text-xs rounded-full ${feedTab === 'forYou' ? 'bg-white/15 text-white' : 'text-white/70'}`}
+            >
+              For You
+            </button>
+            <button
+              onClick={() => setFeedTab('following')}
+              className={`px-3 py-1 text-xs rounded-full ${feedTab === 'following' ? 'bg-white/15 text-white' : 'text-white/70'}`}
+            >
+              Following
+            </button>
           </div>
 
           {/* Auto-advance toggle */}
@@ -318,7 +352,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             style={{ scrollSnapStop: 'always' }}
             onScroll={handleScroll}
           >
-            {reels.map((reel, index) => (
+            {displayedReels.map((reel, index) => (
               <div
                 key={reel.id}
                 className="relative h-full w-full snap-start snap-always"

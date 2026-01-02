@@ -70,7 +70,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const { authUser } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
@@ -135,8 +135,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
       pauseOtherReelVideos({ except: video });
 
       video.currentTime = 0;
-      video.muted = false;
-      setIsMuted(false);
+
+      // Respect the user's mute setting; don't auto-unmute.
+      video.muted = isMuted;
 
       // Ensure the element has the latest src loaded
       try {
@@ -145,12 +146,24 @@ const ReelCard: React.FC<ReelCardProps> = ({
         // ignore
       }
 
-      video.play().then(() => setIsPlaying(true)).catch(() => {
-        // Browser autoplay policy - try muted
-        video.muted = true;
-        setIsMuted(true);
-        video.play().then(() => setIsPlaying(true)).catch(() => {});
-      });
+      const playAttempt = async () => {
+        try {
+          await video.play();
+          setIsPlaying(true);
+        } catch {
+          // Browser autoplay policy - try muted
+          video.muted = true;
+          setIsMuted(true);
+          try {
+            await video.play();
+            setIsPlaying(true);
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      void playAttempt();
     } else {
       // Not active - immediately stop, mute, and stop loading
       try {
@@ -307,12 +320,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
     // Like if not already liked
     if (!isLiked) {
+      const nextCount = likeCount + 1;
       setIsLiked(true);
-      setLikeCount(prev => prev + 1);
-      
+      setLikeCount(nextCount);
+
       if (authUser) {
         await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
-        await supabase.from('reels').update({ likes_count: likeCount + 1 }).eq('id', reel.id);
+        await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
       }
     }
   };
@@ -363,15 +377,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
 
     const newIsLiked = !isLiked;
+    const nextCount = newIsLiked ? likeCount + 1 : Math.max(0, likeCount - 1);
+
     setIsLiked(newIsLiked);
-    setLikeCount(prev => newIsLiked ? prev + 1 : Math.max(0, prev - 1));
+    setLikeCount(nextCount);
 
     if (newIsLiked) {
       await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
-      await supabase.from('reels').update({ likes_count: likeCount + 1 }).eq('id', reel.id);
+      await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
     } else {
       await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
-      await supabase.from('reels').update({ likes_count: Math.max(0, likeCount - 1) }).eq('id', reel.id);
+      await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
     }
   };
 
@@ -402,8 +418,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   const handleShare = async () => {
-    setShareCount(prev => prev + 1);
-    await supabase.from('reels').update({ shares_count: shareCount + 1 }).eq('id', reel.id);
+    const nextCount = shareCount + 1;
+    setShareCount(nextCount);
+    await supabase.from('reels').update({ shares_count: nextCount }).eq('id', reel.id);
 
     if (navigator.share) {
       navigator.share({
@@ -436,7 +453,23 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
   };
 
-  const handleReport = () => {
+  const handleReport = async () => {
+    if (!authUser) {
+      toast({ title: 'Sign in required', description: 'Please sign in to report content' });
+      return;
+    }
+
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: authUser.id,
+      reported_reel_id: reel.id,
+      reason: 'Reported from reel',
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to submit report.', variant: 'destructive' });
+      return;
+    }
+
     toast({ title: 'Report submitted', description: 'Thank you for reporting this content.' });
   };
 
