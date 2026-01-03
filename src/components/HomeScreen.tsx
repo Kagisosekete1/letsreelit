@@ -322,13 +322,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
           </div>
 
-          {/* Auto-advance toggle */}
-          <button 
-            onClick={toggleAutoAdvance}
-            className="absolute top-4 right-4 z-50 px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
-          >
-            {autoAdvance ? 'Auto: On' : 'Auto: Off'}
-          </button>
+          {/* Top right controls: Auto-advance + Following link */}
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+            <button 
+              onClick={toggleAutoAdvance}
+              className="px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
+            >
+              {autoAdvance ? 'Auto: On' : 'Auto: Off'}
+            </button>
+            <button
+              onClick={() => setScreen('following' as any)}
+              className="px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
+            >
+              Following
+            </button>
+          </div>
 
           
           <div 
