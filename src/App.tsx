@@ -13,6 +13,7 @@ import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import About from "./pages/About";
+import Following from "./pages/Following";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,11 @@ const App = () => {
           <div className="bg-background min-h-screen">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/following" element={
+                <ProtectedRoute>
+                  <Following />
+                </ProtectedRoute>
+              } />
               <Route path="/tutorials" element={
                 <ProtectedRoute>
                   <Tutorials />

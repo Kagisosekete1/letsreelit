@@ -29,7 +29,11 @@ const Index = () => {
     }
   };
 
-  const setScreen = (screen: Screen, payload?: any) => {
+  const setScreen = (screen: Screen | 'following', payload?: any) => {
+    if (screen === 'following') {
+      navigate('/following');
+      return;
+    }
     setCurrentScreen(screen);
   };
 

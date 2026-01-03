@@ -71,11 +71,55 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(reel.isLiked || false);
   const [isSaved, setIsSaved] = useState(false);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
   const [commentCount, setCommentCount] = useState(reel.stats.comments);
   const [shareCount, setShareCount] = useState(reel.stats.shares);
+
+  // Realtime subscription for likes
+  useEffect(() => {
+    const channel = supabase
+      .channel(`likes-${reel.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
+        async () => {
+          const { count } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('reel_id', reel.id);
+          setLikeCount(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [reel.id]);
+
+  // Realtime subscription for comments
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${reel.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: `reel_id=eq.${reel.id}` },
+        async () => {
+          const { count } = await supabase
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('reel_id', reel.id);
+          setCommentCount(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [reel.id]);
   const [showComments, setShowComments] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -566,8 +610,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-        {/* Top Controls - Mute Button */}
-        <div className="absolute top-4 right-4 z-10">
+        {/* Top Controls - Mute Button - positioned to not overlap auto-advance */}
+        <div className="absolute top-4 right-28 z-10">
           <Button
             variant="ghost"
             size="sm"
