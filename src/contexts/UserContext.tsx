@@ -108,34 +108,25 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthUser(null);
   };
 
-  const followUser = async (targetProfileId: string) => {
+  const followUser = async (targetUserId: string) => {
     if (!authUser || !currentUser) return;
-    if (!targetProfileId) return;
+    if (!targetUserId) return;
 
     try {
-      // Get current user's profile id
-      const { data: myProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', authUser.id)
-        .single();
-
-      if (!myProfile) return;
-
       // Idempotent follow
       const { data: existing } = await supabase
         .from('follows')
         .select('id')
-        .eq('follower_id', myProfile.id)
-        .eq('following_id', targetProfileId)
+        .eq('follower_id', authUser.id)
+        .eq('following_id', targetUserId)
         .maybeSingle();
 
       if (!existing) {
         const { error } = await supabase
           .from('follows')
           .insert({
-            follower_id: myProfile.id,
-            following_id: targetProfileId,
+            follower_id: authUser.id,
+            following_id: targetUserId,
           });
 
         if (error) return;
@@ -150,29 +141,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const unfollowUser = async (targetProfileId: string) => {
+  const unfollowUser = async (targetUserId: string) => {
     if (!authUser || !currentUser) return;
-    if (!targetProfileId) return;
+    if (!targetUserId) return;
 
     try {
-      // Get current user's profile id
-      const { data: myProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', authUser.id)
-        .single();
-
-      if (!myProfile) return;
-
-      // Delete follow record
       const { error } = await supabase
         .from('follows')
         .delete()
-        .eq('follower_id', myProfile.id)
-        .eq('following_id', targetProfileId);
+        .eq('follower_id', authUser.id)
+        .eq('following_id', targetUserId);
 
       if (!error) {
-        // Update local state
         setCurrentUser(prev => prev ? {
           ...prev,
           stats: { ...prev.stats, following: Math.max(0, prev.stats.following - 1) }

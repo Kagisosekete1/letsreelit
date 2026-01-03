@@ -120,11 +120,11 @@ const UserProfile = () => {
       supabase
         .from('follows')
         .select('id', { count: 'exact', head: true })
-        .eq('following_id', profileData.id),
+        .eq('following_id', profileData.user_id),
       supabase
         .from('follows')
         .select('id', { count: 'exact', head: true })
-        .eq('follower_id', profileData.id),
+        .eq('follower_id', profileData.user_id),
     ]);
 
     setUser(prev => prev ? {
@@ -135,23 +135,15 @@ const UserProfile = () => {
 
     // Check if current user is following this user
     if (authUser) {
-      const { data: myProfile } = await supabase
-        .from('profiles')
+      const { data: followData } = await supabase
+        .from('follows')
         .select('id')
-        .eq('user_id', authUser.id)
-        .single();
+        .eq('follower_id', authUser.id)
+        .eq('following_id', profileData.user_id)
+        .maybeSingle();
 
-      if (myProfile) {
-        const { data: followData } = await supabase
-          .from('follows')
-          .select('id')
-          .eq('follower_id', myProfile.id)
-          .eq('following_id', profileData.id)
-          .maybeSingle();
-
-        setIsFollowing(!!followData);
-        setFollowingIds(followData ? new Set([profileData.id]) : new Set());
-      }
+      setIsFollowing(!!followData);
+      setFollowingIds(followData ? new Set([profileData.user_id]) : new Set());
     }
 
     setLoading(false);
@@ -163,32 +155,18 @@ const UserProfile = () => {
     // Optimistic UI first (instant)
     const wasFollowing = isFollowing;
     setIsFollowing(!wasFollowing);
-    setFollowingIds(!wasFollowing ? new Set([user.id]) : new Set());
+    setFollowingIds(!wasFollowing ? new Set([user.user_id]) : new Set());
     setUser(prev => prev ? {
       ...prev,
       followers_count: Math.max(0, (prev.followers_count || 0) + (wasFollowing ? -1 : 1)),
     } : prev);
 
-    const { data: myProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .single();
-
-    if (!myProfile) {
-      // Revert if we can't resolve profile
-      setIsFollowing(wasFollowing);
-      setFollowingIds(wasFollowing ? new Set([user.id]) : new Set());
-      await fetchUserProfile();
-      return;
-    }
-
     if (wasFollowing) {
       await supabase
         .from('follows')
         .delete()
-        .eq('follower_id', myProfile.id)
-        .eq('following_id', user.id);
+        .eq('follower_id', authUser.id)
+        .eq('following_id', user.user_id);
 
       toast({ title: 'Unfollowed', description: `You unfollowed @${user.username}` });
       return;
@@ -198,16 +176,16 @@ const UserProfile = () => {
     const { data: existing } = await supabase
       .from('follows')
       .select('id')
-      .eq('follower_id', myProfile.id)
-      .eq('following_id', user.id)
+      .eq('follower_id', authUser.id)
+      .eq('following_id', user.user_id)
       .maybeSingle();
 
     if (!existing) {
       await supabase
         .from('follows')
         .insert({
-          follower_id: myProfile.id,
-          following_id: user.id,
+          follower_id: authUser.id,
+          following_id: user.user_id,
         });
     }
 
