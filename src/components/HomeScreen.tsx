@@ -58,8 +58,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       if (authUser) fetchFollowing();
     }
   }, [currentScreen, authUser]);
-
-
   // Extra safety: ensure only the active reel video can play audio
   useEffect(() => {
     const container = containerRef.current;
@@ -75,7 +73,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       try {
         v.pause();
         v.muted = true;
-        v.currentTime = 0;
+        v.removeAttribute('src');
+        v.load();
       } catch {
         // ignore
       }
@@ -158,60 +157,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
 
   const fetchFollowing = async () => {
     if (!authUser) return;
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .single();
 
-    if (profile) {
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', profile.id);
+    const { data: follows } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', authUser.id);
 
-      if (follows) {
-        setFollowingIds(new Set(follows.map(f => f.following_id)));
-      }
+    if (follows) {
+      setFollowingIds(new Set(follows.map(f => f.following_id)));
     }
   };
 
-  const toggleFollow = async (profileId: string) => {
+  const toggleFollow = async (targetUserId: string) => {
     if (!authUser) return;
-    if (!profileId) return;
+    if (!targetUserId) return;
 
     // Optimistic UI first (feels instant)
-    const wasFollowing = followingIds.has(profileId);
+    const wasFollowing = followingIds.has(targetUserId);
     setFollowingIds(prev => {
       const next = new Set(prev);
-      if (wasFollowing) next.delete(profileId);
-      else next.add(profileId);
+      if (wasFollowing) next.delete(targetUserId);
+      else next.add(targetUserId);
       return next;
     });
-
-    const { data: myProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', authUser.id)
-      .single();
-
-    if (!myProfile) {
-      // Revert if we can't resolve the current user's profile
-      setFollowingIds(prev => {
-        const next = new Set(prev);
-        if (wasFollowing) next.add(profileId);
-        else next.delete(profileId);
-        return next;
-      });
-      return;
-    }
 
     if (wasFollowing) {
       await supabase
         .from('follows')
         .delete()
-        .eq('follower_id', myProfile.id)
-        .eq('following_id', profileId);
+        .eq('follower_id', authUser.id)
+        .eq('following_id', targetUserId);
       return;
     }
 
@@ -219,16 +194,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     const { data: existing } = await supabase
       .from('follows')
       .select('id')
-      .eq('follower_id', myProfile.id)
-      .eq('following_id', profileId)
+      .eq('follower_id', authUser.id)
+      .eq('following_id', targetUserId)
       .maybeSingle();
 
     if (!existing) {
       await supabase
         .from('follows')
         .insert({
-          follower_id: myProfile.id,
-          following_id: profileId,
+          follower_id: authUser.id,
+          following_id: targetUserId,
         });
     }
   };
