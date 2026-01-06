@@ -17,6 +17,13 @@ interface Comment {
   username: string;
   text: string;
   timestamp: Date;
+  avatarUrl?: string;
+}
+
+interface Viewer {
+  oderId: string;
+  username: string;
+  avatarUrl?: string;
 }
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
@@ -27,7 +34,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [viewerCount, setViewerCount] = useState(0);
+  const [viewers, setViewers] = useState<Map<string, Viewer>>(new Map());
   const [likeCount, setLikeCount] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -35,13 +42,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<'setup' | 'live' | 'ended'>('setup');
   const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState(0);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const viewerCount = viewers.size;
 
   useEffect(() => {
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+      }
+      // Clean up realtime channel
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
       }
     };
   }, [stream]);
@@ -55,6 +70,92 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return () => clearInterval(interval);
     }
   }, [isLive, liveStartTime]);
+
+  // Setup Supabase Realtime for viewer presence when live
+  useEffect(() => {
+    if (!isLive || !liveSessionId || !authUser) return;
+
+    const channel = supabase.channel(`live:${liveSessionId}`, {
+      config: {
+        presence: {
+          key: authUser.id,
+        },
+      },
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const newViewers = new Map<string, Viewer>();
+        
+        Object.entries(state).forEach(([key, presences]) => {
+          if (key !== authUser.id && Array.isArray(presences) && presences.length > 0) {
+            const presence = presences[0] as any;
+            newViewers.set(key, {
+              oderId: key,
+              username: presence.username || 'Anonymous',
+              avatarUrl: presence.avatarUrl,
+            });
+          }
+        });
+        
+        setViewers(newViewers);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        if (key !== authUser.id && newPresences.length > 0) {
+          const presence = newPresences[0] as any;
+          setViewers(prev => {
+            const next = new Map(prev);
+            next.set(key, {
+              oderId: key,
+              username: presence.username || 'Anonymous',
+              avatarUrl: presence.avatarUrl,
+            });
+            return next;
+          });
+          
+          // Show join notification
+          toast({
+            title: `${presence.username || 'Someone'} joined`,
+            description: 'A new viewer is watching your live!',
+          });
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        if (key !== authUser.id) {
+          setViewers(prev => {
+            const next = new Map(prev);
+            next.delete(key);
+            return next;
+          });
+        }
+      })
+      .on('broadcast', { event: 'like' }, () => {
+        setLikeCount(prev => prev + 1);
+      })
+      .on('broadcast', { event: 'comment' }, ({ payload }) => {
+        const comment = payload as Comment;
+        setComments(prev => [...prev.slice(-20), comment]);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Track the broadcaster's presence
+          await channel.track({
+            username: currentUser?.username || 'Broadcaster',
+            avatarUrl: currentUser?.avatarUrl,
+            isBroadcaster: true,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [isLive, liveSessionId, authUser?.id, currentUser?.username]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -104,13 +205,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    // Generate unique session ID for this live stream
+    const sessionId = `live_${authUser?.id}_${Date.now()}`;
+    setLiveSessionId(sessionId);
+
     await startCamera();
     setStep('live');
     setIsLive(true);
     setLiveStartTime(new Date());
     
-    // Real counts only - no fake viewers, likes, or comments
-    // Viewers, likes, and comments will be 0 until real users interact
+    toast({
+      title: "You're live!",
+      description: "Real viewers will appear when they join your stream.",
+    });
   };
 
   const handleEndLive = async () => {
@@ -122,6 +229,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
+    
+    // Clean up realtime channel
+    if (channelRef.current) {
+      await supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+    
     setStream(null);
     setIsLive(false);
     setStep('ended');
@@ -225,13 +339,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   };
 
   const sendComment = () => {
-    if (newComment.trim() && currentUser) {
+    if (newComment.trim() && currentUser && channelRef.current) {
       const comment: Comment = {
         id: Date.now().toString(),
         username: currentUser.username,
         text: newComment.trim(),
         timestamp: new Date(),
+        avatarUrl: currentUser.avatarUrl,
       };
+      
+      // Broadcast comment to all viewers
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'comment',
+        payload: comment,
+      });
+      
+      // Add to local comments
       setComments(prev => [...prev.slice(-20), comment]);
       setNewComment('');
     }
@@ -257,7 +381,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               <div className="text-center px-4">
                 <Radio className="w-12 h-12 text-pink-500 mx-auto mb-3" />
                 <p className="text-lg font-semibold mb-2">Ready to go live?</p>
-                <p className="text-muted-foreground text-sm">Only real viewers and interactions will be counted</p>
+                <p className="text-muted-foreground text-sm">Real-time viewer tracking with Supabase Presence</p>
               </div>
             </div>
 
@@ -382,18 +506,47 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             <p className="text-white font-semibold">{liveTitle}</p>
           </div>
 
+          {/* Viewer avatars (if any) */}
+          {viewerCount > 0 && (
+            <div className="absolute top-24 left-4 flex -space-x-2">
+              {Array.from(viewers.values()).slice(0, 5).map((viewer, idx) => (
+                <div
+                  key={viewer.oderId}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-600 flex items-center justify-center overflow-hidden"
+                  style={{ zIndex: 5 - idx }}
+                >
+                  {viewer.avatarUrl ? (
+                    <img src={viewer.avatarUrl} alt={viewer.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white text-xs">{viewer.username[0]?.toUpperCase()}</span>
+                  )}
+                </div>
+              ))}
+              {viewerCount > 5 && (
+                <div className="w-8 h-8 rounded-full border-2 border-white bg-black/50 flex items-center justify-center">
+                  <span className="text-white text-xs">+{viewerCount - 5}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Comments Section - Real comments only */}
           <div className="absolute bottom-32 left-0 right-16 max-h-64 overflow-hidden px-4">
             {comments.length === 0 ? (
               <div className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
-                <span className="text-white/60 text-sm">No comments yet. Be the first to comment!</span>
+                <span className="text-white/60 text-sm">Waiting for viewers to join...</span>
               </div>
             ) : (
               <div className="space-y-2">
                 {comments.slice(-8).map((comment) => (
-                  <div key={comment.id} className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
-                    <span className="text-white font-semibold text-sm">@{comment.username}</span>
-                    <span className="text-white/80 text-sm ml-2">{comment.text}</span>
+                  <div key={comment.id} className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm flex items-center gap-2">
+                    {comment.avatarUrl && (
+                      <img src={comment.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+                    )}
+                    <div>
+                      <span className="text-white font-semibold text-sm">@{comment.username}</span>
+                      <span className="text-white/80 text-sm ml-2">{comment.text}</span>
+                    </div>
                   </div>
                 ))}
               </div>

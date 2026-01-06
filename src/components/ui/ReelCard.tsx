@@ -168,6 +168,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   // Auto-play/pause + true "single active" behavior (lazy src + no preload for inactive)
+  // Auto-unmute when active, mute when switching away
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -180,8 +181,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
       video.currentTime = 0;
 
-      // Respect the user's mute setting; don't auto-unmute.
-      video.muted = isMuted;
+      // Auto-unmute when reel becomes active (sound plays automatically)
+      video.muted = false;
+      setIsMuted(false);
 
       // Ensure the element has the latest src loaded
       try {
@@ -195,7 +197,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           await video.play();
           setIsPlaying(true);
         } catch {
-          // Browser autoplay policy - try muted
+          // Browser autoplay policy - try muted first, then user can unmute
           video.muted = true;
           setIsMuted(true);
           try {
