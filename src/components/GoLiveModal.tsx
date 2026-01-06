@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,43 +109,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setIsLive(true);
     setLiveStartTime(new Date());
     
-    // Simulate viewers joining
-    const viewerInterval = setInterval(() => {
-      setViewerCount(prev => Math.min(prev + Math.floor(Math.random() * 3), 100));
-    }, 3000);
-
-    // Simulate likes
-    const likeInterval = setInterval(() => {
-      if (Math.random() > 0.5) {
-        setLikeCount(prev => prev + Math.floor(Math.random() * 5));
-      }
-    }, 2000);
-
-    // Simulate comments
-    const commentInterval = setInterval(() => {
-      if (Math.random() > 0.6) {
-        const sampleComments = [
-          "Amazing moves!",
-          "Love this!",
-          "You're so talented!",
-          "Keep going!",
-          "This is fire!",
-        ];
-        const newSimComment: Comment = {
-          id: Date.now().toString(),
-          username: `user${Math.floor(Math.random() * 1000)}`,
-          text: sampleComments[Math.floor(Math.random() * sampleComments.length)],
-          timestamp: new Date(),
-        };
-        setComments(prev => [...prev.slice(-20), newSimComment]);
-      }
-    }, 4000);
-
-    return () => {
-      clearInterval(viewerInterval);
-      clearInterval(likeInterval);
-      clearInterval(commentInterval);
-    };
+    // Real counts only - no fake viewers, likes, or comments
+    // Viewers, likes, and comments will be 0 until real users interact
   };
 
   const handleEndLive = async () => {
@@ -185,15 +150,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         .from('reels')
         .getPublicUrl(fileName);
 
-      // Save to database as tutorial
+      // Save to database as reel (live replay)
       const { error: dbError } = await supabase
         .from('reels')
         .insert({
           user_id: authUser.id,
           title: liveTitle,
-          description: `Live stream with ${viewerCount} viewers and ${likeCount} likes`,
+          description: `Live replay • ${formatDuration(liveDuration)} • ${viewerCount} viewers`,
           video_url: publicUrl,
           is_portrait: true,
+          views_count: viewerCount,
+          likes_count: likeCount,
+          comments_count: comments.length,
         });
 
       if (dbError) throw dbError;
@@ -202,7 +170,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       toast({
         title: "Live saved!",
-        description: "Your live has been saved to Tutorials.",
+        description: "Your live replay has been saved.",
       });
       onClose();
     } catch (error: any) {
@@ -212,6 +180,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleDiscard = () => {
+    recordedChunksRef.current = [];
+    toast({ title: "Live discarded", description: "Your live recording has been deleted." });
+    onClose();
   };
 
   const toggleMute = () => {
@@ -272,20 +246,36 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="space-y-4">
+            <Input
+              placeholder="Add a title for your live..."
+              value={liveTitle}
+              onChange={(e) => setLiveTitle(e.target.value)}
+              className="rounded-xl"
+            />
+
             <div className="aspect-[9/16] bg-muted rounded-2xl flex items-center justify-center">
               <div className="text-center px-4">
                 <Radio className="w-12 h-12 text-pink-500 mx-auto mb-3" />
-                <p className="text-lg font-semibold mb-2">Coming Soon!</p>
-                <p className="text-muted-foreground text-sm">Live streaming is under development. Stay tuned for updates!</p>
+                <p className="text-lg font-semibold mb-2">Ready to go live?</p>
+                <p className="text-muted-foreground text-sm">Only real viewers and interactions will be counted</p>
               </div>
             </div>
 
+            <Button 
+              className="w-full rounded-xl bg-pink-500 hover:bg-pink-600"
+              onClick={handleGoLive}
+              disabled={!liveTitle.trim()}
+            >
+              <Radio className="w-4 h-4 mr-2" />
+              Go Live
+            </Button>
+            
             <Button 
               variant="outline"
               className="w-full rounded-xl"
               onClick={onClose}
             >
-              Got it
+              Cancel
             </Button>
           </div>
         </DialogContent>
@@ -305,7 +295,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="space-y-6 py-4">
-            {/* Live Results */}
+            {/* Live Results - Real stats only */}
             <div className="bg-secondary/30 rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4 text-center">Live Results</h3>
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -332,13 +322,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 className="w-full rounded-xl"
                 onClick={saveLiveToTutorial}
               >
-                Save to Tutorials
+                Save as Reel
               </Button>
               <Button 
                 variant="outline"
-                className="w-full rounded-xl"
-                onClick={onClose}
+                className="w-full rounded-xl text-destructive hover:text-destructive"
+                onClick={handleDiscard}
               >
+                <Trash2 className="w-4 h-4 mr-2" />
                 Discard
               </Button>
             </div>
@@ -361,7 +352,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             className="w-full h-full object-cover"
           />
 
-          {/* Live Badge & Stats */}
+          {/* Live Badge & Stats - Real counts only */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-2">
               <div className="bg-pink-500 px-3 py-1 rounded-full flex items-center gap-1">
@@ -391,22 +382,28 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             <p className="text-white font-semibold">{liveTitle}</p>
           </div>
 
-          {/* Comments Section */}
+          {/* Comments Section - Real comments only */}
           <div className="absolute bottom-32 left-0 right-16 max-h-64 overflow-hidden px-4">
-            <div className="space-y-2">
-              {comments.slice(-8).map((comment) => (
-                <div key={comment.id} className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
-                  <span className="text-white font-semibold text-sm">@{comment.username}</span>
-                  <span className="text-white/80 text-sm ml-2">{comment.text}</span>
-                </div>
-              ))}
-            </div>
+            {comments.length === 0 ? (
+              <div className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
+                <span className="text-white/60 text-sm">No comments yet. Be the first to comment!</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {comments.slice(-8).map((comment) => (
+                  <div key={comment.id} className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
+                    <span className="text-white font-semibold text-sm">@{comment.username}</span>
+                    <span className="text-white/80 text-sm ml-2">{comment.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Like Animation Area */}
+          {/* Like Animation Area - Real likes only */}
           <div className="absolute right-4 bottom-48 flex flex-col items-center gap-2">
             <div className="bg-black/50 rounded-full p-3">
-              <Heart className="w-6 h-6 text-pink-500" fill="currentColor" />
+              <Heart className={`w-6 h-6 ${likeCount > 0 ? 'text-pink-500 fill-pink-500' : 'text-white'}`} />
             </div>
             <span className="text-white text-sm font-semibold">{likeCount}</span>
           </div>
