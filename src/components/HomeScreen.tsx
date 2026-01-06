@@ -32,20 +32,12 @@ interface ReelData {
   };
 }
 
-const AUTO_ADVANCE_KEY = 'reelit_auto_advance';
-
 const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => {
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [autoAdvance, setAutoAdvance] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(AUTO_ADVANCE_KEY) === 'true';
-    }
-    return false;
-  });
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
 
@@ -281,18 +273,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   }, [currentScreen, activeReelIndex, goToReel]);
 
   const handleReelEnded = useCallback(() => {
+    // Auto-advance is now always on - go to next reel when current ends
     if (activeReelIndex < displayedReels.length - 1) {
       goToReel(activeReelIndex + 1);
     }
   }, [activeReelIndex, displayedReels.length, goToReel]);
-
-  const toggleAutoAdvance = () => {
-    setAutoAdvance(prev => {
-      const next = !prev;
-      localStorage.setItem(AUTO_ADVANCE_KEY, String(next));
-      return next;
-    });
-  };
 
   if (loading) {
     return (
@@ -317,25 +302,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
         </div>
       ) : (
         <div className="relative flex-1 h-full">
-          {/* Subtle App Logo Watermark */}
-          <div className="absolute top-4 left-4 z-50 pointer-events-none">
-            <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
-          </div>
-
-          {/* Top right controls: Auto-advance + Following link */}
-          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-            <button 
-              onClick={toggleAutoAdvance}
-              className="px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
-            >
-              {autoAdvance ? 'Auto: On' : 'Auto: Off'}
-            </button>
+          {/* Top Header: Logo - Following - Volume placeholder area */}
+          <div className="absolute top-4 left-0 right-0 z-50 flex items-center justify-center px-4">
+            {/* Logo on left */}
+            <div className="absolute left-4">
+              <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
+            </div>
+            
+            {/* Following in center */}
             <button
               onClick={() => setScreen('following' as any)}
-              className="px-2 py-1 text-[10px] text-white bg-black/40 rounded-full backdrop-blur-sm"
+              className="px-3 py-1.5 text-xs text-white bg-black/40 rounded-full backdrop-blur-sm font-medium"
             >
               Following
             </button>
+            
+            {/* Volume button space on right (handled by ReelCard) */}
           </div>
 
           
@@ -381,7 +363,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   isActive={index === activeReelIndex}
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
-                  autoAdvance={autoAdvance}
+                  autoAdvance={true}
                   onEnded={handleReelEnded}
                 />
               </div>
