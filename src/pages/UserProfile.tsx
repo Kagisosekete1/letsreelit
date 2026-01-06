@@ -87,6 +87,44 @@ const UserProfile = () => {
     }
   }, [username, authUser]);
 
+  // Realtime subscription for follows
+  useEffect(() => {
+    if (!user?.user_id) return;
+
+    const channel = supabase
+      .channel(`follows-${user.user_id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${user.user_id}` },
+        async () => {
+          // Refetch follower count
+          const { count } = await supabase
+            .from('follows')
+            .select('id', { count: 'exact', head: true })
+            .eq('following_id', user.user_id);
+          
+          setUser(prev => prev ? { ...prev, followers_count: count || 0 } : prev);
+
+          // Check if current user is still following
+          if (authUser) {
+            const { data } = await supabase
+              .from('follows')
+              .select('id')
+              .eq('follower_id', authUser.id)
+              .eq('following_id', user.user_id)
+              .maybeSingle();
+            setIsFollowing(!!data);
+            setFollowingIds(data ? new Set([user.user_id]) : new Set());
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.user_id, authUser?.id]);
+
   const fetchUserProfile = async () => {
     setLoading(true);
     

@@ -746,15 +746,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
                   Delete Reel
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={handleReport} className="text-destructive">
-                <Flag className="w-4 h-4 mr-2" />
-                Report
-              </DropdownMenuItem>
               {!isOwner && (
-                <DropdownMenuItem onClick={handleBlock} className="text-destructive">
-                  <Ban className="w-4 h-4 mr-2" />
-                  Block User
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={handleReport} className="text-destructive">
+                    <Flag className="w-4 h-4 mr-2" />
+                    Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleBlock} className="text-destructive">
+                    <Ban className="w-4 h-4 mr-2" />
+                    Block User
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
