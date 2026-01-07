@@ -7,7 +7,7 @@ import ChatModal from '@/components/ChatModal';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import FollowersModal from '@/components/FollowersModal';
-import ReelCard from '@/components/ui/ReelCard';
+import ProfileReelViewer from '@/components/ProfileReelViewer';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -334,54 +334,19 @@ const UserProfile = () => {
     );
   }
 
-  // Full screen reel viewer
-  if (selectedReelIndex !== null) {
-    const reel = userReels[selectedReelIndex];
+  // Full screen reel viewer - Use ProfileReelViewer for consistent experience
+  if (selectedReelIndex !== null && user) {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-4 left-4 z-50 text-white bg-black/30 rounded-full"
-          onClick={() => setSelectedReelIndex(null)}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
-          {userReels.map((r, index) => (
-            <ReelCard
-              key={r.id}
-              reel={{
-                id: r.id,
-                videoUrl: r.video_url,
-                thumbnailUrl: r.thumbnail_url || '',
-                title: r.title,
-                description: r.description || '',
-                user: {
-                  id: user.user_id,
-                  profileId: user.id,
-                  username: user.username,
-                  displayName: user.display_name,
-                  avatarUrl: user.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
-                  verified: user.verified,
-                },
-                stats: {
-                  likes: r.likes_count || 0,
-                  comments: r.comments_count || 0,
-                  shares: r.shares_count || 0,
-                  views: r.views_count || 0,
-                },
-                isLiked: false,
-              }}
-              followingIds={followingIds}
-              toggleFollow={toggleFollow}
-              isActive={index === selectedReelIndex}
-              isOwner={authUser?.id === user.user_id}
-              variant="profile"
-            />
-          ))}
-        </div>
-      </div>
+      <ProfileReelViewer
+        reels={userReels}
+        initialIndex={selectedReelIndex}
+        onClose={() => setSelectedReelIndex(null)}
+        userId={user.user_id}
+        username={user.username}
+        displayName={user.display_name}
+        avatarUrl={user.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
+        verified={user.verified}
+      />
     );
   }
 
