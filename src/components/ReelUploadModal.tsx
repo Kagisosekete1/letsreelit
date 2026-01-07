@@ -146,7 +146,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
       setUploadProgress(95);
 
-      // Create reel record in database
+      // Create reel record in database with tutorial flag
       const { error: dbError } = await supabase
         .from('reels')
         .insert({
@@ -155,6 +155,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
           description: description.trim() || null,
           video_url: publicUrl,
           is_portrait: true,
+          is_tutorial: postAs === 'tutorial',
         });
 
       if (dbError) throw dbError;
