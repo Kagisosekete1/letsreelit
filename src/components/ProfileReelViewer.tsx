@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { X, ChevronUp, ChevronDown, Volume2, VolumeX } from 'lucide-react';
+import { X, Volume2, VolumeX } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -99,24 +99,8 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     }
   };
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < reels.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowUp') {
-      handlePrevious();
-    } else if (e.key === 'ArrowDown') {
-      handleNext();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
       onClose();
     }
   };
@@ -124,7 +108,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex]);
+  }, [onClose]);
 
 
   const formattedReel = {
@@ -194,34 +178,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
         )}
       </div>
 
-      {/* Navigation Arrows - Desktop/Tablet */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-20 z-50 hidden sm:flex flex-col gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
-          onClick={handlePrevious}
-          disabled={currentIndex === 0}
-        >
-          <ChevronUp className="w-5 h-5" />
-        </Button>
-      </div>
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-20 z-50 hidden sm:flex flex-col gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
-          onClick={handleNext}
-          disabled={currentIndex === reels.length - 1}
-        >
-          <ChevronDown className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Reel Counter */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/50 rounded-full px-3 py-1">
-        <span className="text-white text-sm">{currentIndex + 1} / {reels.length}</span>
-      </div>
 
       {/* Main Reel Content - Single reel view with button navigation */}
       <div className="w-full h-full relative">
@@ -237,29 +193,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
         />
       </div>
 
-      {/* Mobile Navigation Arrows */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-20 z-50 sm:hidden flex flex-col gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
-          onClick={handlePrevious}
-          disabled={currentIndex === 0}
-        >
-          <ChevronUp className="w-5 h-5" />
-        </Button>
-      </div>
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-20 z-50 sm:hidden flex flex-col gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
-          onClick={handleNext}
-          disabled={currentIndex === reels.length - 1}
-        >
-          <ChevronDown className="w-5 h-5" />
-        </Button>
-      </div>
     </div>
   );
 };
