@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Bell, Heart, MessageCircle, UserPlus, Video, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Bell, Heart, MessageCircle, UserPlus, Video } from 'lucide-react';
+
 import { useToast } from '@/hooks/use-toast';
 
 interface NotificationsModalProps {
@@ -132,12 +132,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border rounded-3xl">
         <DialogHeader className="pb-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-foreground">Notifications</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-foreground">Notifications</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

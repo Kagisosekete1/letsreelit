@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LanguageModalProps {
@@ -63,12 +63,7 @@ const LanguageModal: React.FC<LanguageModalProps> = ({ isOpen, onClose }) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border rounded-3xl">
         <DialogHeader className="pb-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-foreground">Language</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-foreground">Language</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
