@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -684,14 +684,34 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
         {/* Action Buttons - Right Side */}
         <div className="absolute bottom-20 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
-          {/* User Avatar */}
-          <button onClick={handleUserClick} className="relative mb-1">
-            <img
-              src={reel.user.avatarUrl}
-              alt={reel.user.username}
-              className="w-10 h-10 rounded-full border-2 border-white"
-            />
-          </button>
+          {/* User Avatar with Follow Button */}
+          <div className="relative mb-1">
+            <button onClick={handleUserClick}>
+              <img
+                src={reel.user.avatarUrl}
+                alt={reel.user.username}
+                className="w-10 h-10 rounded-full border-2 border-white"
+              />
+            </button>
+            {/* Follow button - only show if not owner and not already following */}
+            {authUser && !isOwner && !followingIds.has(reel.user.id) && (
+              <button
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full flex items-center justify-center border border-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFollow(reel.user.id);
+                }}
+              >
+                <UserPlus className="w-3 h-3 text-primary-foreground" />
+              </button>
+            )}
+            {/* Following indicator */}
+            {authUser && !isOwner && followingIds.has(reel.user.id) && (
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border border-white">
+                <UserCheck className="w-3 h-3 text-white" />
+              </div>
+            )}
+          </div>
 
           {/* Like */}
           <button
