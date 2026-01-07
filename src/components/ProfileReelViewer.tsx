@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { X, Volume2, VolumeX } from 'lucide-react';
+import { X } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -41,10 +40,8 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   verified = false,
 }) => {
   const { authUser } = useUser();
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [currentIndex] = useState(initialIndex);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [volume, setVolume] = useState(100);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentReel = reels[currentIndex];
@@ -54,15 +51,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
       fetchFollowing();
     }
   }, [authUser]);
-
-
-  // Apply volume to active video
-  useEffect(() => {
-    const video = document.querySelector('video[data-reel-video="true"]') as HTMLVideoElement;
-    if (video) {
-      video.volume = volume / 100;
-    }
-  }, [volume, currentIndex]);
 
   const fetchFollowing = async () => {
     if (!authUser) return;
@@ -138,49 +126,20 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-background flex items-center justify-center"
+      className="fixed inset-0 z-50 flex flex-col bg-black"
     >
-      {/* Close Button */}
+      {/* Close Button - matches Home header position */}
       <Button
         variant="ghost"
         size="sm"
-        className="absolute top-4 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
+        className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
         onClick={onClose}
       >
         <X className="w-5 h-5" />
       </Button>
 
-      {/* Volume Control - Desktop/Tablet */}
-      <div 
-        className="absolute top-4 left-4 z-50 hidden sm:flex items-center gap-2"
-        onMouseEnter={() => setShowVolumeSlider(true)}
-        onMouseLeave={() => setShowVolumeSlider(false)}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white bg-black/50 hover:bg-black/70 rounded-full"
-          onClick={() => setVolume(volume > 0 ? 0 : 100)}
-        >
-          {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-        </Button>
-        {showVolumeSlider && (
-          <div className="bg-black/70 rounded-full px-3 py-2 flex items-center gap-2">
-            <Slider
-              value={[volume]}
-              onValueChange={(val) => setVolume(val[0])}
-              max={100}
-              step={1}
-              className="w-24"
-            />
-            <span className="text-white text-xs w-8">{volume}%</span>
-          </div>
-        )}
-      </div>
-
-
-      {/* Main Reel Content - Single reel view with button navigation */}
-      <div className="w-full h-full relative">
+      {/* Main Reel Content - Full screen like Home */}
+      <div className="flex-1 h-full w-full relative">
         <ReelCard
           key={currentReel.id}
           reel={formattedReel}
@@ -191,7 +150,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
           autoAdvance={false}
         />
       </div>
-
     </div>
   );
 };
