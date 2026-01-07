@@ -119,12 +119,7 @@ const Profile = () => {
   };
 
   const handleBack = () => {
-    const from = location.state?.from;
-    if (from) {
-      navigate(from);
-    } else {
-      navigate(-1);
-    }
+    navigate('/');
   };
 
   const handleReelClick = (reel: ReelData) => {
