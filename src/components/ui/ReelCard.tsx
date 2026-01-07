@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
+
+// Helper to parse and render hashtags as clickable links
+const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
+  const parts = text.split(/(#\w+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('#')) {
+      const tag = part.slice(1);
+      return (
+        <button
+          key={index}
+          className="text-primary font-medium hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/search?hashtag=${encodeURIComponent(tag)}`);
+          }}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+};
 
 interface Reel {
   id: string;
@@ -602,19 +625,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       )}
       
-      {/* Play/Pause Center Icon + Buffering Indicator */}
-      <div 
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{ opacity: isPlaying && !isBuffering ? 0 : 1, transition: 'opacity 0.2s' }}
-      >
-        {isBuffering && isActive ? (
+      {/* Buffering Indicator Only - No play/pause icon */}
+      {isBuffering && isActive && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
-            <Play className="w-8 h-8 text-white ml-1" fill="white" />
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* UI Elements - Hidden in clear screen mode */}
       <div 
@@ -654,9 +670,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 </div>
               )}
             </div>
-            <p className="text-white text-xs leading-relaxed line-clamp-2">{reel.title}</p>
+            <p className="text-white text-xs leading-relaxed line-clamp-2">
+              {renderTextWithHashtags(reel.title, navigate)}
+            </p>
             {reel.description && (
-              <p className="text-white/70 text-xs line-clamp-1">{reel.description}</p>
+              <p className="text-white/70 text-xs line-clamp-1">
+                {renderTextWithHashtags(reel.description, navigate)}
+              </p>
             )}
           </div>
         </div>

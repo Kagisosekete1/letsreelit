@@ -15,6 +15,7 @@ import Terms from "./pages/Terms";
 import About from "./pages/About";
 import Following from "./pages/Following";
 import LiveDiscovery from "./pages/LiveDiscovery";
+import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/user/:username" element={<UserProfile />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/about" element={<About />} />
