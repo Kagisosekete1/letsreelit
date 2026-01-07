@@ -46,7 +46,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   const [volume, setVolume] = useState(100);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const currentReel = reels[currentIndex];
 
@@ -56,15 +55,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     }
   }, [authUser]);
 
-  // Scroll to current reel on mount and index change
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      const reelElements = scrollContainerRef.current.children;
-      if (reelElements[currentIndex]) {
-        reelElements[currentIndex].scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [currentIndex]);
 
   // Apply volume to active video
   useEffect(() => {
@@ -136,17 +126,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex]);
 
-  // Handle scroll snap for mobile
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const container = scrollContainerRef.current;
-    const scrollTop = container.scrollTop;
-    const reelHeight = container.clientHeight;
-    const newIndex = Math.round(scrollTop / reelHeight);
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
-      setCurrentIndex(newIndex);
-    }
-  };
 
   const formattedReel = {
     id: currentReel.id,
@@ -244,62 +223,42 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
         <span className="text-white text-sm">{currentIndex + 1} / {reels.length}</span>
       </div>
 
-      {/* Main Reel Content - Scrollable for mobile, single view for desktop */}
-      <div 
-        ref={scrollContainerRef}
-        className="w-full h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide sm:overflow-hidden"
-        onScroll={handleScroll}
-      >
-        {/* Mobile: Show all reels for scroll snapping */}
-        <div className="sm:hidden">
-          {reels.map((reel, index) => (
-            <div key={reel.id} className="h-screen w-full snap-start relative">
-              <ReelCard
-                reel={{
-                  id: reel.id,
-                  videoUrl: reel.video_url,
-                  thumbnailUrl: reel.thumbnail_url || '',
-                  title: reel.title,
-                  description: reel.description,
-                  user: {
-                    id: userId,
-                    profileId: userId,
-                    username,
-                    displayName,
-                    avatarUrl,
-                    verified,
-                  },
-                  stats: {
-                    likes: reel.likes_count || 0,
-                    comments: reel.comments_count || 0,
-                    shares: reel.shares_count || 0,
-                    views: reel.views_count || 0,
-                  },
-                }}
-                followingIds={followingIds}
-                toggleFollow={toggleFollow}
-                isActive={index === currentIndex}
-                isOwner={isOwner}
-                autoAdvance={false}
-                variant="profile"
-              />
-            </div>
-          ))}
-        </div>
+      {/* Main Reel Content - Single reel view with button navigation */}
+      <div className="w-full h-full relative">
+        <ReelCard
+          key={currentReel.id}
+          reel={formattedReel}
+          followingIds={followingIds}
+          toggleFollow={toggleFollow}
+          isActive={true}
+          isOwner={isOwner}
+          autoAdvance={false}
+          variant="profile"
+        />
+      </div>
 
-        {/* Desktop/Tablet: Show single reel with nav arrows */}
-        <div className="hidden sm:block w-full h-full relative">
-          <ReelCard
-            key={currentReel.id}
-            reel={formattedReel}
-            followingIds={followingIds}
-            toggleFollow={toggleFollow}
-            isActive={true}
-            isOwner={isOwner}
-            autoAdvance={false}
-            variant="profile"
-          />
-        </div>
+      {/* Mobile Navigation Arrows */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-20 z-50 sm:hidden flex flex-col gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
+          onClick={handlePrevious}
+          disabled={currentIndex === 0}
+        >
+          <ChevronUp className="w-5 h-5" />
+        </Button>
+      </div>
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-20 z-50 sm:hidden flex flex-col gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-30"
+          onClick={handleNext}
+          disabled={currentIndex === reels.length - 1}
+        >
+          <ChevronDown className="w-5 h-5" />
+        </Button>
       </div>
     </div>
   );
