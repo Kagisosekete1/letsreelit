@@ -654,7 +654,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
 
         {/* User Info & Description - Bottom Left */}
-        <div className={`absolute ${variant === 'profile' ? 'bottom-6 sm:bottom-16' : 'bottom-16'} left-3 right-16 z-10`}>
+        <div className="absolute bottom-16 left-3 right-16 z-10">
           <div className="space-y-2 p-2 -ml-2 -mb-2 rounded-lg">
             <div className="flex items-center space-x-2">
               <button onClick={handleUserClick} className="flex items-center space-x-2">
