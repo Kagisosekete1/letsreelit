@@ -154,7 +154,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-background flex items-center justify-center"
     >
       {/* Close Button */}
       <Button
