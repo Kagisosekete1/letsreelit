@@ -72,7 +72,6 @@ const UserProfile = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [contentTab, setContentTab] = useState('reels');
   const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
-  const [contentTab, setContentTab] = useState('reels');
   
   const [user, setUser] = useState<UserProfileData | null>(null);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
