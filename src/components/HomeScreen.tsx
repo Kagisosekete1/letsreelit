@@ -3,6 +3,7 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
+import SplashScreen from './SplashScreen';
 import { Radio } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -287,11 +288,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   }, [currentScreen, activeReelIndex, goToReel]);
 
   if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-black">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   return (
