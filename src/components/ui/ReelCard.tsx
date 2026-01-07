@@ -792,13 +792,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
         </div>
       </div>
 
-      {/* Progress Bar - Always visible at the very bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20">
-        <div 
-          className="h-full bg-white transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
 
       {/* Comments Modal */}
       <CommentsModal
