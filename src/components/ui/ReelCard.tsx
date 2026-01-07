@@ -637,8 +637,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         className="transition-opacity duration-300"
         style={{ opacity: isClearScreen ? 0 : 1, pointerEvents: isClearScreen ? 'none' : 'auto' }}
       >
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
+        {/* Gradient Overlay - Only at bottom for text readability */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
         {/* Top Controls - Volume Button - top right - clickable on all devices */}
         <div className="absolute top-14 right-4 z-20">
