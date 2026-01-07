@@ -116,7 +116,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     videoUrl: currentReel.video_url,
     thumbnailUrl: currentReel.thumbnail_url || '',
     title: currentReel.title,
-    description: currentReel.description,
+    description: currentReel.description || '',
     user: {
       id: userId,
       profileId: userId,
@@ -189,7 +189,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
           isActive={true}
           isOwner={isOwner}
           autoAdvance={false}
-          variant="profile"
         />
       </div>
 
