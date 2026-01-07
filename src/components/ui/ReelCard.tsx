@@ -581,7 +581,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   return (
     <div 
-      className="absolute inset-0 bg-black flex items-center justify-center"
+      className="absolute inset-0 flex items-center justify-center"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleTouchStart}
@@ -637,8 +637,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
         className="transition-opacity duration-300"
         style={{ opacity: isClearScreen ? 0 : 1, pointerEvents: isClearScreen ? 'none' : 'auto' }}
       >
-        {/* Gradient Overlay - Only at bottom for text readability */}
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
         {/* Top Controls - Volume Button - top right - clickable on all devices */}
         <div className="absolute top-14 right-4 z-20">
