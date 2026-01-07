@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import CommentsModal from '@/components/CommentsModal';
+import ShareReelModal from '@/components/ShareReelModal';
 
 interface Reel {
   id: string;
@@ -121,6 +122,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     };
   }, [reel.id]);
   const [showComments, setShowComments] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
@@ -487,17 +489,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const nextCount = shareCount + 1;
     setShareCount(nextCount);
     await supabase.from('reels').update({ shares_count: nextCount }).eq('id', reel.id);
-
-    if (navigator.share) {
-      navigator.share({
-        title: reel.title,
-        text: `Check out this dance by @${reel.user.username}`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast({ title: 'Link copied', description: 'Share link copied to clipboard!' });
-    }
+    setShowShareModal(true);
   };
 
   const handleDownload = async () => {
@@ -791,6 +783,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
         onClose={() => setShowComments(false)}
         reelId={reel.id}
         onCommentCountChange={(count) => setCommentCount(count)}
+      />
+
+      {/* Share Modal */}
+      <ShareReelModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        reelId={reel.id}
+        reelTitle={reel.title}
+        username={reel.user.username}
       />
     </div>
   );
