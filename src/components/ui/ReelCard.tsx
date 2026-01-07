@@ -640,41 +640,44 @@ const ReelCard: React.FC<ReelCardProps> = ({
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-        {/* Top Controls - Volume Button - top right */}
-        <div className="absolute top-14 right-4 z-10">
+        {/* Top Controls - Volume Button - top right - clickable on all devices */}
+        <div className="absolute top-14 right-4 z-20">
           <Button
             variant="ghost"
             size="sm"
-            className="rounded-full p-2 bg-black/20 backdrop-blur-sm hover:bg-black/40"
-            onClick={toggleMute}
+            className="rounded-full p-2 bg-black/40 backdrop-blur-sm hover:bg-black/60 active:bg-black/70"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMute(e);
+            }}
           >
-            {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
+            {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
           </Button>
         </div>
 
         {/* User Info & Description - Bottom Left */}
-        <div className="absolute bottom-16 left-3 right-16 z-10" style={{ opacity: 0.85 }}>
-          <div className="space-y-2">
+        <div className="absolute bottom-16 left-3 right-16 z-10">
+          <div className="space-y-2 bg-gradient-to-t from-black/60 to-transparent p-2 -ml-2 -mb-2 rounded-lg">
             <div className="flex items-center space-x-2">
               <button onClick={handleUserClick} className="flex items-center space-x-2">
                 <img
                   src={reel.user.avatarUrl}
                   alt={reel.user.username}
-                  className="w-8 h-8 rounded-full border border-white/30"
+                  className="w-9 h-9 rounded-full border-2 border-white/50"
                 />
-                <span className="text-white font-semibold text-sm">@{reel.user.username}</span>
+                <span className="text-white font-bold text-sm drop-shadow-lg">@{reel.user.username}</span>
               </button>
               {reel.user.verified && (
-                <div className="w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-[10px] text-white">✓</span>
+                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-[10px] text-white font-bold">✓</span>
                 </div>
               )}
             </div>
-            <p className="text-white text-xs leading-relaxed line-clamp-2">
+            <p className="text-white text-sm font-medium leading-relaxed line-clamp-2 drop-shadow-lg">
               {renderTextWithHashtags(reel.title, navigate)}
             </p>
             {reel.description && (
-              <p className="text-white/70 text-xs line-clamp-1">
+              <p className="text-white/90 text-xs line-clamp-2 drop-shadow-md">
                 {renderTextWithHashtags(reel.description, navigate)}
               </p>
             )}
