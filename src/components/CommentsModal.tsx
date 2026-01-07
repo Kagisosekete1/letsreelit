@@ -116,6 +116,9 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
       });
     } else {
       setNewComment('');
+      // Refetch comments to show the new one immediately
+      await fetchComments();
+      
       // Update reel comments_count
       const { data: reel } = await supabase
         .from('reels')
@@ -127,6 +130,11 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         .from('reels')
         .update({ comments_count: (reel?.comments_count || 0) + 1 })
         .eq('id', reelId);
+      
+      // Scroll to bottom after adding comment
+      setTimeout(() => {
+        commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
     setLoading(false);
   };

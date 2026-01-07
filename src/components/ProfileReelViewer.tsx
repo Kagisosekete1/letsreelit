@@ -221,9 +221,10 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
         <span className="text-white text-sm">{currentIndex + 1} / {reels.length}</span>
       </div>
 
-      {/* Main Reel Content */}
-      <div className="w-full h-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto relative">
+      {/* Main Reel Content - Key forces remount on index change */}
+      <div className="w-full h-full mx-auto relative">
         <ReelCard
+          key={currentReel.id}
           reel={formattedReel}
           followingIds={followingIds}
           toggleFollow={toggleFollow}
