@@ -10,14 +10,20 @@ import ShareProfileModal from '@/components/ShareProfileModal';
 import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
+import ProfileReelViewer from '@/components/ProfileReelViewer';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ReelData {
   id: string;
   title: string;
+  description?: string;
   video_url: string;
   thumbnail_url: string | null;
   views_count: number;
+  likes_count?: number;
+  comments_count?: number;
+  shares_count?: number;
+  user_id: string;
 }
 
 interface SavedReelData {
@@ -43,7 +49,8 @@ const Profile = () => {
   const [reelsModal, setReelsModal] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
-  const [selectedReel, setSelectedReel] = useState<ReelData | null>(null);
+  const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
+  const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
 
   useEffect(() => {
     if (authUser) {
@@ -57,7 +64,7 @@ const Profile = () => {
     if (!authUser) return;
     const { data } = await supabase
       .from('reels')
-      .select('id, title, video_url, thumbnail_url, views_count')
+      .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
       .eq('user_id', authUser.id)
       .order('created_at', { ascending: false });
     
@@ -76,7 +83,7 @@ const Profile = () => {
       const reelIds = savedData.map(s => s.reel_id);
       const { data: reelsData } = await supabase
         .from('reels')
-        .select('id, title, video_url, thumbnail_url, views_count')
+        .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
         .in('id', reelIds);
       
       if (reelsData) setSavedReels(reelsData);
@@ -89,7 +96,7 @@ const Profile = () => {
     if (!authUser) return;
     const { data } = await supabase
       .from('reels')
-      .select('id, title, video_url, thumbnail_url, views_count')
+      .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
       .eq('user_id', authUser.id)
       .eq('is_tutorial', true)
       .order('created_at', { ascending: false });
@@ -122,8 +129,9 @@ const Profile = () => {
     navigate('/');
   };
 
-  const handleReelClick = (reel: ReelData) => {
-    setSelectedReel(reel);
+  const handleReelClick = (reels: ReelData[], index: number) => {
+    setViewingReelsList(reels);
+    setSelectedReelIndex(index);
   };
 
   if (loading) {
@@ -264,11 +272,11 @@ const Profile = () => {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {userReels.map((reel) => (
+              {userReels.map((reel, index) => (
                 <div
                   key={reel.id}
                   className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  onClick={() => handleReelClick(userReels, index)}
                 >
                   <video
                     src={reel.video_url}
@@ -305,11 +313,11 @@ const Profile = () => {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {tutorialReels.map((reel) => (
+              {tutorialReels.map((reel, index) => (
                 <div
                   key={reel.id}
                   className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  onClick={() => handleReelClick(tutorialReels, index)}
                 >
                   <video
                     src={reel.video_url}
@@ -340,11 +348,11 @@ const Profile = () => {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {savedReels.map((reel) => (
+              {savedReels.map((reel, index) => (
                 <div
                   key={reel.id}
                   className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  onClick={() => handleReelClick(savedReels, index)}
                 >
                   <video
                     src={reel.video_url}
@@ -367,24 +375,17 @@ const Profile = () => {
       </div>
 
       {/* Full Screen Reel Player */}
-      {selectedReel && (
-        <div className="fixed inset-0 z-50 bg-black">
-          <video
-            src={selectedReel.video_url}
-            className="w-full h-full object-contain"
-            controls
-            autoPlay
-            playsInline
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute top-4 right-4 text-white bg-black/50 rounded-full"
-            onClick={() => setSelectedReel(null)}
-          >
-            ✕
-          </Button>
-        </div>
+      {selectedReelIndex !== null && currentUser && (
+        <ProfileReelViewer
+          reels={viewingReelsList}
+          initialIndex={selectedReelIndex}
+          onClose={() => setSelectedReelIndex(null)}
+          userId={authUser?.id || ''}
+          username={currentUser.username}
+          displayName={currentUser.displayName}
+          avatarUrl={currentUser.avatarUrl}
+          verified={currentUser.verified}
+        />
       )}
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
