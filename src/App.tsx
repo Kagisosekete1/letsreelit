@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import About from "./pages/About";
 import Following from "./pages/Following";
+import LiveDiscovery from "./pages/LiveDiscovery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,11 @@ const App = () => {
               <Route path="/tutorials" element={
                 <ProtectedRoute>
                   <Tutorials />
+                </ProtectedRoute>
+              } />
+              <Route path="/live" element={
+                <ProtectedRoute>
+                  <LiveDiscovery />
                 </ProtectedRoute>
               } />
               <Route path="/inbox" element={

@@ -96,6 +96,45 @@ export type Database = {
           },
         ]
       }
+      live_streams: {
+        Row: {
+          created_at: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean | null
+          likes_count: number | null
+          session_id: string
+          started_at: string | null
+          title: string
+          user_id: string
+          viewer_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          likes_count?: number | null
+          session_id: string
+          started_at?: string | null
+          title: string
+          user_id: string
+          viewer_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          likes_count?: number | null
+          session_id?: string
+          started_at?: string | null
+          title?: string
+          user_id?: string
+          viewer_count?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -148,6 +187,7 @@ export type Database = {
           description: string | null
           id: string
           is_portrait: boolean | null
+          is_tutorial: boolean | null
           likes_count: number | null
           shares_count: number | null
           thumbnail_url: string | null
@@ -162,6 +202,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_portrait?: boolean | null
+          is_tutorial?: boolean | null
           likes_count?: number | null
           shares_count?: number | null
           thumbnail_url?: string | null
@@ -176,6 +217,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_portrait?: boolean | null
+          is_tutorial?: boolean | null
           likes_count?: number | null
           shares_count?: number | null
           thumbnail_url?: string | null

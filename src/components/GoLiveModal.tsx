@@ -163,10 +163,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startCamera = async () => {
+const startCamera = async () => {
     try {
+      // Use front-facing camera (selfie) for mobile devices
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1920 } },
+        video: { 
+          facingMode: { ideal: 'user' }, // Front camera for selfie
+          width: { ideal: 1080 }, 
+          height: { ideal: 1920 } 
+        },
         audio: true,
       });
       setStream(mediaStream);
@@ -205,9 +210,38 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (!authUser) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to go live.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Generate unique session ID for this live stream
-    const sessionId = `live_${authUser?.id}_${Date.now()}`;
+    const sessionId = `live_${authUser.id}_${Date.now()}`;
     setLiveSessionId(sessionId);
+
+    // Create live stream record in database
+    const { error } = await supabase
+      .from('live_streams')
+      .insert({
+        user_id: authUser.id,
+        title: liveTitle.trim(),
+        session_id: sessionId,
+        is_active: true,
+      });
+
+    if (error) {
+      console.error('Error creating live stream:', error);
+      toast({
+        title: "Failed to start live",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     await startCamera();
     setStep('live');
@@ -234,6 +268,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (channelRef.current) {
       await supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+    }
+
+    // Mark live stream as ended in database
+    if (liveSessionId) {
+      await supabase
+        .from('live_streams')
+        .update({ 
+          is_active: false, 
+          ended_at: new Date().toISOString(),
+          viewer_count: viewerCount,
+          likes_count: likeCount,
+        })
+        .eq('session_id', liveSessionId);
     }
     
     setStream(null);

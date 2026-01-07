@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, Play } from 'lucide-react';
@@ -66,9 +66,12 @@ const UserProfileMenu = ({ onReport, onBlock }: { onReport: () => void; onBlock:
 const UserProfile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { currentUser, authUser } = useUser();
   const [activeTab, setActiveTab] = useState('home');
+  const [contentTab, setContentTab] = useState('reels');
+  const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
   const [contentTab, setContentTab] = useState('reels');
   
   const [user, setUser] = useState<UserProfileData | null>(null);
@@ -151,6 +154,8 @@ const UserProfile = () => {
 
     if (reelsData) {
       setUserReels(reelsData);
+      // Filter tutorial reels
+      setTutorialReels(reelsData.filter(r => (r as any).is_tutorial === true));
     }
 
     // Live follow/following counts (recalculated from follows table)
@@ -247,17 +252,26 @@ const UserProfile = () => {
     setActiveTab(tab);
     switch (tab) {
       case 'home':
-        navigate('/');
+        navigate('/', { state: { from: location.pathname } });
         break;
       case 'tutorials':
-        navigate('/tutorials');
+        navigate('/tutorials', { state: { from: location.pathname } });
         break;
       case 'inbox':
-        navigate('/inbox');
+        navigate('/inbox', { state: { from: location.pathname } });
         break;
       case 'profile':
-        navigate('/profile');
+        navigate('/profile', { state: { from: location.pathname } });
         break;
+    }
+  };
+
+  const handleBack = () => {
+    const from = location.state?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      navigate(-1);
     }
   };
 
@@ -334,7 +348,7 @@ const UserProfile = () => {
       <div className="pt-4 pb-20 h-full overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="sm" onClick={handleBack}>
             <ArrowLeft className="w-6 h-6" />
           </Button>
           <h1 className="text-lg font-semibold">@{user.username}</h1>
@@ -462,12 +476,38 @@ const UserProfile = () => {
         )}
 
         {contentTab === 'tutorials' && (
-          <div className="px-4 py-8">
-            <div className="text-center text-muted-foreground">
-              <p className="text-lg font-medium mb-2">No tutorials yet</p>
-              <p className="text-sm">This user hasn't posted any tutorials</p>
+          tutorialReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No tutorials yet</p>
+                <p className="text-sm">This user hasn't posted any tutorials</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {tutorialReels.map((reel, index) => (
+                <div
+                  key={reel.id}
+                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  onClick={() => setSelectedReelIndex(userReels.findIndex(r => r.id === reel.id))}
+                >
+                  <video
+                    src={reel.video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white" fill="currentColor" />
+                  </div>
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
+                    <Play className="w-3 h-3 text-white" fill="currentColor" />
+                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
       

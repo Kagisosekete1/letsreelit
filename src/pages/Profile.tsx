@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, Play } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, Play, ArrowLeft } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -30,7 +30,9 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [contentTab, setContentTab] = useState('reels');
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, authUser, loading } = useUser();
+  const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -47,6 +49,7 @@ const Profile = () => {
     if (authUser) {
       fetchUserReels();
       fetchSavedReels();
+      fetchTutorialReels();
     }
   }, [authUser]);
 
@@ -82,25 +85,45 @@ const Profile = () => {
     }
   };
 
+  const fetchTutorialReels = async () => {
+    if (!authUser) return;
+    const { data } = await supabase
+      .from('reels')
+      .select('id, title, video_url, thumbnail_url, views_count')
+      .eq('user_id', authUser.id)
+      .eq('is_tutorial', true)
+      .order('created_at', { ascending: false });
+    
+    if (data) setTutorialReels(data);
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     
     switch (tab) {
       case 'home':
-        navigate('/');
+        navigate('/', { state: { from: location.pathname } });
         break;
       case 'tutorials':
-        navigate('/tutorials');
+        navigate('/tutorials', { state: { from: location.pathname } });
         break;
       case 'create':
         setIsCreateReelOpen(true);
         break;
       case 'inbox':
-        navigate('/inbox');
+        navigate('/inbox', { state: { from: location.pathname } });
         break;
       case 'profile':
-        navigate('/profile');
         break;
+    }
+  };
+
+  const handleBack = () => {
+    const from = location.state?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      navigate(-1);
     }
   };
 
@@ -126,11 +149,13 @@ const Profile = () => {
       <div className="pt-4 pb-20 h-full overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
+          <Button variant="ghost" size="sm" onClick={handleBack}>
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
           <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="w-6 h-6" />
           </Button>
-          <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          <div className="w-10" /> {/* Spacer for alignment */}
         </div>
 
         {/* Profile Info */}
@@ -270,12 +295,44 @@ const Profile = () => {
         )}
 
         {contentTab === 'tutorials' && (
-          <div className="px-4 py-8">
-            <div className="text-center text-muted-foreground">
-              <p className="text-lg font-medium mb-2">No tutorials yet</p>
-              <p className="text-sm">Your tutorials will appear here</p>
+          tutorialReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No tutorials yet</p>
+                <p className="text-sm">Your tutorials will appear here</p>
+                <Button 
+                  className="mt-4 rounded-xl"
+                  onClick={() => setIsCreateReelOpen(true)}
+                >
+                  Create your first tutorial
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {tutorialReels.map((reel) => (
+                <div
+                  key={reel.id}
+                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  onClick={() => handleReelClick(reel)}
+                >
+                  <video
+                    src={reel.video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="w-8 h-8 text-white" fill="currentColor" />
+                  </div>
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
+                    <Play className="w-3 h-3 text-white" fill="currentColor" />
+                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         {contentTab === 'saved' && (
