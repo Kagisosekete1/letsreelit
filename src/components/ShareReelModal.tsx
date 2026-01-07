@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Facebook, Instagram, MessageCircle } from 'lucide-react';
+import { Copy, Facebook, Instagram, MessageCircle, BookMarked } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/contexts/UserContext';
 
 interface ShareReelModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface ShareReelModalProps {
   reelId: string;
   reelTitle: string;
   username: string;
+  videoUrl?: string;
 }
 
 // X (Twitter) icon component
@@ -27,8 +30,10 @@ const WhatsAppIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId, reelTitle, username }) => {
+const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId, reelTitle, username, videoUrl }) => {
   const { toast } = useToast();
+  const { authUser } = useUser();
+  const [isSharing, setIsSharing] = useState(false);
   const reelUrl = `https://reelit.app/reel/${reelId}`;
   const shareText = `Check out this reel by @${username}: ${reelTitle}`;
 
@@ -38,6 +43,41 @@ const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId
       title: "Link copied!",
       description: "Reel link copied to clipboard",
     });
+  };
+
+  const shareToStory = async () => {
+    if (!authUser) {
+      toast({ title: 'Sign in required', description: 'Please sign in to share to story' });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      // Create a story reel that references this reel
+      const { error } = await supabase.from('reels').insert({
+        user_id: authUser.id,
+        title: `Shared: ${reelTitle}`,
+        video_url: videoUrl || '',
+        description: `Shared from @${username}`,
+        is_portrait: true,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Shared to your story!",
+        description: "This reel has been added to your profile",
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to share to story",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const shareToFacebook = () => {
@@ -51,7 +91,6 @@ const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId
   };
 
   const shareToInstagram = () => {
-    // Instagram doesn't have direct web share - copy link and show instructions
     navigator.clipboard.writeText(reelUrl);
     toast({
       title: "Link copied!",
@@ -68,13 +107,18 @@ const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId
     if (navigator.share) {
       navigator.share({ title: reelTitle, text: shareText, url: reelUrl });
     } else {
-      // SMS fallback
       const url = `sms:?body=${encodeURIComponent(`${shareText} ${reelUrl}`)}`;
       window.location.href = url;
     }
   };
 
   const shareOptions = [
+    { 
+      icon: BookMarked, 
+      label: 'Your Story', 
+      action: shareToStory,
+      color: 'bg-gradient-to-br from-primary to-primary/70 hover:opacity-90'
+    },
     { 
       icon: Facebook, 
       label: 'Facebook', 
@@ -103,7 +147,7 @@ const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId
       icon: MessageCircle, 
       label: 'Message', 
       action: shareViaMessage,
-      color: 'bg-primary hover:bg-primary/90'
+      color: 'bg-secondary hover:bg-secondary/90'
     },
   ];
 
@@ -116,17 +160,18 @@ const ShareReelModal: React.FC<ShareReelModalProps> = ({ isOpen, onClose, reelId
         
         <div className="space-y-4 py-4">
           {/* Social Share Buttons */}
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
             {shareOptions.map((option, idx) => (
               <button
                 key={idx}
-                className="flex flex-col items-center gap-2"
+                className="flex flex-col items-center gap-2 disabled:opacity-50"
                 onClick={option.action}
+                disabled={isSharing && option.label === 'Your Story'}
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white ${option.color}`}>
                   <option.icon className="w-5 h-5" />
                 </div>
-                <span className="text-xs text-muted-foreground">{option.label}</span>
+                <span className="text-xs text-muted-foreground text-center">{option.label}</span>
               </button>
             ))}
           </div>

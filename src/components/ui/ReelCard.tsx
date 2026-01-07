@@ -792,6 +792,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         reelId={reel.id}
         reelTitle={reel.title}
         username={reel.user.username}
+        videoUrl={reel.videoUrl}
       />
     </div>
   );
