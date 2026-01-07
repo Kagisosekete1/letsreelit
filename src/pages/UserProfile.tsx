@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, Play } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, Play, MessageCircle } from 'lucide-react';
+import ChatModal from '@/components/ChatModal';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import FollowersModal from '@/components/FollowersModal';
@@ -82,6 +83,8 @@ const UserProfile = () => {
   
   const [followersModal, setFollowersModal] = useState(false);
   const [followingModal, setFollowingModal] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (username) {
@@ -229,6 +232,13 @@ const UserProfile = () => {
           follower_id: authUser.id,
           following_id: user.user_id,
         });
+      
+      // Create notification for followed user
+      await supabase.from('notifications').insert({
+        user_id: user.user_id,
+        from_user_id: authUser.id,
+        type: 'follow'
+      });
     }
 
     toast({ title: 'Following', description: `You are now following @${user.username}` });
@@ -245,6 +255,44 @@ const UserProfile = () => {
   const handleBlock = () => {
     toast({ title: 'User blocked', description: `@${user?.username} has been blocked.` });
     navigate(-1);
+  };
+
+  const handleMessage = async () => {
+    if (!authUser || !user) {
+      toast({ title: 'Sign in required', description: 'Please sign in to send messages' });
+      return;
+    }
+
+    // Check for existing conversation
+    const { data: existingConv } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`and(participant_one.eq.${authUser.id},participant_two.eq.${user.user_id}),and(participant_one.eq.${user.user_id},participant_two.eq.${authUser.id})`)
+      .maybeSingle();
+
+    if (existingConv) {
+      setConversationId(existingConv.id);
+      setIsChatOpen(true);
+      return;
+    }
+
+    // Create new conversation
+    const { data: newConv, error } = await supabase
+      .from('conversations')
+      .insert({
+        participant_one: authUser.id,
+        participant_two: user.user_id
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to start conversation', variant: 'destructive' });
+      return;
+    }
+
+    setConversationId(newConv.id);
+    setIsChatOpen(true);
   };
 
   const handleTabChange = (tab: string) => {
@@ -401,15 +449,25 @@ const UserProfile = () => {
               </Button>
             </div>
 
-            {/* Action Button - Only show if not own profile */}
+            {/* Action Buttons - Only show if not own profile */}
             {authUser?.id !== user.user_id && (
-              <Button 
-                className="w-full rounded-xl" 
-                variant={isFollowing ? "outline" : "default"}
-                onClick={handleFollow}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </Button>
+              <div className="flex gap-2 w-full">
+                <Button 
+                  className="flex-1 rounded-xl" 
+                  variant={isFollowing ? "outline" : "default"}
+                  onClick={handleFollow}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+                <Button 
+                  className="flex-1 rounded-xl" 
+                  variant="outline"
+                  onClick={handleMessage}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -529,6 +587,23 @@ const UserProfile = () => {
         count={user.following_count || 0}
         profileId={user.id}
       />
+      
+      {conversationId && user && (
+        <ChatModal
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setConversationId(null);
+          }}
+          conversationId={conversationId}
+          otherUser={{
+            id: user.user_id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_url: user.avatar_url
+          }}
+        />
+      )}
     </div>
   );
 };

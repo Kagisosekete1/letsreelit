@@ -373,6 +373,16 @@ const ReelCard: React.FC<ReelCardProps> = ({
       if (authUser) {
         await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
         await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
+        
+        // Create notification for reel owner (if not self)
+        if (reel.user.id !== authUser.id) {
+          await supabase.from('notifications').insert({
+            user_id: reel.user.id,
+            from_user_id: authUser.id,
+            type: 'like',
+            reel_id: reel.id
+          });
+        }
       }
     }
   };
@@ -431,6 +441,16 @@ const ReelCard: React.FC<ReelCardProps> = ({
     if (newIsLiked) {
       await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
       await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
+      
+      // Create notification for reel owner (if not self)
+      if (reel.user.id !== authUser.id) {
+        await supabase.from('notifications').insert({
+          user_id: reel.user.id,
+          from_user_id: authUser.id,
+          type: 'like',
+          reel_id: reel.id
+        });
+      }
     } else {
       await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
       await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
