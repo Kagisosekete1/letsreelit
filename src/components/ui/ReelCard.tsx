@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX, Download, Flag, Ban, Trash2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -632,8 +632,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
 
-        {/* Top Controls - Mute Button - positioned to not overlap auto-advance */}
-        <div className="absolute top-4 right-28 z-10">
+        {/* Top Controls - Volume Button - top right */}
+        <div className="absolute top-14 right-4 z-10">
           <Button
             variant="ghost"
             size="sm"
@@ -737,19 +737,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
               <Share className={`${iconSize} text-white`} />
             </div>
             <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
-          </button>
-
-          {/* Download */}
-          <button
-            className="flex flex-col items-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDownload();
-            }}
-          >
-            <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-              <Download className={`${iconSize} text-white`} />
-            </div>
           </button>
 
           {/* More Options */}

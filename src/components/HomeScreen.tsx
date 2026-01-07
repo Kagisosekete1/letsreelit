@@ -3,9 +3,10 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
+import { Radio } from 'lucide-react';
 
 interface HomeScreenProps {
-  setScreen: (screen: Screen, payload?: any) => void;
+  setScreen: (screen: Screen | 'following' | 'live', payload?: any) => void;
   currentScreen: Screen;
 }
 
@@ -38,10 +39,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [activeLiveCount, setActiveLiveCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
 
   const displayedReels = reels;
+
+  // Fetch live count
+  useEffect(() => {
+    const fetchLiveCount = async () => {
+      const { count } = await supabase
+        .from('live_streams')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      setActiveLiveCount(count || 0);
+    };
+    fetchLiveCount();
+  }, []);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -50,6 +64,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
       if (authUser) fetchFollowing();
     }
   }, [currentScreen, authUser]);
+
   // Extra safety: ensure only the active reel video can play audio
   useEffect(() => {
     const container = containerRef.current;
@@ -206,7 +221,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
 
   const handleScroll = useCallback(() => {
     // IntersectionObserver drives the active index (more stable than scroll math).
-    // Keep this handler as a no-op to avoid mid-swipe index flicker.
   }, []);
 
   // Determine active reel by visibility (TikTok-style: only the centered reel becomes active)
@@ -272,13 +286,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [currentScreen, activeReelIndex, goToReel]);
 
-  const handleReelEnded = useCallback(() => {
-    // Auto-advance is now always on - go to next reel when current ends
-    if (activeReelIndex < displayedReels.length - 1) {
-      goToReel(activeReelIndex + 1);
-    }
-  }, [activeReelIndex, displayedReels.length, goToReel]);
-
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-black">
@@ -302,25 +309,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
         </div>
       ) : (
         <div className="relative flex-1 h-full">
-          {/* Top Header: Logo - Following - Volume placeholder area */}
-          <div className="absolute top-4 left-0 right-0 z-50 flex items-center justify-center px-4">
+          {/* Top Header */}
+          <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
             {/* Logo on left */}
-            <div className="absolute left-4">
-              <span className="text-gray-400 font-bold text-xl opacity-45 drop-shadow-md">Reel'it</span>
+            <span className="text-white font-bold text-lg opacity-80 drop-shadow-md">Reel'it</span>
+            
+            {/* Following + Live Now in center-right */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setScreen('following' as any)}
+                className="px-3 py-1.5 text-xs text-white bg-white/20 rounded-full backdrop-blur-sm font-medium"
+              >
+                Following
+              </button>
+              <button
+                onClick={() => setScreen('live' as any)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-pink-500/80 rounded-full backdrop-blur-sm font-medium"
+              >
+                <Radio className="w-3 h-3" />
+                Live{activeLiveCount > 0 && ` (${activeLiveCount})`}
+              </button>
             </div>
-            
-            {/* Following in center */}
-            <button
-              onClick={() => setScreen('following' as any)}
-              className="px-3 py-1.5 text-xs text-white bg-black/40 rounded-full backdrop-blur-sm font-medium"
-            >
-              Following
-            </button>
-            
-            {/* Volume button space on right (handled by ReelCard) */}
           </div>
 
-          
           <div 
             ref={containerRef}
             className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide overscroll-none"
@@ -363,8 +374,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   isActive={index === activeReelIndex}
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
-                  autoAdvance={true}
-                  onEnded={handleReelEnded}
+                  autoAdvance={false}
                 />
               </div>
             ))}
