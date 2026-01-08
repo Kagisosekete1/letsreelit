@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Film, Play, Trash2, Edit2 } from 'lucide-react';
+import { X, Film, Trash2, Edit2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import VideoThumbnail from '@/components/ui/VideoThumbnail';
 
 interface ReelsModalProps {
   isOpen: boolean;
@@ -90,7 +91,7 @@ const ReelsModal: React.FC<ReelsModalProps> = ({ isOpen, onClose, userId, count,
 
       if (error) throw error;
 
-      setReels(prev => prev.map(r => 
+      setReels(prev => prev.map(r =>
         r.id === reelId ? { ...r, title: editTitle.trim() } : r
       ));
       setEditingId(null);
@@ -135,17 +136,13 @@ const ReelsModal: React.FC<ReelsModalProps> = ({ isOpen, onClose, userId, count,
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {reels.map((reel) => (
-                <div key={reel.id} className="relative group rounded-xl overflow-hidden bg-secondary aspect-[9/16]">
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
+                <div key={reel.id} className="relative group rounded-xl overflow-hidden bg-secondary">
+                  <VideoThumbnail
+                    videoUrl={reel.video_url}
+                    thumbnailUrl={reel.thumbnail_url}
+                    className="rounded-xl"
                   />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-8 h-8 text-white" />
-                  </div>
-                  
+
                   {/* Title */}
                   <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80">
                     {editingId === reel.id ? (
@@ -198,3 +195,4 @@ const ReelsModal: React.FC<ReelsModalProps> = ({ isOpen, onClose, userId, count,
 };
 
 export default ReelsModal;
+

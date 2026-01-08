@@ -100,6 +100,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
   const [commentCount, setCommentCount] = useState(reel.stats.comments);
   const [shareCount, setShareCount] = useState(reel.stats.shares);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Realtime subscription for likes
   useEffect(() => {
@@ -197,6 +198,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    // Reset ready state whenever we switch reels / src
+    setIsVideoReady(false);
 
     if (isActive) {
       setVideoSrc(reel.videoUrl);
@@ -590,27 +594,35 @@ const ReelCard: React.FC<ReelCardProps> = ({
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
       <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
-        {/* Crossfade between thumbnail and active video */}
-        {reel.thumbnailUrl && (
+        {/* Cover the video with the thumbnail until the video can actually render a frame */}
+        {reel.thumbnailUrl ? (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-            style={{ opacity: isActive ? 0 : 1 }}
+            style={{ opacity: isActive && isVideoReady ? 0 : 1 }}
             draggable={false}
           />
+        ) : (
+          <div
+            className="absolute inset-0 bg-muted transition-opacity duration-300"
+            style={{ opacity: isActive && isVideoReady ? 0 : 1 }}
+          />
         )}
+
         <video
           ref={videoRef}
           data-reel-video="true"
           className="w-full h-full object-contain sm:object-cover transition-opacity duration-300"
-          style={{ opacity: isActive ? 1 : 0 }}
+          style={{ opacity: isActive && isVideoReady ? 1 : 0 }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'none'}
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
           poster={reel.thumbnailUrl}
+          onLoadedData={() => setIsVideoReady(true)}
+          onCanPlay={() => setIsVideoReady(true)}
           onClick={handleVideoTap}
         />
       </div>
