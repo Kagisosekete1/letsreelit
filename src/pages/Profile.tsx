@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, Play, ArrowLeft } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft } from 'lucide-react';
+import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -273,25 +274,13 @@ const Profile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {userReels.map((reel, index) => (
-                <div
+                <VideoThumbnail
                   key={reel.id}
-                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  viewsCount={reel.views_count || 0}
                   onClick={() => handleReelClick(userReels, index)}
-                >
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white" fill="currentColor" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                    <Play className="w-3 h-3 text-white" fill="currentColor" />
-                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )
@@ -314,25 +303,13 @@ const Profile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {tutorialReels.map((reel, index) => (
-                <div
+                <VideoThumbnail
                   key={reel.id}
-                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  viewsCount={reel.views_count || 0}
                   onClick={() => handleReelClick(tutorialReels, index)}
-                >
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white" fill="currentColor" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                    <Play className="w-3 h-3 text-white" fill="currentColor" />
-                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )
@@ -349,25 +326,13 @@ const Profile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {savedReels.map((reel, index) => (
-                <div
+                <VideoThumbnail
                   key={reel.id}
-                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  viewsCount={reel.views_count || 0}
                   onClick={() => handleReelClick(savedReels, index)}
-                >
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white" fill="currentColor" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                    <Play className="w-3 h-3 text-white" fill="currentColor" />
-                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )

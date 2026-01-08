@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Search as SearchIcon, Play, Hash, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Hash, TrendingUp } from 'lucide-react';
+import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
@@ -257,25 +258,13 @@ const Search = () => {
         ) : reels.length > 0 ? (
           <div className="grid grid-cols-3 gap-0.5 px-0.5">
             {reels.map((reel, index) => (
-              <div
+              <VideoThumbnail
                 key={reel.id}
-                className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                videoUrl={reel.video_url}
+                thumbnailUrl={reel.thumbnail_url}
+                viewsCount={reel.views_count || 0}
                 onClick={() => handleReelClick(index)}
-              >
-                <video
-                  src={reel.video_url}
-                  className="w-full h-full object-cover"
-                  muted
-                  playsInline
-                />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Play className="w-8 h-8 text-white" fill="currentColor" />
-                </div>
-                <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                  <Play className="w-3 h-3 text-white" fill="currentColor" />
-                  <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                </div>
-              </div>
+              />
             ))}
           </div>
         ) : null}
