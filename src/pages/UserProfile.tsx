@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, Play, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle } from 'lucide-react';
+import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import ChatModal from '@/components/ChatModal';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -468,25 +469,13 @@ const UserProfile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {userReels.map((reel, index) => (
-                <div
+                <VideoThumbnail
                   key={reel.id}
-                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  viewsCount={reel.views_count || 0}
                   onClick={() => setSelectedReelIndex(index)}
-                >
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white" fill="currentColor" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                    <Play className="w-3 h-3 text-white" fill="currentColor" />
-                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )
@@ -503,25 +492,13 @@ const UserProfile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {tutorialReels.map((reel, index) => (
-                <div
+                <VideoThumbnail
                   key={reel.id}
-                  className="aspect-[9/16] bg-muted relative overflow-hidden cursor-pointer group"
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  viewsCount={reel.views_count || 0}
                   onClick={() => setSelectedReelIndex(userReels.findIndex(r => r.id === reel.id))}
-                >
-                  <video
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white" fill="currentColor" />
-                  </div>
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1">
-                    <Play className="w-3 h-3 text-white" fill="currentColor" />
-                    <span className="text-white text-xs font-medium">{reel.views_count || 0}</span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )
