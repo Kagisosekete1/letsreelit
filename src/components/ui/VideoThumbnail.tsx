@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play } from 'lucide-react';
 
 interface VideoThumbnailProps {
@@ -18,7 +18,6 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
 }) => {
   const [generatedThumbnail, setGeneratedThumbnail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     // If we have a thumbnail URL, use it directly
@@ -96,21 +95,16 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
           src={generatedThumbnail}
           alt="Video thumbnail"
           className="w-full h-full object-cover"
+          loading="lazy"
         />
-      ) : isLoading ? (
-        <div className="w-full h-full flex items-center justify-center bg-muted">
-          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
       ) : (
-        // Fallback: show first frame using video element with poster
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          className="w-full h-full object-cover"
-          muted
-          playsInline
-          preload="metadata"
-        />
+        <div className="w-full h-full flex items-center justify-center bg-muted">
+          {isLoading ? (
+            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+          ) : (
+            <Play className="w-10 h-10 text-muted-foreground" />
+          )}
+        </div>
       )}
 
       {/* Hover Overlay */}
@@ -130,3 +124,4 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
 };
 
 export default VideoThumbnail;
+

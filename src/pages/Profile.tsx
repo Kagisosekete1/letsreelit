@@ -183,7 +183,7 @@ const Profile = () => {
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
                 onClick={() => setFollowingModal(true)}
               >
-                <p className="text-lg font-bold">{currentUser.stats.following}</p>
+                <p className="text-lg font-bold">{currentUser.stats?.following ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
               </Button>
               <Button 
@@ -191,7 +191,7 @@ const Profile = () => {
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
                 onClick={() => setFollowersModal(true)}
               >
-                <p className="text-lg font-bold">{currentUser.stats.followers}</p>
+                <p className="text-lg font-bold">{currentUser.stats?.followers ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
               </Button>
               <Button 
@@ -199,7 +199,7 @@ const Profile = () => {
                 className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
                 onClick={() => setReelsModal(true)}
               >
-                <p className="text-lg font-bold">{currentUser.stats.reels}</p>
+                <p className="text-lg font-bold">{currentUser.stats?.reels ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
               </Button>
             </div>
@@ -371,20 +371,20 @@ const Profile = () => {
         onClose={() => setFollowersModal(false)}
         userId={authUser?.id || ''}
         type="followers"
-        count={currentUser.stats.followers}
+        count={currentUser.stats?.followers ?? 0}
       />
       <FollowersModal
         isOpen={followingModal}
         onClose={() => setFollowingModal(false)}
         userId={authUser?.id || ''}
         type="following"
-        count={currentUser.stats.following}
+        count={currentUser.stats?.following ?? 0}
       />
       <ReelsModal
         isOpen={reelsModal}
         onClose={() => setReelsModal(false)}
         userId={authUser?.id || ''}
-        count={currentUser.stats.reels}
+        count={currentUser.stats?.reels ?? 0}
         isOwnProfile={true}
       />
     </div>

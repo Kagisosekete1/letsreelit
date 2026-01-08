@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Play, Volume2, VolumeX } from 'lucide-react';
 import { Reel } from '@/types';
 
 interface VideoCardProps {
@@ -20,6 +20,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
+  const [isReady, setIsReady] = useState(false);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -51,19 +52,31 @@ const VideoCard: React.FC<VideoCardProps> = ({
 
   return (
     <div className="relative h-screen w-full bg-black snap-start flex items-center justify-center snap-always">
+      {/* Cover thumbnail while video is loading (removes the black/grey video element) */}
+      {!!reel.thumbnailUrl && !isReady && (
+        <img
+          src={reel.thumbnailUrl}
+          alt={`${reel.user.username} reel thumbnail`}
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+      )}
+
       <video
         ref={videoRef}
         className="w-full h-full object-cover"
-        style={{ objectFit: 'cover' }}
+        style={{ objectFit: 'cover', opacity: isReady ? 1 : 0 }}
         src={reel.videoUrl}
         loop
         muted={isMuted}
         playsInline
         poster={reel.thumbnailUrl}
+        onCanPlay={() => setIsReady(true)}
+        onLoadedData={() => setIsReady(true)}
         onClick={togglePlay}
       />
       
-      {/* Play/Pause Overlay */}
+      {/* Play Overlay */}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
           <Button
