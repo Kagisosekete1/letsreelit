@@ -11,6 +11,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
+import { useAudio } from '@/contexts/AudioContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
 
@@ -92,14 +93,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
+  const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  // Persist mute preference globally so user doesn't have to unmute every reel
-  const [isMuted, setIsMuted] = useState(() => {
-    // Check if user has manually unmuted before - default to muted for autoplay policy
-    const saved = sessionStorage.getItem('reelAudioMuted');
-    return saved === null ? true : saved === 'true';
-  });
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
   const [isSaved, setIsSaved] = useState(false);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
@@ -181,28 +177,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsSaved(!!saveData);
   };
 
-  const pauseOtherReelVideos = (opts?: { except?: HTMLMediaElement }) => {
-    const except = opts?.except;
-    const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video[data-reel-video="true"], audio'));
-    media.forEach(m => {
-      if (except && m === except) return;
-      try {
-        m.pause();
-        m.muted = true;
-        m.currentTime = 0;
-        // Remove src to stop any buffering/loading
-        if (m.tagName === 'VIDEO') {
-          m.removeAttribute('src');
-          m.load();
-        }
-      } catch {
-        // ignore
-      }
-    });
-  };
-
-  // Auto-play/pause + true "single active" behavior (lazy src + no preload for inactive)
-  // Respect user's mute preference across reels
+  // Auto-play/pause using global audio manager
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -211,19 +186,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsVideoReady(false);
 
     if (isActive) {
-      // FIRST: Aggressively stop ALL other videos before anything else
-      pauseOtherReelVideos({ except: video });
+      // Request audio focus from global manager - this silences all other videos
+      requestAudioFocus(video, reel.id);
       
       setVideoSrc(reel.videoUrl);
       video.currentTime = 0;
 
-      // Get user's mute preference from session
-      const userMutePreference = sessionStorage.getItem('reelAudioMuted');
-      const shouldBeMuted = userMutePreference === null ? true : userMutePreference === 'true';
-      
-      // Set muted state based on user preference
-      video.muted = shouldBeMuted;
-      setIsMuted(shouldBeMuted);
+      // Apply mute state from global context
+      video.muted = isMuted;
 
       // Ensure the element has the latest src loaded
       try {
@@ -240,9 +210,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
           // Browser autoplay policy - if unmuted play fails, try muted
           if (!video.muted) {
             video.muted = true;
-            setIsMuted(true);
-            // IMPORTANT: don't overwrite the user's preference here.
-            // If they previously unmuted, keep that preference so future reels attempt sound.
             try {
               await video.play();
               setIsPlaying(true);
@@ -255,7 +222,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
       void playAttempt();
     } else {
-      // Not active - immediately stop, mute, and stop loading
+      // Release audio focus and stop this video
+      releaseAudioFocus(reel.id);
+      
       try {
         video.pause();
         video.muted = true;
@@ -271,7 +240,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
 
     return () => {
-      // On unmount / change: always silence this instance
+      // On unmount: release focus and silence
+      releaseAudioFocus(reel.id);
       try {
         video.pause();
         video.muted = true;
@@ -281,9 +251,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
         // ignore
       }
     };
-  }, [isActive, reel.id, reel.videoUrl]);
+  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus]);
 
-  // Safety net: whenever THIS video plays or is unmuted, silence others. Also handle buffering & ended.
+  // Sync mute state from global context to video element
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && isActive) {
+      video.muted = isMuted;
+    }
+  }, [isMuted, isActive]);
+
+  // Safety net: whenever THIS video plays or is unmuted, ensure it has audio focus
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -301,7 +279,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         return;
       }
 
-      pauseOtherReelVideos({ except: video });
+      // Request audio focus when playing
+      requestAudioFocus(video, reel.id);
     };
 
     const onVolumeChange = () => {
@@ -314,7 +293,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
         return;
       }
 
-      if (!video.muted) pauseOtherReelVideos({ except: video });
+      // If unmuting, request audio focus
+      if (!video.muted) {
+        requestAudioFocus(video, reel.id);
+      }
     };
 
     const onTimeUpdate = () => {
@@ -443,8 +425,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
       return;
     }
 
-    // Ensure no other reel keeps playing in the background
-    pauseOtherReelVideos({ except: video });
+    // Request audio focus when playing
+    requestAudioFocus(video, reel.id);
 
     video.play().then(() => {
       setIsPlaying(true);
@@ -465,12 +447,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const nextMuted = !isMuted;
     video.muted = nextMuted;
     setIsMuted(nextMuted);
-    
-    // Persist user's mute preference
-    sessionStorage.setItem('reelAudioMuted', String(nextMuted));
 
     if (!nextMuted) {
-      pauseOtherReelVideos({ except: video });
+      // Request audio focus when unmuting
+      requestAudioFocus(video, reel.id);
     }
   };
 

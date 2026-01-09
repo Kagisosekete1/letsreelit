@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
+import { useAudio } from '@/contexts/AudioContext';
 
 interface ReelData {
   id: string;
@@ -40,6 +41,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   verified = false,
 }) => {
   const { authUser } = useUser();
+  const { silenceAll } = useAudio();
   const [currentIndex] = useState(initialIndex);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,11 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
       fetchFollowing();
     }
   }, [authUser]);
+
+  // Silence all other videos when this viewer opens
+  useEffect(() => {
+    silenceAll();
+  }, [silenceAll]);
 
   const fetchFollowing = async () => {
     if (!authUser) return;
@@ -122,30 +129,6 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   };
 
   const isOwner = authUser?.id === userId;
-
-  // Mute all videos in the background when this viewer opens
-  useEffect(() => {
-    // When opening the profile reel viewer, silence any background videos
-    const silenceAllVideos = () => {
-      const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video'));
-      videos.forEach(v => {
-        // Don't affect videos inside this viewer
-        if (containerRef.current?.contains(v)) return;
-        try {
-          v.pause();
-          v.muted = true;
-        } catch {
-          // ignore
-        }
-      });
-    };
-    
-    silenceAllVideos();
-    
-    return () => {
-      // Cleanup not needed as HomeScreen will take over
-    };
-  }, []);
 
   return (
     <div 

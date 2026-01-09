@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import { reelSchema } from '@/lib/validations';
+import { generateThumbnail } from '@/lib/thumbnailGenerator';
 import MusicLibraryModal, { type PlaceholderSong } from '@/components/MusicLibraryModal';
 
 interface ReelUploadModalProps {
@@ -122,20 +123,41 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     setUploadProgress(0);
 
     try {
-      // Simulate progress for UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+      // Step 1: Generate thumbnail from video
+      setUploadProgress(10);
+      let thumbnailUrl: string | null = null;
+      
+      try {
+        const thumbnailBlob = await generateThumbnail(videoFile, 1);
+        const thumbnailFileName = `${authUser.id}/${Date.now()}_thumb.jpg`;
+        
+        setUploadProgress(20);
+        
+        const { data: thumbUpload, error: thumbError } = await supabase.storage
+          .from('reels')
+          .upload(thumbnailFileName, thumbnailBlob, {
+            contentType: 'image/jpeg',
+          });
+        
+        if (!thumbError && thumbUpload) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('reels')
+            .getPublicUrl(thumbnailFileName);
+          thumbnailUrl = publicUrl;
+        }
+      } catch (thumbErr) {
+        console.warn('Thumbnail generation failed, continuing without thumbnail:', thumbErr);
+      }
 
-      // Upload video to storage
+      setUploadProgress(30);
+
+      // Step 2: Upload video to storage
       const fileExt = videoFile.name.split('.').pop();
       const fileName = `${authUser.id}/${Date.now()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('reels')
         .upload(fileName, videoFile);
-
-      clearInterval(progressInterval);
 
       if (uploadError) throw uploadError;
 
@@ -144,9 +166,9 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
         .from('reels')
         .getPublicUrl(fileName);
 
-      setUploadProgress(95);
+      setUploadProgress(80);
 
-      // Create reel record in database with tutorial flag
+      // Step 3: Create reel record in database with thumbnail
       const { error: dbError } = await supabase
         .from('reels')
         .insert({
@@ -154,11 +176,14 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
           title: title.trim(),
           description: description.trim() || null,
           video_url: publicUrl,
+          thumbnail_url: thumbnailUrl,
           is_portrait: true,
           is_tutorial: postAs === 'tutorial',
         });
 
       if (dbError) throw dbError;
+
+      setUploadProgress(95);
 
       // Update user's reel count
       await supabase
