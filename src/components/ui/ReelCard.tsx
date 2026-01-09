@@ -94,7 +94,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const { authUser } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  // Persist mute preference globally so user doesn't have to unmute every reel
+  const [isMuted, setIsMuted] = useState(() => {
+    // Check if user has manually unmuted before - default to muted for autoplay policy
+    const saved = sessionStorage.getItem('reelAudioMuted');
+    return saved === null ? true : saved === 'true';
+  });
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
   const [isSaved, setIsSaved] = useState(false);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
@@ -178,15 +183,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   const pauseOtherReelVideos = (opts?: { except?: HTMLMediaElement }) => {
     const except = opts?.except;
-    const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
+    const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video[data-reel-video="true"], audio'));
     media.forEach(m => {
       if (except && m === except) return;
       try {
         m.pause();
-        if ('muted' in m) {
-          (m as HTMLVideoElement).muted = true;
-        }
+        m.muted = true;
         m.currentTime = 0;
+        // Remove src to stop any buffering/loading
+        if (m.tagName === 'VIDEO') {
+          m.removeAttribute('src');
+          m.load();
+        }
       } catch {
         // ignore
       }
@@ -194,7 +202,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   // Auto-play/pause + true "single active" behavior (lazy src + no preload for inactive)
-  // Auto-unmute when active, mute when switching away
+  // Respect user's mute preference across reels
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -203,16 +211,19 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsVideoReady(false);
 
     if (isActive) {
-      setVideoSrc(reel.videoUrl);
-
-      // Ensure ONLY this video is allowed to play/unmute
+      // FIRST: Aggressively stop ALL other videos before anything else
       pauseOtherReelVideos({ except: video });
-
+      
+      setVideoSrc(reel.videoUrl);
       video.currentTime = 0;
 
-      // Auto-unmute when reel becomes active (sound plays automatically)
-      video.muted = false;
-      setIsMuted(false);
+      // Get user's mute preference from session
+      const userMutePreference = sessionStorage.getItem('reelAudioMuted');
+      const shouldBeMuted = userMutePreference === null ? true : userMutePreference === 'true';
+      
+      // Set muted state based on user preference
+      video.muted = shouldBeMuted;
+      setIsMuted(shouldBeMuted);
 
       // Ensure the element has the latest src loaded
       try {
@@ -226,14 +237,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
           await video.play();
           setIsPlaying(true);
         } catch {
-          // Browser autoplay policy - try muted first, then user can unmute
-          video.muted = true;
-          setIsMuted(true);
-          try {
-            await video.play();
-            setIsPlaying(true);
-          } catch {
-            // ignore
+          // Browser autoplay policy - if unmuted play fails, try muted
+          if (!video.muted) {
+            video.muted = true;
+            setIsMuted(true);
+            sessionStorage.setItem('reelAudioMuted', 'true');
+            try {
+              await video.play();
+              setIsPlaying(true);
+            } catch {
+              // ignore
+            }
           }
         }
       };
@@ -253,7 +267,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
       setVideoSrc(undefined);
       setIsPlaying(false);
-      setIsMuted(true);
     }
 
     return () => {
@@ -261,6 +274,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
       try {
         video.pause();
         video.muted = true;
+        video.removeAttribute('src');
+        video.load();
       } catch {
         // ignore
       }
@@ -449,6 +464,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const nextMuted = !isMuted;
     video.muted = nextMuted;
     setIsMuted(nextMuted);
+    
+    // Persist user's mute preference
+    sessionStorage.setItem('reelAudioMuted', String(nextMuted));
 
     if (!nextMuted) {
       pauseOtherReelVideos({ except: video });
