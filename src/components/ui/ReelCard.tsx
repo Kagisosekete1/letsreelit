@@ -93,7 +93,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
-  const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
+  const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted, silenceAll } = useAudio();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
@@ -422,6 +422,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
       video.pause();
       onPause?.();
       setIsPlaying(false);
+      // When the user pauses the active reel, silence EVERYTHING to prevent any background audio.
+      silenceAll();
       return;
     }
 

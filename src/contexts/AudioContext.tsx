@@ -58,13 +58,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     });
 
-    // Also silence any unregistered videos in the DOM
-    const allVideos = document.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]');
+    // Also silence any unregistered media elements in the DOM
+    const allVideos = document.querySelectorAll<HTMLVideoElement>('video');
     allVideos.forEach((video) => {
       if (video === exceptElement) return;
       try {
         video.pause();
         video.muted = true;
+      } catch {
+        // ignore
+      }
+    });
+
+    const allAudios = document.querySelectorAll<HTMLAudioElement>('audio');
+    allAudios.forEach((audio) => {
+      try {
+        audio.pause();
+        audio.muted = true;
       } catch {
         // ignore
       }
@@ -139,13 +149,25 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const activeVideo = activeVideoRef.current;
       if (!activeVideo) return;
 
-      const allVideos = document.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]');
+      const allVideos = document.querySelectorAll<HTMLVideoElement>('video');
       allVideos.forEach((video) => {
         if (video === activeVideo) return;
         if (!video.paused || !video.muted) {
           try {
             video.pause();
             video.muted = true;
+          } catch {
+            // ignore
+          }
+        }
+      });
+
+      const allAudios = document.querySelectorAll<HTMLAudioElement>('audio');
+      allAudios.forEach((audio) => {
+        if (!audio.paused || !audio.muted) {
+          try {
+            audio.pause();
+            audio.muted = true;
           } catch {
             // ignore
           }
