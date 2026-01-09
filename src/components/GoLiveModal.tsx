@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
+import ConfettiBurst from '@/components/ui/ConfettiBurst';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -27,6 +28,9 @@ interface Viewer {
   avatarUrl?: string;
 }
 
+// Viewer milestones for confetti
+const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
+
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
   const { currentUser, authUser, refreshProfile } = useUser();
@@ -38,6 +42,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [viewers, setViewers] = useState<Map<string, Viewer>>(new Map());
   const [likeCount, setLikeCount] = useState(0);
   const [likeTrigger, setLikeTrigger] = useState(0);
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [currentMilestone, setCurrentMilestone] = useState<number | undefined>();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [liveTitle, setLiveTitle] = useState('');
@@ -48,8 +54,25 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const reachedMilestones = useRef<Set<number>>(new Set());
 
   const viewerCount = viewers.size;
+
+  // Check for viewer milestones
+  useEffect(() => {
+    for (const milestone of VIEWER_MILESTONES) {
+      if (viewerCount >= milestone && !reachedMilestones.current.has(milestone)) {
+        reachedMilestones.current.add(milestone);
+        setCurrentMilestone(milestone);
+        setConfettiTrigger(prev => prev + 1);
+        
+        toast({
+          title: `🎉 ${milestone} Viewers!`,
+          description: "Your live is on fire!",
+        });
+      }
+    }
+  }, [viewerCount, toast]);
 
   useEffect(() => {
     return () => {
@@ -294,10 +317,11 @@ const startCamera = async () => {
   // No longer save lives - just close when ending
   const handleClose = () => {
     recordedChunksRef.current = [];
+    reachedMilestones.current.clear();
     onClose();
   };
 
-  // Emojis for quick reactions
+  // Emojis for quick reactions - clickable for viewers (not broadcaster)
   const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', '🙌'];
 
   const toggleMute = () => {
@@ -362,29 +386,29 @@ const startCamera = async () => {
   if (step === 'setup') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Go Live</h2>
+        <DialogContent className="w-[90vw] max-w-[320px] sm:max-w-[360px] rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold">Go Live</h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <Input
               placeholder="Add a title for your live..."
               value={liveTitle}
               onChange={(e) => setLiveTitle(e.target.value)}
-              className="rounded-xl"
+              className="rounded-xl text-sm"
             />
 
-            <div className="aspect-[9/16] bg-muted rounded-2xl flex items-center justify-center">
+            <div className="aspect-[9/16] max-h-[40vh] bg-muted rounded-xl flex items-center justify-center">
               <div className="text-center px-4">
-                <Radio className="w-12 h-12 text-pink-500 mx-auto mb-3" />
-                <p className="text-lg font-semibold mb-2">Ready to go live?</p>
-                <p className="text-muted-foreground text-sm">Real-time viewer tracking with Supabase Presence</p>
+                <Radio className="w-10 h-10 text-pink-500 mx-auto mb-2" />
+                <p className="text-base font-semibold mb-1">Ready to go live?</p>
+                <p className="text-muted-foreground text-xs">Real-time viewer tracking</p>
               </div>
             </div>
 
             <Button 
-              className="w-full rounded-xl bg-pink-500 hover:bg-pink-600"
+              className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 h-10"
               onClick={handleGoLive}
               disabled={!liveTitle.trim()}
             >
@@ -394,7 +418,7 @@ const startCamera = async () => {
             
             <Button 
               variant="outline"
-              className="w-full rounded-xl"
+              className="w-full rounded-xl h-9"
               onClick={onClose}
             >
               Cancel
@@ -408,71 +432,68 @@ const startCamera = async () => {
   if (step === 'ended') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md rounded-3xl bg-gradient-to-br from-background via-background to-pink-500/5 border-pink-500/20">
+        <DialogContent className="w-[90vw] max-w-[360px] rounded-2xl bg-gradient-to-br from-background via-background to-pink-500/5 border-pink-500/20 p-4">
           <div className="relative">
             {/* Decorative elements */}
-            <div className="absolute -top-2 -right-2 w-20 h-20 bg-pink-500/20 rounded-full blur-2xl" />
-            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-purple-500/20 rounded-full blur-xl" />
+            <div className="absolute -top-2 -right-2 w-16 h-16 bg-pink-500/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-purple-500/20 rounded-full blur-xl" />
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                    <Radio className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                    <Radio className="w-4 h-4 text-white" />
                   </div>
-                  <h2 className="text-xl font-bold">Live Ended</h2>
+                  <h2 className="text-lg font-bold">Live Ended</h2>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleClose} className="rounded-full">
-                  <X className="h-5 w-5" />
-                </Button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-2xl p-4 text-center border border-pink-500/20">
-                    <div className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-3 text-center border border-pink-500/20">
+                    <div className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                       {viewerCount}
                     </div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
+                    <div className="flex items-center justify-center gap-1 mt-0.5">
                       <Users className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Peak Viewers</span>
+                      <span className="text-[10px] text-muted-foreground">Peak Viewers</span>
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-2xl p-4 text-center border border-red-500/20">
-                    <div className="text-3xl font-bold text-red-500 flex items-center justify-center gap-1">
-                      <Heart className="w-6 h-6 fill-red-500" />
+                  <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-xl p-3 text-center border border-red-500/20">
+                    <div className="text-2xl font-bold text-red-500 flex items-center justify-center gap-1">
+                      <Heart className="w-5 h-5 fill-red-500" />
                       {likeCount}
                     </div>
-                    <span className="text-xs text-muted-foreground">Likes</span>
+                    <span className="text-[10px] text-muted-foreground">Likes</span>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-2xl p-4 text-center border border-blue-500/20">
-                    <div className="text-3xl font-bold text-blue-500 flex items-center justify-center gap-1">
-                      <MessageCircle className="w-5 h-5" />
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-xl p-3 text-center border border-blue-500/20">
+                    <div className="text-2xl font-bold text-blue-500 flex items-center justify-center gap-1">
+                      <MessageCircle className="w-4 h-4" />
                       {comments.length}
                     </div>
-                    <span className="text-xs text-muted-foreground">Comments</span>
+                    <span className="text-[10px] text-muted-foreground">Comments</span>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-2xl p-4 text-center border border-purple-500/20">
-                    <div className="text-3xl font-bold text-purple-500">
+                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-xl p-3 text-center border border-purple-500/20">
+                    <div className="text-2xl font-bold text-purple-500">
                       {formatDuration(liveDuration)}
                     </div>
-                    <span className="text-xs text-muted-foreground">Duration</span>
+                    <span className="text-[10px] text-muted-foreground">Duration</span>
                   </div>
                 </div>
 
                 {/* Title recap */}
-                <div className="bg-muted/50 rounded-xl p-3 text-center">
-                  <p className="text-sm text-muted-foreground">Stream title</p>
-                  <p className="font-semibold">{liveTitle}</p>
+                <div className="bg-muted/50 rounded-xl p-2 text-center">
+                  <p className="text-xs text-muted-foreground">Stream title</p>
+                  <p className="font-medium text-sm truncate">{liveTitle}</p>
                 </div>
 
                 {/* Close button */}
                 <Button 
-                  className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                  className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 h-10"
                   onClick={handleClose}
                 >
                   Done
@@ -489,6 +510,9 @@ const startCamera = async () => {
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
         <div className="relative h-full bg-gradient-to-b from-black via-black to-purple-950/30">
+          {/* Confetti Burst for milestones */}
+          <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
+
           {/* Video Preview with gradient overlay */}
           <video
             ref={videoRef}
@@ -599,34 +623,8 @@ const startCamera = async () => {
           {/* Floating Hearts Animation */}
           <FloatingHearts trigger={likeTrigger} />
 
-          {/* Side actions - Likes with animation */}
-          <div className="absolute right-4 bottom-52 flex flex-col items-center gap-3 z-10">
-            <div className="relative">
-              <div className={`absolute inset-0 bg-pink-500 rounded-full blur-lg transition-opacity ${likeCount > 0 ? 'opacity-50' : 'opacity-0'}`} />
-              <div className="relative bg-white/10 backdrop-blur-md rounded-full p-3 border border-white/10">
-                <Heart className={`w-7 h-7 transition-all ${likeCount > 0 ? 'text-pink-500 fill-pink-500 scale-110' : 'text-white'}`} />
-              </div>
-            </div>
-            <span className="text-white text-sm font-bold">{likeCount}</span>
-          </div>
-
-          {/* Bottom Controls with glass morphism */}
+          {/* Bottom Controls with glass morphism - Broadcaster view (no emoji reactions, no like button) */}
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
-            {/* Quick emoji reactions */}
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => {
-                    setNewComment(prev => prev + emoji);
-                  }}
-                  className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-lg transition-all hover:scale-110"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
             {/* Comment Input with modern styling */}
             <div className="flex items-center gap-2 mb-4">
               <div className="flex-1 relative">
