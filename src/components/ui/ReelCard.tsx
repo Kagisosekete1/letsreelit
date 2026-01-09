@@ -241,7 +241,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
           if (!video.muted) {
             video.muted = true;
             setIsMuted(true);
-            sessionStorage.setItem('reelAudioMuted', 'true');
+            // IMPORTANT: don't overwrite the user's preference here.
+            // If they previously unmuted, keep that preference so future reels attempt sound.
             try {
               await video.play();
               setIsPlaying(true);
@@ -603,7 +604,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   return (
     <div 
-      className="absolute inset-0 flex items-center justify-center"
+      className="absolute inset-0 flex items-center justify-center bg-black"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleTouchStart}
@@ -623,7 +624,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           />
         ) : (
           <div
-            className="absolute inset-0 bg-muted transition-opacity duration-300"
+            className="absolute inset-0 bg-black transition-opacity duration-300"
             style={{ opacity: isActive && isVideoReady ? 0 : 1 }}
           />
         )}
