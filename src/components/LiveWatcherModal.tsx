@@ -6,6 +6,7 @@ import { X, Heart, Send, Users, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
+import FloatingHearts from '@/components/ui/FloatingHearts';
 
 interface LiveWatcherModalProps {
   isOpen: boolean;
@@ -31,11 +32,15 @@ interface Comment {
   avatarUrl?: string;
 }
 
+// Quick emoji reactions for viewers
+const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', '🙌'];
+
 const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, liveStream }) => {
   const { toast } = useToast();
   const { currentUser, authUser } = useUser();
   const [viewerCount, setViewerCount] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeTrigger, setLikeTrigger] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [hasLiked, setHasLiked] = useState(false);
@@ -61,6 +66,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       })
       .on('broadcast', { event: 'like' }, () => {
         setLikeCount(prev => prev + 1);
+        setLikeTrigger(prev => prev + 1);
       })
       .on('broadcast', { event: 'comment' }, ({ payload }) => {
         const comment = payload as Comment;
@@ -101,9 +107,36 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
     setHasLiked(true);
     setLikeCount(prev => prev + 1);
+    setLikeTrigger(prev => prev + 1);
 
     // Allow liking again after 2 seconds
     setTimeout(() => setHasLiked(false), 2000);
+  };
+
+  const handleEmojiClick = (emoji: string) => {
+    // Send emoji as a comment
+    if (!currentUser || !channelRef.current) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      username: currentUser.username,
+      text: emoji,
+      timestamp: new Date(),
+      avatarUrl: currentUser.avatarUrl,
+    };
+
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'comment',
+      payload: comment,
+    });
+
+    setComments(prev => [...prev.slice(-20), comment]);
+
+    // Also send a like for heart emoji
+    if (emoji === '❤️') {
+      handleLike();
+    }
   };
 
   const sendComment = () => {
@@ -180,10 +213,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             <div className="absolute top-16 left-4 right-4">
               <p className="text-white font-semibold text-center">{liveStream.title}</p>
             </div>
+
+            {/* Floating Hearts */}
+            <FloatingHearts trigger={likeTrigger} />
           </div>
 
           {/* Comments Section */}
-          <div className="h-64 bg-gradient-to-t from-black via-black/90 to-transparent absolute bottom-20 left-0 right-0 px-4 py-2 overflow-hidden">
+          <div className="h-64 bg-gradient-to-t from-black via-black/90 to-transparent absolute bottom-32 left-0 right-0 px-4 py-2 overflow-hidden">
             <div className="space-y-2 max-h-full overflow-y-auto scrollbar-hide">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex items-start gap-2 animate-fade-in">
@@ -203,6 +239,19 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
           {/* Interaction Bar */}
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm">
+            {/* Quick emoji reactions - clickable */}
+            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiClick(emoji)}
+                  className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-lg transition-all hover:scale-110 active:scale-95"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center gap-2">
               <Input
                 placeholder="Say something..."

@@ -3,23 +3,31 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Video, TrendingUp, Play, Heart, Eye, Radio } from 'lucide-react';
+import { Search, Video, TrendingUp, Play, Heart, Eye, Radio, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import { supabase } from '@/integrations/supabase/client';
+import ReelCard from '@/components/ui/ReelCard';
+import { useUser } from '@/contexts/UserContext';
 
 interface TutorialReel {
   id: string;
   title: string;
+  description?: string | null;
   thumbnail_url: string | null;
   video_url: string;
   likes_count: number;
   views_count: number;
+  comments_count?: number;
+  shares_count?: number;
   user_id: string;
   is_tutorial: boolean;
   profile?: {
+    id?: string;
     username: string;
+    display_name?: string;
     avatar_url: string | null;
+    verified?: boolean;
   };
 }
 
@@ -31,14 +39,53 @@ const Tutorials = () => {
   const [tutorialReels, setTutorialReels] = useState<TutorialReel[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
+  const [selectedReel, setSelectedReel] = useState<TutorialReel | null>(null);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { authUser } = useUser();
 
   useEffect(() => {
     fetchTrendingReels();
     fetchTutorialReels();
-  }, []);
+    if (authUser) fetchFollowing();
+  }, [authUser]);
+
+  const fetchFollowing = async () => {
+    if (!authUser) return;
+    const { data } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', authUser.id);
+    
+    if (data) {
+      setFollowingIds(new Set(data.map(f => f.following_id)));
+    }
+  };
+
+  const toggleFollow = async (targetUserId: string) => {
+    if (!authUser) return;
+    
+    const isCurrentlyFollowing = followingIds.has(targetUserId);
+    
+    if (isCurrentlyFollowing) {
+      await supabase.from('follows').delete()
+        .eq('follower_id', authUser.id)
+        .eq('following_id', targetUserId);
+      setFollowingIds(prev => {
+        const next = new Set(prev);
+        next.delete(targetUserId);
+        return next;
+      });
+    } else {
+      await supabase.from('follows').insert({
+        follower_id: authUser.id,
+        following_id: targetUserId,
+      });
+      setFollowingIds(prev => new Set([...prev, targetUserId]));
+    }
+  };
 
   const fetchTrendingReels = async () => {
     try {
@@ -53,7 +100,7 @@ const Tutorials = () => {
         const userIds = [...new Set(reelsData.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, username, avatar_url')
+          .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
@@ -91,7 +138,7 @@ const Tutorials = () => {
         const userIds = [...new Set(reelsData.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, username, avatar_url')
+          .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
@@ -149,6 +196,59 @@ const Tutorials = () => {
     navigate('/live', { state: { from: location.pathname } });
   };
 
+  const handleReelClick = (reel: TutorialReel) => {
+    setSelectedReel(reel);
+  };
+
+  const closeReelViewer = () => {
+    setSelectedReel(null);
+  };
+
+  // Reel Viewer Modal
+  if (selectedReel) {
+    const formattedReel = {
+      id: selectedReel.id,
+      videoUrl: selectedReel.video_url,
+      thumbnailUrl: selectedReel.thumbnail_url || '',
+      title: selectedReel.title,
+      description: selectedReel.description || '',
+      user: {
+        id: selectedReel.user_id,
+        profileId: selectedReel.profile?.id || selectedReel.user_id,
+        username: selectedReel.profile?.username || 'user',
+        displayName: selectedReel.profile?.display_name || selectedReel.profile?.username || 'User',
+        avatarUrl: selectedReel.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face',
+        verified: selectedReel.profile?.verified || false,
+      },
+      stats: {
+        likes: selectedReel.likes_count || 0,
+        comments: selectedReel.comments_count || 0,
+        shares: selectedReel.shares_count || 0,
+        views: selectedReel.views_count || 0,
+      },
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
+          onClick={closeReelViewer}
+        >
+          <X className="w-5 h-5" />
+        </Button>
+        <ReelCard
+          reel={formattedReel}
+          followingIds={followingIds}
+          toggleFollow={toggleFollow}
+          isActive={true}
+          isOwner={authUser?.id === selectedReel.user_id}
+          autoAdvance={false}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
@@ -198,7 +298,7 @@ const Tutorials = () => {
                 <div 
                   key={reel.id} 
                   className="flex-shrink-0 w-32 relative cursor-pointer group"
-                  onClick={() => navigate('/')}
+                  onClick={() => handleReelClick(reel)}
                 >
                   {/* Ranking Badge */}
                   <div className="absolute -top-1 -left-1 z-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -296,7 +396,7 @@ const Tutorials = () => {
                 <div 
                   key={reel.id} 
                   className="relative cursor-pointer group"
-                  onClick={() => navigate('/')}
+                  onClick={() => handleReelClick(reel)}
                 >
                   <div className="relative aspect-[9/16] bg-secondary rounded-xl overflow-hidden">
                     {reel.thumbnail_url ? (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
@@ -42,7 +42,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
 }) => {
   const { authUser } = useUser();
   const { silenceAll } = useAudio();
-  const [currentIndex] = useState(initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -94,24 +94,55 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
+    } else if (e.key === 'ArrowDown' && currentIndex < reels.length - 1) {
+      e.preventDefault();
+      setCurrentIndex(prev => prev + 1);
+    } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+      e.preventDefault();
+      setCurrentIndex(prev => prev - 1);
     }
-  };
+  }, [onClose, currentIndex, reels.length]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [handleKeyDown]);
 
+  // Handle scroll/swipe navigation
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  const formattedReel = {
-    id: currentReel.id,
-    videoUrl: currentReel.video_url,
-    thumbnailUrl: currentReel.thumbnail_url || '',
-    title: currentReel.title,
-    description: currentReel.description || '',
+    const scrollTop = container.scrollTop;
+    const itemHeight = container.clientHeight;
+    const newIndex = Math.round(scrollTop / itemHeight);
+    
+    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
+      setCurrentIndex(newIndex);
+    }
+  }, [currentIndex, reels.length]);
+
+  // Scroll to current index when it changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const itemHeight = container.clientHeight;
+    container.scrollTo({
+      top: currentIndex * itemHeight,
+      behavior: 'smooth'
+    });
+  }, [currentIndex]);
+
+  const formattedReel = (reel: ReelData) => ({
+    id: reel.id,
+    videoUrl: reel.video_url,
+    thumbnailUrl: reel.thumbnail_url || '',
+    title: reel.title,
+    description: reel.description || '',
     user: {
       id: userId,
       profileId: userId,
@@ -121,20 +152,17 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
       verified,
     },
     stats: {
-      likes: currentReel.likes_count || 0,
-      comments: currentReel.comments_count || 0,
-      shares: currentReel.shares_count || 0,
-      views: currentReel.views_count || 0,
+      likes: reel.likes_count || 0,
+      comments: reel.comments_count || 0,
+      shares: reel.shares_count || 0,
+      views: reel.views_count || 0,
     },
-  };
+  });
 
   const isOwner = authUser?.id === userId;
 
   return (
-    <div 
-      ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col bg-black"
-    >
+    <div className="fixed inset-0 z-50 flex flex-col bg-black">
       {/* Close Button - matches Home header position */}
       <Button
         variant="ghost"
@@ -145,17 +173,29 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
         <X className="w-5 h-5" />
       </Button>
 
-      {/* Main Reel Content - Full screen like Home */}
-      <div className="flex-1 h-full w-full relative">
-        <ReelCard
-          key={currentReel.id}
-          reel={formattedReel}
-          followingIds={followingIds}
-          toggleFollow={toggleFollow}
-          isActive={true}
-          isOwner={isOwner}
-          autoAdvance={false}
-        />
+      {/* Scrollable Reel Container */}
+      <div 
+        ref={containerRef}
+        className="flex-1 h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        style={{ scrollSnapStop: 'always' }}
+        onScroll={handleScroll}
+      >
+        {reels.map((reel, index) => (
+          <div
+            key={reel.id}
+            className="relative h-full w-full snap-start snap-always"
+            style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+          >
+            <ReelCard
+              reel={formattedReel(reel)}
+              followingIds={followingIds}
+              toggleFollow={toggleFollow}
+              isActive={index === currentIndex}
+              isOwner={isOwner}
+              autoAdvance={false}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

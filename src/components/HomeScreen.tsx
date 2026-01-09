@@ -166,12 +166,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
         })) as ReelData[];
         
         if (reset) {
-          // Shuffle only on initial load
+          // Always shuffle on initial load/refresh for fresh experience
           const shuffled = [...reelsWithProfiles].sort(() => Math.random() - 0.5);
           setReels(shuffled);
         } else {
-          // Append for infinite scroll
-          setReels(prev => [...prev, ...reelsWithProfiles]);
+          // Shuffle new batch and append for infinite scroll
+          const shuffledNew = [...reelsWithProfiles].sort(() => Math.random() - 0.5);
+          setReels(prev => [...prev, ...shuffledNew]);
         }
 
         if (reelsData.length < PAGE_SIZE) {
