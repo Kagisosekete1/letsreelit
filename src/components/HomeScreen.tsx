@@ -3,8 +3,10 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
-import { Radio } from 'lucide-react';
+import { Radio, Loader2 } from 'lucide-react';
 import { useReelPreloader } from '@/hooks/useReelPreloader';
+
+const PAGE_SIZE = 10;
 
 interface HomeScreenProps {
   setScreen: (screen: Screen | 'following' | 'live', payload?: any) => void;
@@ -38,11 +40,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [activeLiveCount, setActiveLiveCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   const displayedReels = reels;
 
@@ -64,7 +69,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
     if (currentScreen === 'home') {
-      fetchReels();
+      fetchReels(true);
       if (authUser) fetchFollowing();
     }
   }, [currentScreen, authUser]);
@@ -101,6 +106,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   }, [activeReelIndex, displayedReels, authUser]);
 
+  // Infinite scroll: load more when approaching the end
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current;
+    if (!trigger) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          fetchReels(false);
+        }
+      },
+      { root: containerRef.current, rootMargin: '200px', threshold: 0 }
+    );
+
+    observer.observe(trigger);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, reels.length]);
+
   const incrementViewCount = async (reelId: string) => {
     try {
       await supabase.rpc('increment_view_count', { reel_id: reelId });
@@ -114,12 +137,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   };
 
-  const fetchReels = async () => {
+  const fetchReels = async (reset: boolean = false) => {
+    if (reset) {
+      setLoading(true);
+      setHasMore(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
+      const offset = reset ? 0 : reels.length;
       const { data: reelsData } = await supabase
         .from('reels')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
       
       if (reelsData && reelsData.length > 0) {
         const userIds = [...new Set(reelsData.map(r => r.user_id))];
@@ -150,19 +182,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           followers_count: followersCountMap.get(p.id) || 0,
           following_count: followingCountMap.get(p.id) || 0,
         }]) || []);
+        
         const reelsWithProfiles = reelsData.map(r => ({
           ...r,
           profile: profileMap.get(r.user_id)
-        }));
+        })) as ReelData[];
         
-        // Shuffle reels randomly
-        const shuffled = [...reelsWithProfiles].sort(() => Math.random() - 0.5);
-        setReels(shuffled as ReelData[]);
+        if (reset) {
+          // Shuffle only on initial load
+          const shuffled = [...reelsWithProfiles].sort(() => Math.random() - 0.5);
+          setReels(shuffled);
+        } else {
+          // Append for infinite scroll
+          setReels(prev => [...prev, ...reelsWithProfiles]);
+        }
+
+        if (reelsData.length < PAGE_SIZE) {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
       }
     } catch (error) {
       console.error('Error fetching reels:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -378,6 +423,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                 />
               </div>
             ))}
+            
+            {/* Infinite scroll trigger */}
+            <div ref={loadMoreTriggerRef} className="h-1 w-full" />
+            
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                  <span className="text-white text-xs">Loading more...</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
