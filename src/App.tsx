@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
+import { AudioProvider } from "@/contexts/AudioContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Tutorials from "./pages/Tutorials";
@@ -24,51 +25,53 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <div className="bg-background min-h-screen">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/following" element={
-                <ProtectedRoute>
-                  <Following />
-                </ProtectedRoute>
-              } />
-              <Route path="/tutorials" element={
-                <ProtectedRoute>
-                  <Tutorials />
-                </ProtectedRoute>
-              } />
-              <Route path="/live" element={
-                <ProtectedRoute>
-                  <LiveDiscovery />
-                </ProtectedRoute>
-              } />
-              <Route path="/inbox" element={
-                <ProtectedRoute>
-                  <Inbox />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/:username" element={<UserProfile />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/about" element={<About />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-        </BrowserRouter>
-      </TooltipProvider>
-    </UserProvider>
-  </QueryClientProvider>
+        <AudioProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="bg-background min-h-screen">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/following" element={
+                    <ProtectedRoute>
+                      <Following />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/tutorials" element={
+                    <ProtectedRoute>
+                      <Tutorials />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/live" element={
+                    <ProtectedRoute>
+                      <LiveDiscovery />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inbox" element={
+                    <ProtectedRoute>
+                      <Inbox />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/user/:username" element={<UserProfile />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/about" element={<About />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AudioProvider>
+      </UserProvider>
+    </QueryClientProvider>
   );
 };
 
