@@ -6,6 +6,7 @@ import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
+import FloatingHearts from '@/components/ui/FloatingHearts';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [viewers, setViewers] = useState<Map<string, Viewer>>(new Map());
   const [likeCount, setLikeCount] = useState(0);
+  const [likeTrigger, setLikeTrigger] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [liveTitle, setLiveTitle] = useState('');
@@ -132,6 +134,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       })
       .on('broadcast', { event: 'like' }, () => {
         setLikeCount(prev => prev + 1);
+        setLikeTrigger(prev => prev + 1); // Trigger floating hearts
       })
       .on('broadcast', { event: 'comment' }, ({ payload }) => {
         const comment = payload as Comment;
@@ -592,6 +595,9 @@ const startCamera = async () => {
               </div>
             )}
           </div>
+
+          {/* Floating Hearts Animation */}
+          <FloatingHearts trigger={likeTrigger} />
 
           {/* Side actions - Likes with animation */}
           <div className="absolute right-4 bottom-52 flex flex-col items-center gap-3 z-10">
