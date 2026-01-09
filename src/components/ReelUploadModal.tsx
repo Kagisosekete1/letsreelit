@@ -417,7 +417,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
               <div>
                 <Input
-                  placeholder="Add dance style..."
+                  placeholder="Add Caption..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
@@ -425,15 +425,22 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 />
                 {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
               </div>
-              <div>
+              <div className="relative">
                 <Textarea
-                  placeholder="Add a description..."
+                  placeholder="Add Hashtags..."
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={500}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 50) {
+                      setDescription(e.target.value);
+                    }
+                  }}
+                  maxLength={50}
                   className="rounded-xl resize-none"
-                  rows={3}
+                  rows={2}
                 />
+                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                  {description.length}/50
+                </span>
                 {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
               </div>
 

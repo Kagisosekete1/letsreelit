@@ -184,6 +184,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
     // Reset ready state whenever we switch reels / src
     setIsVideoReady(false);
+    setIsBuffering(true);
 
     if (isActive) {
       // Request audio focus from global manager - this silences all other videos
@@ -195,6 +196,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
       // Apply mute state from global context
       video.muted = isMuted;
 
+      // Wait for video to be ready before playing to prevent black screen
+      const handleCanPlay = () => {
+        setIsVideoReady(true);
+        setIsBuffering(false);
+      };
+
+      const handleLoadedData = () => {
+        setIsVideoReady(true);
+        setIsBuffering(false);
+      };
+
+      video.addEventListener('canplay', handleCanPlay);
+      video.addEventListener('loadeddata', handleLoadedData);
+
       // Ensure the element has the latest src loaded
       try {
         video.load();
@@ -203,6 +218,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
       }
 
       const playAttempt = async () => {
+        // Wait for video to have enough data
+        if (video.readyState >= 3) {
+          setIsVideoReady(true);
+          setIsBuffering(false);
+        }
+
         try {
           await video.play();
           setIsPlaying(true);
@@ -221,6 +242,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
       };
 
       void playAttempt();
+
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+        video.removeEventListener('loadeddata', handleLoadedData);
+      };
     } else {
       // Release audio focus and stop this video
       releaseAudioFocus(reel.id);

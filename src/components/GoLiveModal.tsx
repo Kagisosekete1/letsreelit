@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, Trash2 } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,66 +288,14 @@ const startCamera = async () => {
     setStep('ended');
   };
 
-  const saveLiveToTutorial = async () => {
-    if (!authUser || !currentUser) {
-      toast({ title: "Error", description: "Please sign in", variant: "destructive" });
-      return;
-    }
-
-    try {
-      // Create blob from recorded chunks
-      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-      const file = new File([blob], `live_${Date.now()}.webm`, { type: 'video/webm' });
-
-      // Upload to storage
-      const fileName = `${authUser.id}/live_${Date.now()}.webm`;
-      const { error: uploadError } = await supabase.storage
-        .from('reels')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('reels')
-        .getPublicUrl(fileName);
-
-      // Save to database as reel (live replay)
-      const { error: dbError } = await supabase
-        .from('reels')
-        .insert({
-          user_id: authUser.id,
-          title: liveTitle,
-          description: `Live replay • ${formatDuration(liveDuration)} • ${viewerCount} viewers`,
-          video_url: publicUrl,
-          is_portrait: true,
-          views_count: viewerCount,
-          likes_count: likeCount,
-          comments_count: comments.length,
-        });
-
-      if (dbError) throw dbError;
-
-      await refreshProfile();
-
-      toast({
-        title: "Live saved!",
-        description: "Your live replay has been saved.",
-      });
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: "Save failed",
-        description: error.message || "Failed to save live",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDiscard = () => {
+  // No longer save lives - just close when ending
+  const handleClose = () => {
     recordedChunksRef.current = [];
-    toast({ title: "Live discarded", description: "Your live recording has been deleted." });
     onClose();
   };
+
+  // Emojis for quick reactions
+  const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', '🙌'];
 
   const toggleMute = () => {
     if (stream) {
@@ -457,52 +405,76 @@ const startCamera = async () => {
   if (step === 'ended') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Live Ended</h2>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <div className="space-y-6 py-4">
-            {/* Live Results - Real stats only */}
-            <div className="bg-secondary/30 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4 text-center">Live Results</h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold">{formatDuration(liveDuration)}</p>
-                  <p className="text-sm text-muted-foreground">Duration</p>
+        <DialogContent className="sm:max-w-md rounded-3xl bg-gradient-to-br from-background via-background to-pink-500/5 border-pink-500/20">
+          <div className="relative">
+            {/* Decorative elements */}
+            <div className="absolute -top-2 -right-2 w-20 h-20 bg-pink-500/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-purple-500/20 rounded-full blur-xl" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                    <Radio className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold">Live Ended</h2>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{viewerCount}</p>
-                  <p className="text-sm text-muted-foreground">Viewers</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-pink-500">{likeCount}</p>
-                  <p className="text-sm text-muted-foreground">Likes</p>
-                </div>
+                <Button variant="ghost" size="sm" onClick={handleClose} className="rounded-full">
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-              <div className="mt-4 text-center">
-                <p className="text-sm text-muted-foreground">{comments.length} comments received</p>
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              <Button 
-                className="w-full rounded-xl"
-                onClick={saveLiveToTutorial}
-              >
-                Save as Reel
-              </Button>
-              <Button 
-                variant="outline"
-                className="w-full rounded-xl text-destructive hover:text-destructive"
-                onClick={handleDiscard}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Discard
-              </Button>
+              <div className="space-y-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-2xl p-4 text-center border border-pink-500/20">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                      {viewerCount}
+                    </div>
+                    <div className="flex items-center justify-center gap-1 mt-1">
+                      <Users className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Peak Viewers</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-2xl p-4 text-center border border-red-500/20">
+                    <div className="text-3xl font-bold text-red-500 flex items-center justify-center gap-1">
+                      <Heart className="w-6 h-6 fill-red-500" />
+                      {likeCount}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Likes</span>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-2xl p-4 text-center border border-blue-500/20">
+                    <div className="text-3xl font-bold text-blue-500 flex items-center justify-center gap-1">
+                      <MessageCircle className="w-5 h-5" />
+                      {comments.length}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Comments</span>
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 rounded-2xl p-4 text-center border border-purple-500/20">
+                    <div className="text-3xl font-bold text-purple-500">
+                      {formatDuration(liveDuration)}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Duration</span>
+                  </div>
+                </div>
+
+                {/* Title recap */}
+                <div className="bg-muted/50 rounded-xl p-3 text-center">
+                  <p className="text-sm text-muted-foreground">Stream title</p>
+                  <p className="font-semibold">{liveTitle}</p>
+                </div>
+
+                {/* Close button */}
+                <Button 
+                  className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                  onClick={handleClose}
+                >
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
@@ -513,8 +485,8 @@ const startCamera = async () => {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
-        <div className="relative h-full bg-black">
-          {/* Video Preview */}
+        <div className="relative h-full bg-gradient-to-b from-black via-black to-purple-950/30">
+          {/* Video Preview with gradient overlay */}
           <video
             ref={videoRef}
             autoPlay
@@ -522,77 +494,98 @@ const startCamera = async () => {
             muted
             className="w-full h-full object-cover"
           />
+          
+          {/* Gradient overlays for modern look */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
 
-          {/* Live Badge & Stats - Real counts only */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-            <div className="flex items-center gap-2">
-              <div className="bg-pink-500 px-3 py-1 rounded-full flex items-center gap-1">
-                <Radio className="w-3 h-3 text-white animate-pulse" />
-                <span className="text-white text-sm font-semibold">LIVE</span>
+          {/* Top Bar with glass effect */}
+          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/50 to-transparent z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {/* Live badge with glow */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-50 animate-pulse" />
+                  <div className="relative bg-gradient-to-r from-pink-500 to-red-500 px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    <span className="text-white text-sm font-bold tracking-wide">LIVE</span>
+                  </div>
+                </div>
+                
+                {/* Stats pills */}
+                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                  <Users className="w-3.5 h-3.5 text-white" />
+                  <span className="text-white text-sm font-medium">{viewerCount}</span>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                  <span className="text-white text-sm font-medium">{formatDuration(liveDuration)}</span>
+                </div>
               </div>
-              <div className="bg-black/50 px-3 py-1 rounded-full flex items-center gap-1">
-                <Users className="w-3 h-3 text-white" />
-                <span className="text-white text-sm">{viewerCount}</span>
-              </div>
-              <div className="bg-black/50 px-3 py-1 rounded-full">
-                <span className="text-white text-sm">{formatDuration(liveDuration)}</span>
-              </div>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-white/10 backdrop-blur-md text-white hover:bg-red-500/80 rounded-full w-10 h-10 border border-white/10"
+                onClick={handleEndLive}
+              >
+                <X className="w-5 h-5" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="bg-black/50 text-white hover:bg-black/70 rounded-full"
-              onClick={handleEndLive}
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            
+            {/* Title with subtle background */}
+            <div className="mt-3 bg-white/5 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/5">
+              <p className="text-white font-semibold text-lg">{liveTitle}</p>
+            </div>
           </div>
 
-          {/* Title */}
-          <div className="absolute top-16 left-4 right-4">
-            <p className="text-white font-semibold">{liveTitle}</p>
-          </div>
-
-          {/* Viewer avatars (if any) */}
+          {/* Viewer avatars with better styling */}
           {viewerCount > 0 && (
-            <div className="absolute top-24 left-4 flex -space-x-2">
+            <div className="absolute top-32 left-4 flex -space-x-2 z-10">
               {Array.from(viewers.values()).slice(0, 5).map((viewer, idx) => (
                 <div
                   key={viewer.oderId}
-                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-600 flex items-center justify-center overflow-hidden"
+                  className="w-9 h-9 rounded-full border-2 border-pink-500/50 bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center overflow-hidden shadow-lg"
                   style={{ zIndex: 5 - idx }}
                 >
                   {viewer.avatarUrl ? (
                     <img src={viewer.avatarUrl} alt={viewer.username} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-white text-xs">{viewer.username[0]?.toUpperCase()}</span>
+                    <span className="text-white text-xs font-bold">{viewer.username[0]?.toUpperCase()}</span>
                   )}
                 </div>
               ))}
               {viewerCount > 5 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-black/50 flex items-center justify-center">
-                  <span className="text-white text-xs">+{viewerCount - 5}</span>
+                <div className="w-9 h-9 rounded-full border-2 border-white/20 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">+{viewerCount - 5}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Comments Section - Real comments only */}
-          <div className="absolute bottom-32 left-0 right-16 max-h-64 overflow-hidden px-4">
+          {/* Comments Section with modern bubbles */}
+          <div className="absolute bottom-44 left-0 right-20 max-h-60 overflow-hidden px-4">
             {comments.length === 0 ? (
-              <div className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm">
-                <span className="text-white/60 text-sm">Waiting for viewers to join...</span>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
+                <span className="text-white/70 text-sm">✨ Waiting for viewers to join...</span>
               </div>
             ) : (
               <div className="space-y-2">
-                {comments.slice(-8).map((comment) => (
-                  <div key={comment.id} className="bg-black/40 rounded-xl px-3 py-2 backdrop-blur-sm flex items-center gap-2">
-                    {comment.avatarUrl && (
-                      <img src={comment.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+                {comments.slice(-6).map((comment, idx) => (
+                  <div 
+                    key={comment.id} 
+                    className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/5 flex items-start gap-2 animate-in slide-in-from-left duration-300"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    {comment.avatarUrl ? (
+                      <img src={comment.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/20" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{comment.username[0]?.toUpperCase()}</span>
+                      </div>
                     )}
-                    <div>
-                      <span className="text-white font-semibold text-sm">@{comment.username}</span>
-                      <span className="text-white/80 text-sm ml-2">{comment.text}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-pink-400 font-semibold text-sm">@{comment.username}</span>
+                      <p className="text-white/90 text-sm break-words">{comment.text}</p>
                     </div>
                   </div>
                 ))}
@@ -600,40 +593,60 @@ const startCamera = async () => {
             )}
           </div>
 
-          {/* Like Animation Area - Real likes only */}
-          <div className="absolute right-4 bottom-48 flex flex-col items-center gap-2">
-            <div className="bg-black/50 rounded-full p-3">
-              <Heart className={`w-6 h-6 ${likeCount > 0 ? 'text-pink-500 fill-pink-500' : 'text-white'}`} />
+          {/* Side actions - Likes with animation */}
+          <div className="absolute right-4 bottom-52 flex flex-col items-center gap-3 z-10">
+            <div className="relative">
+              <div className={`absolute inset-0 bg-pink-500 rounded-full blur-lg transition-opacity ${likeCount > 0 ? 'opacity-50' : 'opacity-0'}`} />
+              <div className="relative bg-white/10 backdrop-blur-md rounded-full p-3 border border-white/10">
+                <Heart className={`w-7 h-7 transition-all ${likeCount > 0 ? 'text-pink-500 fill-pink-500 scale-110' : 'text-white'}`} />
+              </div>
             </div>
-            <span className="text-white text-sm font-semibold">{likeCount}</span>
+            <span className="text-white text-sm font-bold">{likeCount}</span>
           </div>
 
-          {/* Bottom Controls */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-            {/* Comment Input */}
+          {/* Bottom Controls with glass morphism */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
+            {/* Quick emoji reactions */}
+            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    setNewComment(prev => prev + emoji);
+                  }}
+                  className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-lg transition-all hover:scale-110"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            {/* Comment Input with modern styling */}
             <div className="flex items-center gap-2 mb-4">
-              <Input
-                placeholder="Say something..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendComment()}
-                className="flex-1 bg-white/10 border-0 text-white placeholder:text-white/50 rounded-full"
-              />
+              <div className="flex-1 relative">
+                <Input
+                  placeholder="Say something..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendComment()}
+                  className="w-full bg-white/10 backdrop-blur-md border-white/10 text-white placeholder:text-white/50 rounded-full pl-4 pr-12 py-3 focus:ring-2 focus:ring-pink-500/50"
+                />
+              </div>
               <Button
-                size="sm"
-                className="rounded-full bg-primary"
+                size="icon"
+                className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 w-11 h-11 shadow-lg"
                 onClick={sendComment}
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Control Buttons */}
-            <div className="flex items-center justify-center gap-4">
+            {/* Control Buttons with glass effect */}
+            <div className="flex items-center justify-center gap-3">
               <Button
                 variant="ghost"
                 size="lg"
-                className={`rounded-full ${isMuted ? 'bg-destructive/80' : 'bg-white/20'}`}
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${isMuted ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={toggleMute}
               >
                 {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
@@ -641,7 +654,7 @@ const startCamera = async () => {
               <Button
                 variant="ghost"
                 size="lg"
-                className={`rounded-full ${!isCameraOn ? 'bg-destructive/80' : 'bg-white/20'}`}
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${!isCameraOn ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={toggleCamera}
               >
                 {isCameraOn ? <Camera className="w-6 h-6 text-white" /> : <CameraOff className="w-6 h-6 text-white" />}
@@ -649,7 +662,7 @@ const startCamera = async () => {
               <Button
                 variant="ghost"
                 size="lg"
-                className="rounded-full bg-white/20"
+                className="rounded-full w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
                 onClick={flipCamera}
               >
                 <RotateCcw className="w-6 h-6 text-white" />
