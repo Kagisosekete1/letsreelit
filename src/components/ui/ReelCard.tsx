@@ -665,29 +665,34 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </Button>
         </div>
 
-        {/* User Info & Description - Bottom Left */}
-        <div className="absolute bottom-16 left-3 right-16 z-10">
-          <div className="space-y-2 p-2 -ml-2 -mb-2 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <button onClick={handleUserClick} className="flex items-center space-x-2">
+        {/* User Info & Description - Bottom Left - Fixed layout for all screen sizes */}
+        <div className="absolute bottom-16 left-3 right-16 sm:right-20 md:right-24 z-10 max-w-[calc(100%-5rem)] sm:max-w-md">
+          <div className="space-y-1.5 sm:space-y-2">
+            {/* Username row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={handleUserClick} className="flex items-center gap-2 min-w-0">
                 <img
                   src={reel.user.avatarUrl}
                   alt={reel.user.username}
-                  className="w-9 h-9 rounded-full border-2 border-white/50"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white/50 flex-shrink-0"
                 />
-                <span className="text-white font-bold text-sm drop-shadow-lg">@{reel.user.username}</span>
+                <span className="text-white font-bold text-sm sm:text-base drop-shadow-lg truncate">
+                  @{reel.user.username}
+                </span>
               </button>
               {reel.user.verified && (
-                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-[10px] text-white font-bold">✓</span>
                 </div>
               )}
             </div>
-            <p className="text-white text-sm font-medium leading-relaxed line-clamp-2 drop-shadow-lg">
+            {/* Title/Caption */}
+            <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
               {renderTextWithHashtags(reel.title, navigate)}
             </p>
+            {/* Description */}
             {reel.description && (
-              <p className="text-white/90 text-xs line-clamp-2 drop-shadow-md">
+              <p className="text-white/90 text-xs sm:text-sm line-clamp-2 drop-shadow-md break-words">
                 {renderTextWithHashtags(reel.description, navigate)}
               </p>
             )}

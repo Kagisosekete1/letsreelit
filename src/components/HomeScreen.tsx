@@ -3,8 +3,8 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
-import SplashScreen from './SplashScreen';
 import { Radio } from 'lucide-react';
+import { useReelPreloader } from '@/hooks/useReelPreloader';
 
 interface HomeScreenProps {
   setScreen: (screen: Screen | 'following' | 'live', payload?: any) => void;
@@ -45,6 +45,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const viewedReels = useRef<Set<string>>(new Set());
 
   const displayedReels = reels;
+
+  // Prefetch next reels for instant scrolling
+  useReelPreloader(reels, activeReelIndex, 2);
 
   // Fetch live count
   useEffect(() => {
