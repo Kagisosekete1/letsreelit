@@ -74,27 +74,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     }
   }, [currentScreen, authUser]);
 
-  // Extra safety: ensure only the active reel video can play audio
+  // Extra safety: ensure only the active reel video can play audio - run on every render tick
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const activeVideo = container.querySelector<HTMLVideoElement>(
-      `[data-reel-index="${activeReelIndex}"] video[data-reel-video="true"]`
-    );
+    // Immediately mute/pause all non-active videos
+    const silenceInactiveVideos = () => {
+      const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]'));
+      videos.forEach((v, idx) => {
+        const reelItem = v.closest('[data-reel-index]');
+        const videoIndex = reelItem ? Number(reelItem.getAttribute('data-reel-index')) : -1;
+        
+        if (videoIndex !== activeReelIndex) {
+          try {
+            v.pause();
+            v.muted = true;
+            if (v.src) {
+              v.removeAttribute('src');
+              v.load();
+            }
+          } catch {
+            // ignore
+          }
+        }
+      });
+    };
 
-    const videos = Array.from(container.querySelectorAll<HTMLVideoElement>('video[data-reel-video="true"]'));
-    videos.forEach((v) => {
-      if (activeVideo && v === activeVideo) return;
-      try {
-        v.pause();
-        v.muted = true;
-        v.removeAttribute('src');
-        v.load();
-      } catch {
-        // ignore
-      }
-    });
+    silenceInactiveVideos();
+    
+    // Also run periodically as a safety net
+    const interval = setInterval(silenceInactiveVideos, 500);
+    return () => clearInterval(interval);
   }, [activeReelIndex]);
 
   // Track view when reel becomes active (only for non-owners)

@@ -123,6 +123,30 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
 
   const isOwner = authUser?.id === userId;
 
+  // Mute all videos in the background when this viewer opens
+  useEffect(() => {
+    // When opening the profile reel viewer, silence any background videos
+    const silenceAllVideos = () => {
+      const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video'));
+      videos.forEach(v => {
+        // Don't affect videos inside this viewer
+        if (containerRef.current?.contains(v)) return;
+        try {
+          v.pause();
+          v.muted = true;
+        } catch {
+          // ignore
+        }
+      });
+    };
+    
+    silenceAllVideos();
+    
+    return () => {
+      // Cleanup not needed as HomeScreen will take over
+    };
+  }, []);
+
   return (
     <div 
       ref={containerRef}
