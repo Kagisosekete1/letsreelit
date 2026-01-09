@@ -13,6 +13,7 @@ import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
 import { supabase } from '@/integrations/supabase/client';
+import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
 interface ReelData {
   id: string;
@@ -52,6 +53,7 @@ const Profile = () => {
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
+  const [reelsLoading, setReelsLoading] = useState(true);
 
   useEffect(() => {
     if (authUser) {
@@ -63,6 +65,7 @@ const Profile = () => {
 
   const fetchUserReels = async () => {
     if (!authUser) return;
+    setReelsLoading(true);
     const { data } = await supabase
       .from('reels')
       .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
@@ -70,6 +73,7 @@ const Profile = () => {
       .order('created_at', { ascending: false });
     
     if (data) setUserReels(data);
+    setReelsLoading(false);
   };
 
   const fetchSavedReels = async () => {
@@ -137,8 +141,18 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="relative h-screen overflow-hidden bg-background">
+        <div className="pt-4 pb-20 h-full overflow-y-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10" />
+            <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+            <div className="w-10 h-10" />
+          </div>
+          <ProfileHeaderSkeleton />
+          <div className="border-t border-border mt-6 pt-4">
+            <ProfileGridSkeleton count={6} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -258,7 +272,9 @@ const Profile = () => {
 
         {/* Reels Grid */}
         {contentTab === 'reels' && (
-          userReels.length === 0 ? (
+          reelsLoading ? (
+            <ProfileGridSkeleton count={6} />
+          ) : userReels.length === 0 ? (
             <div className="px-4 py-8">
               <div className="text-center text-muted-foreground">
                 <p className="text-lg font-medium mb-2">No reels yet</p>
