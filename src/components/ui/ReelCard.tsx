@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
+import DuetModal from '@/components/DuetModal';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -93,7 +94,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
-  const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted, silenceAll } = useAudio();
+  const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
@@ -148,6 +149,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   }, [reel.id]);
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showDuetModal, setShowDuetModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
@@ -448,14 +450,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
       video.pause();
       onPause?.();
       setIsPlaying(false);
-      // When the user pauses the active reel, silence EVERYTHING to prevent any background audio.
-      silenceAll();
       return;
     }
 
-    // Request audio focus when playing
+    // Request audio focus when playing - this silences other videos
     requestAudioFocus(video, reel.id);
 
+    // Resume from current position (don't reset currentTime)
     video.play().then(() => {
       setIsPlaying(true);
     }).catch(() => {
@@ -816,6 +817,26 @@ const ReelCard: React.FC<ReelCardProps> = ({
             <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
           </button>
 
+          {/* Duet */}
+          {!isOwner && (
+            <button
+              className="flex flex-col items-center"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!authUser) {
+                  toast({ title: 'Sign in required', description: 'Please sign in to create duets' });
+                  return;
+                }
+                setShowDuetModal(true);
+              }}
+            >
+              <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
+                <Users className={`${iconSize} text-white`} />
+              </div>
+              <span className="text-[10px] text-white mt-0.5">Duet</span>
+            </button>
+          )}
+
           {/* More Options */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -871,6 +892,21 @@ const ReelCard: React.FC<ReelCardProps> = ({
         reelTitle={reel.title}
         username={reel.user.username}
         videoUrl={reel.videoUrl}
+      />
+
+      {/* Duet Modal */}
+      <DuetModal
+        isOpen={showDuetModal}
+        onClose={() => setShowDuetModal(false)}
+        originalReel={{
+          id: reel.id,
+          videoUrl: reel.videoUrl,
+          title: reel.title,
+          user: {
+            username: reel.user.username,
+            avatarUrl: reel.user.avatarUrl,
+          },
+        }}
       />
     </div>
   );
