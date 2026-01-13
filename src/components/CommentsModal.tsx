@@ -6,6 +6,7 @@ import { Send, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import ProfileLink from '@/components/ui/ProfileLink';
 
 interface Comment {
   id: string;
@@ -207,16 +208,20 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3">
-                <img
-                  src={comment.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
-                  alt={comment.profile?.username || 'User'}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                />
+                <ProfileLink username={comment.profile?.username || 'user'}>
+                  <img
+                    src={comment.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
+                    alt={comment.profile?.username || 'User'}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                </ProfileLink>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">
-                      @{comment.profile?.username || 'user'}
-                    </span>
+                    <ProfileLink username={comment.profile?.username || 'user'}>
+                      <span className="font-semibold text-sm">
+                        @{comment.profile?.username || 'user'}
+                      </span>
+                    </ProfileLink>
                     <span className="text-xs text-muted-foreground">
                       {formatTime(comment.created_at)}
                     </span>

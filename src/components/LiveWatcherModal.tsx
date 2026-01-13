@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
+import ProfileLink from '@/components/ui/ProfileLink';
 
 interface LiveWatcherModalProps {
   isOpen: boolean;
@@ -176,15 +177,19 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
             {/* Broadcaster Avatar as placeholder */}
             <div className="text-center">
-              <img
-                src={liveStream.broadcaster?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
-                alt={liveStream.broadcaster?.username}
-                className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-pink-500"
-              />
-              <p className="text-white text-lg font-semibold">
-                {liveStream.broadcaster?.display_name || 'Live Stream'}
-              </p>
-              <p className="text-white/60 text-sm">@{liveStream.broadcaster?.username}</p>
+              <ProfileLink username={liveStream.broadcaster?.username || ''}>
+                <img
+                  src={liveStream.broadcaster?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
+                  alt={liveStream.broadcaster?.username}
+                  className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-pink-500"
+                />
+              </ProfileLink>
+              <ProfileLink username={liveStream.broadcaster?.username || ''}>
+                <p className="text-white text-lg font-semibold">
+                  {liveStream.broadcaster?.display_name || 'Live Stream'}
+                </p>
+                <p className="text-white/60 text-sm">@{liveStream.broadcaster?.username}</p>
+              </ProfileLink>
             </div>
 
             {/* Live Badge & Stats */}
@@ -223,13 +228,17 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             <div className="space-y-2 max-h-full overflow-y-auto scrollbar-hide">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex items-start gap-2 animate-fade-in">
-                  <img
-                    src={comment.avatarUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'}
-                    alt={comment.username}
-                    className="w-6 h-6 rounded-full"
-                  />
+                  <ProfileLink username={comment.username}>
+                    <img
+                      src={comment.avatarUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'}
+                      alt={comment.username}
+                      className="w-6 h-6 rounded-full"
+                    />
+                  </ProfileLink>
                   <div>
-                    <span className="text-pink-400 text-xs font-semibold">@{comment.username}</span>
+                    <ProfileLink username={comment.username}>
+                      <span className="text-pink-400 text-xs font-semibold">@{comment.username}</span>
+                    </ProfileLink>
                     <p className="text-white text-sm">{comment.text}</p>
                   </div>
                 </div>

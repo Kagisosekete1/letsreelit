@@ -8,6 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
+import ProfileLink from '@/components/ui/ProfileLink';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -604,14 +605,20 @@ const startCamera = async () => {
                     style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     {comment.avatarUrl ? (
-                      <img src={comment.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/20" />
+                      <ProfileLink username={comment.username}>
+                        <img src={comment.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/20" />
+                      </ProfileLink>
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">{comment.username[0]?.toUpperCase()}</span>
-                      </div>
+                      <ProfileLink username={comment.username}>
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">{comment.username[0]?.toUpperCase()}</span>
+                        </div>
+                      </ProfileLink>
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className="text-pink-400 font-semibold text-sm">@{comment.username}</span>
+                      <ProfileLink username={comment.username}>
+                        <span className="text-pink-400 font-semibold text-sm">@{comment.username}</span>
+                      </ProfileLink>
                       <p className="text-white/90 text-sm break-words">{comment.text}</p>
                     </div>
                   </div>
