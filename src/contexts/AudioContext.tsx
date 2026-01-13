@@ -147,11 +147,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const interval = setInterval(() => {
       const activeVideo = activeVideoRef.current;
-      if (!activeVideo) return;
 
       const allVideos = document.querySelectorAll<HTMLVideoElement>('video');
       allVideos.forEach((video) => {
-        if (video === activeVideo) return;
+        if (activeVideo && video === activeVideo) return;
+        // If there is no active video, OR this isn't the active one, force it silent.
         if (!video.paused || !video.muted) {
           try {
             video.pause();

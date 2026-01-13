@@ -362,6 +362,42 @@ const ReelCard: React.FC<ReelCardProps> = ({
     };
   }, [reel.id, autoAdvance, onEnded, isActive]);
 
+  // Desktop keyboard shortcuts (only when this reel is active)
+  useEffect(() => {
+    if (!isActive) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Don't hijack typing
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (target as any)?.isContentEditable) return;
+
+      if (e.key === ' ' || e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        togglePlay();
+      }
+
+      if (e.key.toLowerCase() === 'm') {
+        // mimic click behavior
+        const video = videoRef.current;
+        if (!video) return;
+        if (!isActive) return;
+
+        const nextMuted = !isMuted;
+        video.muted = nextMuted;
+        setIsMuted(nextMuted);
+        if (!nextMuted) requestAudioFocus(video, reel.id);
+      }
+
+      if (e.key.toLowerCase() === 'l') {
+        void handleLike();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isActive, isMuted, reel.id, requestAudioFocus]);
+
   const triggerHaptic = () => {
     // PWA/mobile friendly haptic (best-effort)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
