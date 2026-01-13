@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,7 +21,7 @@ interface FollowUser {
   avatar_url: string;
 }
 
-const FollowersModal: React.FC<FollowersModalProps> = ({ isOpen, onClose, userId, type, count, profileId }) => {
+const FollowersModal: React.FC<FollowersModalProps> = ({ isOpen, onClose, userId, type }) => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,65 +32,67 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ isOpen, onClose, userId
     } else {
       setLoading(false);
     }
-  }, [isOpen, userId, type, profileId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, userId, type]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      let targetProfileId = profileId;
-
-      // If profileId not provided, get it from userId
-      if (!targetProfileId) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
-
-        if (!profile) {
-          setLoading(false);
-          return;
-        }
-        targetProfileId = profile.id;
-      }
-
+      // IMPORTANT: follows.follower_id / follows.following_id store AUTH USER IDs (profiles.user_id)
       if (type === 'followers') {
         const { data: follows } = await supabase
           .from('follows')
           .select('follower_id')
-          .eq('following_id', targetProfileId);
+          .eq('following_id', userId);
 
-        if (follows && follows.length > 0) {
-          const followerIds = follows.map(f => f.follower_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .in('id', followerIds);
-          
-          setUsers(profiles || []);
-        } else {
+        if (!follows || follows.length === 0) {
           setUsers([]);
+          return;
         }
+
+        const followerAuthIds = follows.map((f) => f.follower_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', followerAuthIds);
+
+        setUsers(
+          (profiles || []).map((p: any) => ({
+            id: p.user_id,
+            username: p.username,
+            display_name: p.display_name,
+            avatar_url: p.avatar_url,
+          }))
+        );
       } else {
         const { data: follows } = await supabase
           .from('follows')
           .select('following_id')
-          .eq('follower_id', targetProfileId);
+          .eq('follower_id', userId);
 
-        if (follows && follows.length > 0) {
-          const followingIds = follows.map(f => f.following_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .in('id', followingIds);
-          
-          setUsers(profiles || []);
-        } else {
+        if (!follows || follows.length === 0) {
           setUsers([]);
+          return;
         }
+
+        const followingAuthIds = follows.map((f) => f.following_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', followingAuthIds);
+
+        setUsers(
+          (profiles || []).map((p: any) => ({
+            id: p.user_id,
+            username: p.username,
+            display_name: p.display_name,
+            avatar_url: p.avatar_url,
+          }))
+        );
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -105,12 +107,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ isOpen, onClose, userId
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[400px] max-h-[80vh] rounded-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{type === 'followers' ? 'Followers' : 'Following'}</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+          <DialogTitle>{type === 'followers' ? 'Followers' : 'Following'}</DialogTitle>
         </DialogHeader>
 
         <div className="py-4 overflow-y-auto max-h-96">

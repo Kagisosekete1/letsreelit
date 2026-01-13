@@ -30,16 +30,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (!data || error) return;
 
-    // Always compute live counts from the database so Following/Followers are accurate
+    // IMPORTANT: follows.follower_id / follows.following_id store AUTH USER IDs
     const [{ count: followingCount }, { count: followersCount }, { count: reelsCount }] = await Promise.all([
       supabase
         .from('follows')
         .select('id', { count: 'exact', head: true })
-        .eq('follower_id', data.id),
+        .eq('follower_id', userId),
       supabase
         .from('follows')
         .select('id', { count: 'exact', head: true })
-        .eq('following_id', data.id),
+        .eq('following_id', userId),
       supabase
         .from('reels')
         .select('id', { count: 'exact', head: true })
@@ -88,6 +88,43 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Realtime: keep own Following/Followers counts in sync everywhere
+  useEffect(() => {
+    if (!authUser) return;
+
+    const channel = supabase
+      .channel(`profile-counts-${authUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'follows',
+          filter: `follower_id=eq.${authUser.id}`,
+        },
+        () => {
+          void fetchProfile(authUser.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'follows',
+          filter: `following_id=eq.${authUser.id}`,
+        },
+        () => {
+          void fetchProfile(authUser.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUser?.id]);
 
   const updateUser = async (updates: Partial<UserProfile>) => {
     if (!authUser) return;
