@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import { useAudio } from '@/contexts/AudioContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
 import DuetModal from '@/components/DuetModal';
+import ProfileLink from '@/components/ui/ProfileLink';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -77,6 +78,10 @@ interface ReelCardProps {
   onEnded?: () => void;
   autoAdvance?: boolean;
   variant?: 'home' | 'profile';
+  /** If true, show a big play button and wait for user tap before playing (first reel in app) */
+  startPaused?: boolean;
+  /** Callback when user manually triggers play for the first time */
+  onUserTriggeredPlay?: () => void;
 }
 
 const ReelCard: React.FC<ReelCardProps> = ({ 
@@ -90,6 +95,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
   onEnded,
   autoAdvance = false,
   variant = 'home',
+  startPaused = false,
+  onUserTriggeredPlay,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -103,6 +110,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [commentCount, setCommentCount] = useState(reel.stats.comments);
   const [shareCount, setShareCount] = useState(reel.stats.shares);
   const [isVideoReady, setIsVideoReady] = useState(false);
+
+  // Tracks whether user has interacted to play (for startPaused mode)
+  const [userHasPlayed, setUserHasPlayed] = useState(!startPaused);
 
   // Realtime subscription for likes
   useEffect(() => {
@@ -219,6 +229,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
         // ignore
       }
 
+      // If startPaused mode and user has not played yet, do NOT auto-play
+      if (!userHasPlayed) {
+        // Just load the video but stay paused
+        return () => {
+          video.removeEventListener('canplay', handleCanPlay);
+          video.removeEventListener('loadeddata', handleLoadedData);
+        };
+      }
+
       const playAttempt = async () => {
         // Wait for video to have enough data
         if (video.readyState >= 3) {
@@ -279,7 +298,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         // ignore
       }
     };
-  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus]);
+  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus, userHasPlayed, isMuted]);
 
   // Sync mute state from global context to video element
   useEffect(() => {
@@ -482,6 +501,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    // If in startPaused mode and user hasn't played yet, mark user as having played
+    if (!userHasPlayed) {
+      setUserHasPlayed(true);
+      onUserTriggeredPlay?.();
+
+      // Wait briefly for effect to register, then play
+      requestAudioFocus(video, reel.id);
+      video.play().then(() => setIsPlaying(true)).catch(() => {});
+      return;
+    }
+
     if (isPlaying) {
       video.pause();
       onPause?.();
@@ -566,10 +596,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
       await supabase.from('saved_reels').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
       toast({ title: 'Removed', description: 'Reel removed from saved' });
     }
-  };
-
-  const handleUserClick = () => {
-    navigate(`/user/${reel.user.username}`);
   };
 
   const handleComment = () => {
@@ -702,10 +728,25 @@ const ReelCard: React.FC<ReelCardProps> = ({
       )}
       
       {/* Buffering Indicator Only - No play/pause icon */}
-      {isBuffering && isActive && (
+      {isBuffering && isActive && userHasPlayed && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
         </div>
+      )}
+
+      {/* Big play button overlay for startPaused mode */}
+      {isActive && !userHasPlayed && (
+        <button
+          className="absolute inset-0 flex items-center justify-center z-30 bg-black/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+        >
+          <div className="w-20 h-20 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/40 transition-colors">
+            <Play className="w-10 h-10 text-white fill-white ml-1" />
+          </div>
+        </button>
       )}
 
       {/* UI Elements - Hidden in clear screen mode */}
@@ -734,7 +775,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           <div className="space-y-1.5 sm:space-y-2">
             {/* Username row */}
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={handleUserClick} className="flex items-center gap-2 min-w-0">
+              <ProfileLink username={reel.user.username} className="flex items-center gap-2 min-w-0">
                 <img
                   src={reel.user.avatarUrl}
                   alt={reel.user.username}
@@ -743,7 +784,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 <span className="text-white font-bold text-sm sm:text-base drop-shadow-lg truncate">
                   @{reel.user.username}
                 </span>
-              </button>
+              </ProfileLink>
               {reel.user.verified && (
                 <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-[10px] text-white font-bold">✓</span>
@@ -767,13 +808,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
         <div className="absolute bottom-20 right-2 z-10 flex flex-col items-center space-y-3" style={{ opacity: 0.85 }}>
           {/* User Avatar with Follow Button */}
           <div className="relative mb-1">
-            <button onClick={handleUserClick}>
+            <ProfileLink username={reel.user.username}>
               <img
                 src={reel.user.avatarUrl}
                 alt={reel.user.username}
                 className="w-10 h-10 rounded-full border-2 border-white"
               />
-            </button>
+            </ProfileLink>
             {/* Follow button - only show if not owner and not already following */}
             {authUser && !isOwner && !followingIds.has(reel.user.id) && (
               <button

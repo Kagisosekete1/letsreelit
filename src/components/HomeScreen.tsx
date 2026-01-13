@@ -49,6 +49,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const viewedReels = useRef<Set<string>>(new Set());
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
+  // For "start paused until user taps play" - track if user has ever played
+  const [userTriggeredPlay, setUserTriggeredPlay] = useState(false);
+
   const displayedReels = reels;
 
   // Prefetch next reels for instant scrolling
@@ -398,6 +401,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
                   autoAdvance={false}
+                  startPaused={!userTriggeredPlay}
+                  onUserTriggeredPlay={() => setUserTriggeredPlay(true)}
                 />
               </div>
             ))}
