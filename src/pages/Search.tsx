@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { useUser } from '@/contexts/UserContext';
 import ReelCard from '@/components/ui/ReelCard';
 import CreateReelModal from '@/components/CreateReelModal';
 import TrendingHashtags from '@/components/TrendingHashtags';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
 
 interface ReelData {
   id: string;
@@ -57,6 +59,19 @@ const Search = () => {
   const hoverVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const hashtag = searchParams.get('hashtag');
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      fetchTrendingReels(),
+      fetchTutorialReels(),
+      fetchTrendingHashtags(),
+      authUser ? fetchFollowing() : Promise.resolve(),
+    ]);
+  }, [authUser]);
+
+  const { containerRef, pullDistance, isRefreshing, handlers } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  });
 
   useEffect(() => {
     fetchTrendingReels();
@@ -456,7 +471,12 @@ const Search = () => {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pt-8 pb-20 px-4 h-full overflow-y-auto">
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <div 
+        ref={containerRef}
+        className="pt-8 pb-20 px-4 h-full overflow-y-auto"
+        {...handlers}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Search</h1>

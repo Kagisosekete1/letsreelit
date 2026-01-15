@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import NotificationReelModal from '@/components/NotificationReelModal';
 import NotificationProfileView from '@/components/NotificationProfileView';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
-
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
+import { useNotificationCountsDetailed } from '@/components/ui/NotificationBadge';
 interface Notification {
   id: string;
   type: string;
@@ -60,86 +62,95 @@ const Inbox = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
+  const { counts } = useNotificationCountsDetailed();
 
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    
+    if (inboxTab === 'notifications') {
+      const { data: notifs, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else if (notifs) {
+        const userIds = [...new Set(notifs.map(n => n.from_user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', userIds);
+
+        const enrichedNotifs = notifs.map(n => ({
+          ...n,
+          from_user: profiles?.find(p => p.user_id === n.from_user_id)
+        }));
+        setNotifications(enrichedNotifs);
+      }
+    } else {
+      const { data: convs, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`participant_one.eq.${authUser.id},participant_two.eq.${authUser.id}`)
+        .order('last_message_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching conversations:', error);
+      } else if (convs) {
+        const otherUserIds = convs.map(c => 
+          c.participant_one === authUser.id ? c.participant_two : c.participant_one
+        );
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', otherUserIds);
+
+        const enrichedConvs = await Promise.all(convs.map(async (c) => {
+          const otherUserId = c.participant_one === authUser.id ? c.participant_two : c.participant_one;
+          const profile = profiles?.find(p => p.user_id === otherUserId);
+          
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('content')
+            .eq('conversation_id', c.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', c.id)
+            .eq('is_read', false)
+            .neq('sender_id', authUser.id);
+
+          return {
+            ...c,
+            other_user: profile ? { id: otherUserId, ...profile } : undefined,
+            last_message: lastMsg?.content,
+            unread_count: count || 0
+          };
+        }));
+
+        setConversations(enrichedConvs);
+      }
+    }
+    setLoading(false);
+  }, [authUser, inboxTab]);
+
+  const handleRefresh = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
+
+  const { containerRef, pullDistance, isRefreshing, handlers } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  });
   useEffect(() => {
     if (!authUser) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      
-      if (inboxTab === 'notifications') {
-        const { data: notifs, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', authUser.id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching notifications:', error);
-        } else if (notifs) {
-          const userIds = [...new Set(notifs.map(n => n.from_user_id))];
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url')
-            .in('user_id', userIds);
-
-          const enrichedNotifs = notifs.map(n => ({
-            ...n,
-            from_user: profiles?.find(p => p.user_id === n.from_user_id)
-          }));
-          setNotifications(enrichedNotifs);
-        }
-      } else {
-        const { data: convs, error } = await supabase
-          .from('conversations')
-          .select('*')
-          .or(`participant_one.eq.${authUser.id},participant_two.eq.${authUser.id}`)
-          .order('last_message_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching conversations:', error);
-        } else if (convs) {
-          const otherUserIds = convs.map(c => 
-            c.participant_one === authUser.id ? c.participant_two : c.participant_one
-          );
-          
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, username, display_name, avatar_url')
-            .in('user_id', otherUserIds);
-
-          const enrichedConvs = await Promise.all(convs.map(async (c) => {
-            const otherUserId = c.participant_one === authUser.id ? c.participant_two : c.participant_one;
-            const profile = profiles?.find(p => p.user_id === otherUserId);
-            
-            const { data: lastMsg } = await supabase
-              .from('messages')
-              .select('content')
-              .eq('conversation_id', c.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-
-            const { count } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', c.id)
-              .eq('is_read', false)
-              .neq('sender_id', authUser.id);
-
-            return {
-              ...c,
-              other_user: profile ? { id: otherUserId, ...profile } : undefined,
-              last_message: lastMsg?.content,
-              unread_count: count || 0
-            };
-          }));
-
-          setConversations(enrichedConvs);
-        }
-      }
-      setLoading(false);
-    };
 
     fetchData();
 
@@ -196,7 +207,7 @@ const Inbox = () => {
       supabase.removeChannel(notifChannel);
       supabase.removeChannel(msgChannel);
     };
-  }, [authUser, inboxTab]);
+  }, [authUser, inboxTab, fetchData]);
 
   const getNotificationTitle = (type: string) => {
     switch (type) {
@@ -307,7 +318,12 @@ const Inbox = () => {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pt-8 pb-20 h-full overflow-y-auto">
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+      <div 
+        ref={containerRef}
+        className="pt-8 pb-20 h-full overflow-y-auto"
+        {...handlers}
+      >
         <div className="flex items-center justify-between px-4 mb-6">
           <h1 className="text-xl font-bold text-foreground">Inbox</h1>
           <Button variant="ghost" size="sm" onClick={handleSearch}>
@@ -320,7 +336,7 @@ const Inbox = () => {
             <Button
               variant="ghost"
               size="sm"
-              className={`flex-1 rounded-lg ${
+              className={`flex-1 rounded-lg relative ${
                 inboxTab === 'messages'
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground'
@@ -329,11 +345,16 @@ const Inbox = () => {
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Messages
+              {counts.messages > 0 && (
+                <span className="ml-1.5 min-w-[18px] h-[18px] px-1 bg-primary rounded-full text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                  {counts.messages > 99 ? '99+' : counts.messages}
+                </span>
+              )}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className={`flex-1 rounded-lg ${
+              className={`flex-1 rounded-lg relative ${
                 inboxTab === 'notifications'
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground'
@@ -342,6 +363,11 @@ const Inbox = () => {
             >
               <Heart className="w-4 h-4 mr-2" />
               Activity
+              {counts.notifications > 0 && (
+                <span className="ml-1.5 min-w-[18px] h-[18px] px-1 bg-primary rounded-full text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                  {counts.notifications > 99 ? '99+' : counts.notifications}
+                </span>
+              )}
             </Button>
           </div>
         </div>

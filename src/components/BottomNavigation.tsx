@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Home, Search, Plus, MessageSquare, User } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUser } from '@/contexts/UserContext';
+import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -10,80 +9,8 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
-  const { authUser } = useUser();
-  const [hasUnread, setHasUnread] = useState(false);
-
-  useEffect(() => {
-    if (authUser) {
-      checkUnread();
-      subscribeToUpdates();
-    }
-  }, [authUser]);
-
-  const checkUnread = async () => {
-    if (!authUser) return;
-
-    // Check for unread notifications
-    const { count: notifCount } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', authUser.id)
-      .eq('is_read', false);
-
-    // Check for unread messages
-    const { data: convs } = await supabase
-      .from('conversations')
-      .select('id')
-      .or(`participant_one.eq.${authUser.id},participant_two.eq.${authUser.id}`);
-
-    let unreadMsgs = 0;
-    if (convs && convs.length > 0) {
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .in('conversation_id', convs.map(c => c.id))
-        .neq('sender_id', authUser.id)
-        .eq('is_read', false);
-      unreadMsgs = count || 0;
-    }
-
-    setHasUnread((notifCount || 0) > 0 || unreadMsgs > 0);
-  };
-
-  const subscribeToUpdates = () => {
-    if (!authUser) return;
-
-    const notifChannel = supabase
-      .channel('bottom-nav-notifs')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${authUser.id}` },
-        () => setHasUnread(true)
-      )
-      .subscribe();
-
-    const msgChannel = supabase
-      .channel('bottom-nav-msgs')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => checkUnread()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(notifChannel);
-      supabase.removeChannel(msgChannel);
-    };
-  };
-
-  const handleTabClick = (tabId: string) => {
-    if (tabId === 'inbox') {
-      // Clear unread indicator when visiting inbox
-      setHasUnread(false);
-    }
-    onTabChange(tabId);
-  };
+  const counts = useNotificationCounts();
+  const hasUnread = counts.notifications + counts.messages > 0;
 
   const tabs = [
     { id: 'home', icon: Home, label: 'Home' },
@@ -108,7 +35,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
-            onClick={() => handleTabClick(tab.id)}
+            onClick={() => onTabChange(tab.id)}
           >
             <tab.icon className={`${tab.special ? 'w-7 h-7' : 'w-6 h-6'}`} strokeWidth={2} />
             {!tab.special && (
@@ -116,9 +43,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
                 {tab.label}
               </span>
             )}
-            {/* Notification dot */}
+            {/* Notification badge with count */}
             {tab.id === 'inbox' && hasUnread && (
-              <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
+              <NotificationBadge 
+                className="absolute -top-0.5 -right-0.5" 
+                showDotOnly={false}
+              />
             )}
           </Button>
         ))}
