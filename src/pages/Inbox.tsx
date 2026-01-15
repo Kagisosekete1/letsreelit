@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import ChatModal from '@/components/ChatModal';
@@ -203,6 +203,7 @@ const Inbox = () => {
       case 'follow': return 'New Follower';
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
+      case 'profile_view': return 'Profile View';
       default: return 'Notification';
     }
   };
@@ -212,6 +213,7 @@ const Inbox = () => {
       case 'follow': return 'started following you';
       case 'like': return 'liked your reel';
       case 'comment': return 'commented on your reel';
+      case 'profile_view': return 'viewed your profile';
       default: return 'interacted with you';
     }
   };
@@ -221,6 +223,7 @@ const Inbox = () => {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case 'profile_view': return <Eye className="w-4 h-4 text-purple-500" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };

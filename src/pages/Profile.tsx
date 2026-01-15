@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Eye } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -12,6 +12,7 @@ import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
+import ProfileViewsModal from '@/components/ProfileViewsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -26,12 +27,6 @@ interface ReelData {
   comments_count?: number;
   shares_count?: number;
   user_id: string;
-}
-
-interface SavedReelData {
-  id: string;
-  reel_id: string;
-  reel?: ReelData;
 }
 
 const Profile = () => {
@@ -54,43 +49,49 @@ const Profile = () => {
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
   const [reelsLoading, setReelsLoading] = useState(true);
+  const [profileViewsCount, setProfileViewsCount] = useState(0);
+  const [profileViewsModal, setProfileViewsModal] = useState(false);
 
   useEffect(() => {
     if (authUser) {
       fetchUserReels();
       fetchSavedReels();
       fetchTutorialReels();
+      fetchProfileViews();
     }
   }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    const channel = supabase
+      .channel('profile-views-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_views', filter: `profile_user_id=eq.${authUser.id}` }, () => fetchProfileViews())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [authUser]);
+
+  const fetchProfileViews = async () => {
+    if (!authUser) return;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { count } = await supabase.from('profile_views').select('*', { count: 'exact', head: true }).eq('profile_user_id', authUser.id).gte('viewed_at', thirtyDaysAgo.toISOString());
+    setProfileViewsCount(count || 0);
+  };
 
   const fetchUserReels = async () => {
     if (!authUser) return;
     setReelsLoading(true);
-    const { data } = await supabase
-      .from('reels')
-      .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
-      .eq('user_id', authUser.id)
-      .order('created_at', { ascending: false });
-    
+    const { data } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').eq('user_id', authUser.id).order('created_at', { ascending: false });
     if (data) setUserReels(data);
     setReelsLoading(false);
   };
 
   const fetchSavedReels = async () => {
     if (!authUser) return;
-    const { data: savedData } = await supabase
-      .from('saved_reels')
-      .select('reel_id')
-      .eq('user_id', authUser.id)
-      .order('created_at', { ascending: false });
-    
+    const { data: savedData } = await supabase.from('saved_reels').select('reel_id').eq('user_id', authUser.id).order('created_at', { ascending: false });
     if (savedData && savedData.length > 0) {
       const reelIds = savedData.map(s => s.reel_id);
-      const { data: reelsData } = await supabase
-        .from('reels')
-        .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
-        .in('id', reelIds);
-      
+      const { data: reelsData } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').in('id', reelIds);
       if (reelsData) setSavedReels(reelsData);
     } else {
       setSavedReels([]);
@@ -99,310 +100,115 @@ const Profile = () => {
 
   const fetchTutorialReels = async () => {
     if (!authUser) return;
-    const { data } = await supabase
-      .from('reels')
-      .select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id')
-      .eq('user_id', authUser.id)
-      .eq('is_tutorial', true)
-      .order('created_at', { ascending: false });
-    
+    const { data } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').eq('user_id', authUser.id).eq('is_tutorial', true).order('created_at', { ascending: false });
     if (data) setTutorialReels(data);
   };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    
     switch (tab) {
-      case 'home':
-        navigate('/', { state: { from: location.pathname } });
-        break;
-      case 'tutorials':
-        navigate('/tutorials', { state: { from: location.pathname } });
-        break;
-      case 'create':
-        setIsCreateReelOpen(true);
-        break;
-      case 'inbox':
-        navigate('/inbox', { state: { from: location.pathname } });
-        break;
-      case 'profile':
-        break;
+      case 'home': navigate('/', { state: { from: location.pathname } }); break;
+      case 'tutorials': navigate('/tutorials', { state: { from: location.pathname } }); break;
+      case 'create': setIsCreateReelOpen(true); break;
+      case 'inbox': navigate('/inbox', { state: { from: location.pathname } }); break;
+      case 'profile': break;
     }
   };
 
-  const handleBack = () => {
-    navigate('/');
-  };
-
-  const handleReelClick = (reels: ReelData[], index: number) => {
-    setViewingReelsList(reels);
-    setSelectedReelIndex(index);
-  };
+  const handleBack = () => navigate('/');
+  const handleReelClick = (reels: ReelData[], index: number) => { setViewingReelsList(reels); setSelectedReelIndex(index); };
 
   if (loading) {
     return (
       <div className="relative h-screen overflow-hidden bg-background">
         <div className="pt-4 pb-20 h-full overflow-y-auto px-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10" />
-            <div className="h-6 w-24 bg-muted rounded animate-pulse" />
-            <div className="w-10 h-10" />
-          </div>
+          <div className="flex items-center justify-between mb-4"><div className="w-10 h-10" /><div className="h-6 w-24 bg-muted rounded animate-pulse" /><div className="w-10 h-10" /></div>
           <ProfileHeaderSkeleton />
-          <div className="border-t border-border mt-6 pt-4">
-            <ProfileGridSkeleton count={6} />
-          </div>
+          <div className="border-t border-border mt-6 pt-4"><ProfileGridSkeleton count={6} /></div>
         </div>
       </div>
     );
   }
 
-  if (!currentUser) {
-    navigate('/auth');
-    return null;
-  }
+  if (!currentUser) { navigate('/auth'); return null; }
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
       <div className="pt-4 pb-20 h-full overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
+          <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}>
-            <Settings className="w-6 h-6" />
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}><Settings className="w-6 h-6" /></Button>
         </div>
 
-        {/* Profile Info */}
         <div className="px-4 mb-6">
           <div className="flex flex-col items-center mb-6">
             <div className="relative mb-3">
-              <img
-                src={currentUser.avatarUrl}
-                alt="Profile"
-                className="w-24 h-24 rounded-full object-cover border-2 border-border"
-              />
+              <img src={currentUser.avatarUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-border" />
             </div>
-            
             <h2 className="text-xl font-bold mb-1">{currentUser.displayName}</h2>
             <p className="text-muted-foreground text-sm mb-4">{currentUser.bio}</p>
             
-            {/* Stats */}
-            <div className="flex items-center gap-6 mb-4">
-              <Button 
-                variant="ghost" 
-                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => setFollowingModal(true)}
-              >
+            <div className="flex items-center gap-4 mb-4 flex-wrap justify-center">
+              <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg" onClick={() => setFollowingModal(true)}>
                 <p className="text-lg font-bold">{currentUser.stats?.following ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Following</p>
               </Button>
-              <Button 
-                variant="ghost" 
-                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => setFollowersModal(true)}
-              >
+              <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg" onClick={() => setFollowersModal(true)}>
                 <p className="text-lg font-bold">{currentUser.stats?.followers ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Followers</p>
               </Button>
-              <Button 
-                variant="ghost" 
-                className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg"
-                onClick={() => setReelsModal(true)}
-              >
+              <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg" onClick={() => setReelsModal(true)}>
                 <p className="text-lg font-bold">{currentUser.stats?.reels ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
               </Button>
+              <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg relative" onClick={() => setProfileViewsModal(true)}>
+                <div className="flex items-center gap-1"><Eye className="w-4 h-4 text-muted-foreground" /><p className="text-lg font-bold">{profileViewsCount}</p></div>
+                <p className="text-xs text-muted-foreground">Views</p>
+                {profileViewsCount > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />}
+              </Button>
             </div>
-
-            {/* Action Buttons */}
+            
             <div className="flex gap-2 w-full">
-              <Button 
-                variant="outline" 
-                className="flex-1 rounded-xl"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                Edit Profile
-              </Button>
-              <Button 
-                className="flex-1 rounded-xl"
-                onClick={() => setIsShareOpen(true)}
-              >
-                Share Profile
-              </Button>
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsEditModalOpen(true)}>Edit Profile</Button>
+              <Button className="flex-1 rounded-xl" onClick={() => setIsShareOpen(true)}>Share Profile</Button>
             </div>
           </div>
         </div>
 
-        {/* Content Tabs - Icons Only */}
         <div className="border-t border-border">
           <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              className={`flex-1 py-3 rounded-none ${
-                contentTab === 'reels' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
-              }`}
-              onClick={() => setContentTab('reels')}
-            >
-              <Grid3X3 className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              className={`flex-1 py-3 rounded-none ${
-                contentTab === 'tutorials' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
-              }`}
-              onClick={() => setContentTab('tutorials')}
-            >
-              <Video className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              className={`flex-1 py-3 rounded-none ${
-                contentTab === 'saved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
-              }`}
-              onClick={() => setContentTab('saved')}
-            >
-              <Bookmark className="w-5 h-5" />
-            </Button>
+            <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'reels' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('reels')}><Grid3X3 className="w-5 h-5" /></Button>
+            <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'tutorials' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('tutorials')}><Video className="w-5 h-5" /></Button>
+            <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'saved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('saved')}><Bookmark className="w-5 h-5" /></Button>
           </div>
         </div>
 
-        {/* Reels Grid */}
-        {contentTab === 'reels' && (
-          reelsLoading ? (
-            <ProfileGridSkeleton count={6} />
-          ) : userReels.length === 0 ? (
-            <div className="px-4 py-8">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium mb-2">No reels yet</p>
-                <p className="text-sm">Your reels will appear here</p>
-                <Button 
-                  className="mt-4 rounded-xl"
-                  onClick={() => setIsCreateReelOpen(true)}
-                >
-                  Create your first reel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {userReels.map((reel, index) => (
-                <VideoThumbnail
-                  key={reel.id}
-                  videoUrl={reel.video_url}
-                  thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
-                  onClick={() => handleReelClick(userReels, index)}
-                />
-              ))}
-            </div>
-          )
-        )}
+        {contentTab === 'reels' && (reelsLoading ? <ProfileGridSkeleton count={6} /> : userReels.length === 0 ? (
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No reels yet</p><p className="text-sm">Your reels will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first reel</Button></div></div>
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{userReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(userReels, index)} />)}</div>)}
 
-        {contentTab === 'tutorials' && (
-          tutorialReels.length === 0 ? (
-            <div className="px-4 py-8">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium mb-2">No tutorials yet</p>
-                <p className="text-sm">Your tutorials will appear here</p>
-                <Button 
-                  className="mt-4 rounded-xl"
-                  onClick={() => setIsCreateReelOpen(true)}
-                >
-                  Create your first tutorial
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {tutorialReels.map((reel, index) => (
-                <VideoThumbnail
-                  key={reel.id}
-                  videoUrl={reel.video_url}
-                  thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
-                  onClick={() => handleReelClick(tutorialReels, index)}
-                />
-              ))}
-            </div>
-          )
-        )}
+        {contentTab === 'tutorials' && (tutorialReels.length === 0 ? (
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No tutorials yet</p><p className="text-sm">Your tutorials will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first tutorial</Button></div></div>
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{tutorialReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(tutorialReels, index)} />)}</div>)}
 
-        {contentTab === 'saved' && (
-          savedReels.length === 0 ? (
-            <div className="px-4 py-8">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium mb-2">No saved reels</p>
-                <p className="text-sm">Your saved reels will appear here</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
-              {savedReels.map((reel, index) => (
-                <VideoThumbnail
-                  key={reel.id}
-                  videoUrl={reel.video_url}
-                  thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
-                  onClick={() => handleReelClick(savedReels, index)}
-                />
-              ))}
-            </div>
-          )
-        )}
+        {contentTab === 'saved' && (savedReels.length === 0 ? (
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved reels</p><p className="text-sm">Your saved reels will appear here</p></div></div>
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{savedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(savedReels, index)} />)}</div>)}
       </div>
 
-      {/* Full Screen Reel Player */}
-      {selectedReelIndex !== null && currentUser && (
-        <ProfileReelViewer
-          reels={viewingReelsList}
-          initialIndex={selectedReelIndex}
-          onClose={() => setSelectedReelIndex(null)}
-          userId={authUser?.id || ''}
-          username={currentUser.username}
-          displayName={currentUser.displayName}
-          avatarUrl={currentUser.avatarUrl}
-          verified={currentUser.verified}
-        />
-      )}
+      {selectedReelIndex !== null && currentUser && <ProfileReelViewer reels={viewingReelsList} initialIndex={selectedReelIndex} onClose={() => setSelectedReelIndex(null)} userId={authUser?.id || ''} username={currentUser.username} displayName={currentUser.displayName} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} />}
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       
-      {/* Modals */}
       <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <ShareProfileModal 
-        isOpen={isShareOpen} 
-        onClose={() => setIsShareOpen(false)}
-        username={currentUser.username}
-      />
+      <ShareProfileModal isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} username={currentUser.username} />
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
-      
-      {/* Stats Modals */}
-      <FollowersModal
-        isOpen={followersModal}
-        onClose={() => setFollowersModal(false)}
-        userId={authUser?.id || ''}
-        type="followers"
-        count={currentUser.stats?.followers ?? 0}
-      />
-      <FollowersModal
-        isOpen={followingModal}
-        onClose={() => setFollowingModal(false)}
-        userId={authUser?.id || ''}
-        type="following"
-        count={currentUser.stats?.following ?? 0}
-      />
-      <ReelsModal
-        isOpen={reelsModal}
-        onClose={() => setReelsModal(false)}
-        userId={authUser?.id || ''}
-        count={currentUser.stats?.reels ?? 0}
-        isOwnProfile={true}
-      />
+      <FollowersModal isOpen={followersModal} onClose={() => setFollowersModal(false)} userId={authUser?.id || ''} type="followers" count={currentUser.stats?.followers ?? 0} />
+      <FollowersModal isOpen={followingModal} onClose={() => setFollowingModal(false)} userId={authUser?.id || ''} type="following" count={currentUser.stats?.following ?? 0} />
+      <ReelsModal isOpen={reelsModal} onClose={() => setReelsModal(false)} userId={authUser?.id || ''} count={currentUser.stats?.reels ?? 0} isOwnProfile={true} />
+      <ProfileViewsModal isOpen={profileViewsModal} onClose={() => setProfileViewsModal(false)} />
     </div>
   );
 };

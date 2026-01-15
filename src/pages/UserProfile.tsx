@@ -90,8 +90,37 @@ const UserProfile = () => {
   useEffect(() => {
     if (username) {
       fetchUserProfile();
+      // Track profile view (if not viewing own profile)
+      trackProfileView();
     }
   }, [username, authUser]);
+
+  const trackProfileView = async () => {
+    if (!authUser || !username) return;
+    
+    // Get the user being viewed
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('username', username)
+      .single();
+    
+    if (!profile || profile.user_id === authUser.id) return; // Don't track self-views
+    
+    // Insert profile view
+    await supabase.from('profile_views').insert({
+      profile_user_id: profile.user_id,
+      viewer_user_id: authUser.id,
+    });
+    
+    // Create notification
+    await supabase.from('notifications').insert({
+      user_id: profile.user_id,
+      from_user_id: authUser.id,
+      type: 'profile_view',
+      message: 'viewed your profile',
+    });
+  };
 
   // Realtime subscription for follows
   useEffect(() => {
