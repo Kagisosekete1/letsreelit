@@ -18,6 +18,7 @@ import About from "./pages/About";
 import Following from "./pages/Following";
 import LiveDiscovery from "./pages/LiveDiscovery";
 import Search from "./pages/Search";
+import NotificationPreferencesPage from "./components/settings/NotificationPreferencesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,11 @@ const App = () => {
                   <Route path="/profile" element={
                     <ProtectedRoute>
                       <Profile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings/notifications" element={
+                    <ProtectedRoute>
+                      <NotificationPreferencesPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/user/:username" element={<UserProfile />} />

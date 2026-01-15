@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -12,6 +12,7 @@ import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
+import MilestoneBadges from '@/components/MilestoneBadges';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -43,6 +44,7 @@ const Profile = () => {
   const [followersModal, setFollowersModal] = useState(false);
   const [followingModal, setFollowingModal] = useState(false);
   const [reelsModal, setReelsModal] = useState(false);
+  const [badgesModal, setBadgesModal] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
@@ -146,6 +148,9 @@ const Profile = () => {
             <div className="flex gap-2 w-full">
               <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsEditModalOpen(true)}>Edit Profile</Button>
               <Button className="flex-1 rounded-xl" onClick={() => setIsShareOpen(true)}>Share Profile</Button>
+              <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setBadgesModal(true)}>
+                <Trophy className="w-5 h-5 text-yellow-500" />
+              </Button>
             </div>
           </div>
         </div>
@@ -182,6 +187,7 @@ const Profile = () => {
       <FollowersModal isOpen={followersModal} onClose={() => setFollowersModal(false)} userId={authUser?.id || ''} type="followers" count={currentUser.stats?.followers ?? 0} />
       <FollowersModal isOpen={followingModal} onClose={() => setFollowingModal(false)} userId={authUser?.id || ''} type="following" count={currentUser.stats?.following ?? 0} />
       <ReelsModal isOpen={reelsModal} onClose={() => setReelsModal(false)} userId={authUser?.id || ''} count={currentUser.stats?.reels ?? 0} isOwnProfile={true} />
+      <MilestoneBadges isOpen={badgesModal} onClose={() => setBadgesModal(false)} userId={authUser?.id} />
     </div>
   );
 };

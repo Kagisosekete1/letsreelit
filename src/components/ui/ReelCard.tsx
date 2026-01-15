@@ -17,6 +17,7 @@ import ShareReelModal from '@/components/ShareReelModal';
 import DuetModal from '@/components/DuetModal';
 import ProfileLink from '@/components/ui/ProfileLink';
 import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
+import { sendLikeNotification } from '@/services/notificationService';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -528,6 +529,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
             type: 'like',
             reel_id: reel.id
           });
+          
+          // Send push notification
+          sendLikeNotification(reel.user.id, authUser.id, reel.id);
         }
       }
     }
@@ -609,6 +613,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
           type: 'like',
           reel_id: reel.id
         });
+        
+        // Send push notification
+        sendLikeNotification(reel.user.id, authUser.id, reel.id);
       }
     } else {
       await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
