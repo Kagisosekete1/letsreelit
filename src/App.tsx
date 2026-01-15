@@ -8,7 +8,6 @@ import { AudioProvider } from "@/contexts/AudioContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import Index from "./pages/Index";
-import Tutorials from "./pages/Tutorials";
 import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
 import UserProfile from "./pages/UserProfile";
@@ -43,7 +42,7 @@ const App = () => {
                   } />
                   <Route path="/tutorials" element={
                     <ProtectedRoute>
-                      <Tutorials />
+                      <Search />
                     </ProtectedRoute>
                   } />
                   <Route path="/live" element={

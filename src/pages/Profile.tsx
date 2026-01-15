@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Eye } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -12,7 +12,6 @@ import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
-import ProfileViewsModal from '@/components/ProfileViewsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -49,34 +48,14 @@ const Profile = () => {
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
   const [reelsLoading, setReelsLoading] = useState(true);
-  const [profileViewsCount, setProfileViewsCount] = useState(0);
-  const [profileViewsModal, setProfileViewsModal] = useState(false);
 
   useEffect(() => {
     if (authUser) {
       fetchUserReels();
       fetchSavedReels();
       fetchTutorialReels();
-      fetchProfileViews();
     }
   }, [authUser]);
-
-  useEffect(() => {
-    if (!authUser) return;
-    const channel = supabase
-      .channel('profile-views-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_views', filter: `profile_user_id=eq.${authUser.id}` }, () => fetchProfileViews())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [authUser]);
-
-  const fetchProfileViews = async () => {
-    if (!authUser) return;
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const { count } = await supabase.from('profile_views').select('*', { count: 'exact', head: true }).eq('profile_user_id', authUser.id).gte('viewed_at', thirtyDaysAgo.toISOString());
-    setProfileViewsCount(count || 0);
-  };
 
   const fetchUserReels = async () => {
     if (!authUser) return;
@@ -162,11 +141,6 @@ const Profile = () => {
                 <p className="text-lg font-bold">{currentUser.stats?.reels ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Reels</p>
               </Button>
-              <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg relative" onClick={() => setProfileViewsModal(true)}>
-                <div className="flex items-center gap-1"><Eye className="w-4 h-4 text-muted-foreground" /><p className="text-lg font-bold">{profileViewsCount}</p></div>
-                <p className="text-xs text-muted-foreground">Views</p>
-                {profileViewsCount > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />}
-              </Button>
             </div>
             
             <div className="flex gap-2 w-full">
@@ -208,7 +182,6 @@ const Profile = () => {
       <FollowersModal isOpen={followersModal} onClose={() => setFollowersModal(false)} userId={authUser?.id || ''} type="followers" count={currentUser.stats?.followers ?? 0} />
       <FollowersModal isOpen={followingModal} onClose={() => setFollowingModal(false)} userId={authUser?.id || ''} type="following" count={currentUser.stats?.following ?? 0} />
       <ReelsModal isOpen={reelsModal} onClose={() => setReelsModal(false)} userId={authUser?.id || ''} count={currentUser.stats?.reels ?? 0} isOwnProfile={true} />
-      <ProfileViewsModal isOpen={profileViewsModal} onClose={() => setProfileViewsModal(false)} />
     </div>
   );
 };
