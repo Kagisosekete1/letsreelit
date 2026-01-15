@@ -24,14 +24,20 @@ const config: CapacitorConfig = {
     }
   },
   android: {
-    icon: 'public/android-chrome-512x512.png',
+    // Use the generated icons from public/icons/android/
+    icon: 'public/icons/android/icon-512x512.png',
     adaptiveIcon: {
-      foreground: 'public/android-chrome-512x512.png',
-      backgroundColor: '#3B82F6'
-    }
+      foreground: 'public/icons/android/icon-512x512.png',
+      backgroundColor: '#FF6B6B'
+    },
+    // FCM Configuration - place google-services.json in android/app/
+    googleServicesFile: 'google-services.json'
   },
   ios: {
-    icon: 'public/android-chrome-512x512.png'
+    // Use the generated icons from public/icons/ios/
+    icon: 'public/icons/ios/icon-1024x1024.png',
+    // FCM Configuration - place GoogleService-Info.plist in ios/App/App/
+    // Enable push notification capability in Xcode
   }
 };
 
