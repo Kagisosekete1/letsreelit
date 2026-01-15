@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import Index from "./pages/Index";
 import Tutorials from "./pages/Tutorials";
 import Profile from "./pages/Profile";
@@ -13,6 +14,7 @@ import Inbox from "./pages/Inbox";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 import Following from "./pages/Following";
 import LiveDiscovery from "./pages/LiveDiscovery";
@@ -29,6 +31,7 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <OfflineIndicator />
             <BrowserRouter>
               <div className="bg-background min-h-screen">
                 <Routes>
@@ -62,6 +65,7 @@ const App = () => {
                   <Route path="/search" element={<Search />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
                   <Route path="/about" element={<About />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
