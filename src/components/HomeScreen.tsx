@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
 import { Radio, Loader2 } from 'lucide-react';
 import { useReelPreloader } from '@/hooks/useReelPreloader';
+import AppRatingPrompt from './AppRatingPrompt';
 
 const PAGE_SIZE = 10;
 
@@ -48,6 +49,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
+  const [reelsViewedCount, setReelsViewedCount] = useState(0);
 
   // For "start paused until user taps play" - track if user has ever played
   // Changed default to TRUE for autoplay behavior
@@ -84,6 +86,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
     if (currentReel && authUser && currentReel.user_id !== authUser.id && !viewedReels.current.has(currentReel.id)) {
       viewedReels.current.add(currentReel.id);
       incrementViewCount(currentReel.id);
+      setReelsViewedCount(prev => prev + 1);
     }
   }, [activeReelIndex, displayedReels, authUser]);
 
@@ -430,6 +433,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           </div>
         </div>
       )}
+      
+      {/* App Rating Prompt */}
+      <AppRatingPrompt reelsViewedThisSession={reelsViewedCount} />
     </div>
   );
 };

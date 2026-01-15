@@ -199,7 +199,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const lastTapRef = useRef<number>(0);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoldingRef = useRef(false);
-  const [videoSrc, setVideoSrc] = useState<string | undefined>(isActive ? reel.videoUrl : undefined);
+  const [videoSrc, setVideoSrc] = useState<string | undefined>(reel.videoUrl);
   const [isBuffering, setIsBuffering] = useState(false);
 
   // Check if user has liked/saved this reel
@@ -226,17 +226,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    // Reset ready state whenever we switch reels / src
-    setIsVideoReady(false);
-    setIsBuffering(true);
-
     if (isActive) {
       // Request audio focus from global manager - this silences all other videos
       requestAudioFocus(video, reel.id);
       
-      setVideoSrc(reel.videoUrl);
-      video.currentTime = 0;
-
+      // Set video source FIRST before anything else
+      if (!videoSrc) {
+        setVideoSrc(reel.videoUrl);
+      }
+      
       // Apply mute state from global context
       video.muted = isMuted;
 
@@ -251,22 +249,26 @@ const ReelCard: React.FC<ReelCardProps> = ({
         setIsBuffering(false);
       };
 
+      const handleLoadedMetadata = () => {
+        // Video has metadata, can start showing
+        if (video.readyState >= 1) {
+          setIsBuffering(false);
+        }
+      };
+
       video.addEventListener('canplay', handleCanPlay);
       video.addEventListener('loadeddata', handleLoadedData);
-
-      // Ensure the element has the latest src loaded
-      try {
-        video.load();
-      } catch {
-        // ignore
-      }
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
 
       // If startPaused mode and user has not played yet, do NOT auto-play
       if (!userHasPlayed) {
-        // Just load the video but stay paused
+        // Load video but stay paused - show first frame
+        video.currentTime = 0;
+        video.load();
         return () => {
           video.removeEventListener('canplay', handleCanPlay);
           video.removeEventListener('loadeddata', handleLoadedData);
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
         };
       }
 
@@ -278,12 +280,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
         }
 
         try {
+          video.currentTime = 0;
           await video.play();
           setIsPlaying(true);
         } catch {
           // Browser autoplay policy - if unmuted play fails, try muted
           if (!video.muted) {
             video.muted = true;
+            setIsMuted(true);
             try {
               await video.play();
               setIsPlaying(true);
@@ -294,11 +298,16 @@ const ReelCard: React.FC<ReelCardProps> = ({
         }
       };
 
-      void playAttempt();
+      // Small delay to ensure video element is ready
+      const playTimer = setTimeout(() => {
+        void playAttempt();
+      }, 50);
 
       return () => {
+        clearTimeout(playTimer);
         video.removeEventListener('canplay', handleCanPlay);
         video.removeEventListener('loadeddata', handleLoadedData);
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     } else {
       // Release audio focus and stop this video
@@ -307,15 +316,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
       try {
         video.pause();
         video.muted = true;
-        video.currentTime = 0;
-        video.removeAttribute('src');
-        video.load();
       } catch {
         // ignore
       }
 
-      setVideoSrc(undefined);
       setIsPlaying(false);
+      setIsVideoReady(false);
     }
 
     return () => {
@@ -324,13 +330,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
       try {
         video.pause();
         video.muted = true;
-        video.removeAttribute('src');
-        video.load();
       } catch {
         // ignore
       }
     };
-  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus, userHasPlayed, isMuted]);
+  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus, userHasPlayed, isMuted, setIsMuted]);
 
   // Sync mute state from global context to video element
   useEffect(() => {
