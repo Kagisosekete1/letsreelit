@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play, Eye } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import ChatModal from '@/components/ChatModal';
+import NotificationReelModal from '@/components/NotificationReelModal';
+import NotificationProfileView from '@/components/NotificationProfileView';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 
@@ -40,6 +42,11 @@ interface Conversation {
   unread_count?: number;
 }
 
+type ViewState = 
+  | { type: 'list' }
+  | { type: 'profile'; userId: string }
+  | { type: 'reel'; reelId: string };
+
 const Inbox = () => {
   const [activeTab, setActiveTab] = useState('inbox');
   const [inboxTab, setInboxTab] = useState('messages');
@@ -49,6 +56,7 @@ const Inbox = () => {
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
@@ -60,7 +68,6 @@ const Inbox = () => {
       setLoading(true);
       
       if (inboxTab === 'notifications') {
-        // Fetch notifications with user data
         const { data: notifs, error } = await supabase
           .from('notifications')
           .select('*')
@@ -70,7 +77,6 @@ const Inbox = () => {
         if (error) {
           console.error('Error fetching notifications:', error);
         } else if (notifs) {
-          // Fetch user data for each notification
           const userIds = [...new Set(notifs.map(n => n.from_user_id))];
           const { data: profiles } = await supabase
             .from('profiles')
@@ -84,7 +90,6 @@ const Inbox = () => {
           setNotifications(enrichedNotifs);
         }
       } else {
-        // Fetch conversations
         const { data: convs, error } = await supabase
           .from('conversations')
           .select('*')
@@ -94,7 +99,6 @@ const Inbox = () => {
         if (error) {
           console.error('Error fetching conversations:', error);
         } else if (convs) {
-          // Get other user's profile for each conversation
           const otherUserIds = convs.map(c => 
             c.participant_one === authUser.id ? c.participant_two : c.participant_one
           );
@@ -104,7 +108,6 @@ const Inbox = () => {
             .select('user_id, username, display_name, avatar_url')
             .in('user_id', otherUserIds);
 
-          // Get last message and unread count for each conversation
           const enrichedConvs = await Promise.all(convs.map(async (c) => {
             const otherUserId = c.participant_one === authUser.id ? c.participant_two : c.participant_one;
             const profile = profiles?.find(p => p.user_id === otherUserId);
@@ -140,7 +143,6 @@ const Inbox = () => {
 
     fetchData();
 
-    // Subscribe to real-time notifications
     const notifChannel = supabase
       .channel('notifications-realtime')
       .on(
@@ -173,7 +175,6 @@ const Inbox = () => {
       )
       .subscribe();
 
-    // Subscribe to new messages
     const msgChannel = supabase
       .channel('messages-realtime')
       .on(
@@ -184,7 +185,6 @@ const Inbox = () => {
           table: 'messages'
         },
         () => {
-          // Refresh conversations when new message arrives
           if (inboxTab === 'messages') {
             fetchData();
           }
@@ -203,7 +203,6 @@ const Inbox = () => {
       case 'follow': return 'New Follower';
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
-      case 'profile_view': return 'Profile View';
       default: return 'Notification';
     }
   };
@@ -213,7 +212,6 @@ const Inbox = () => {
       case 'follow': return 'started following you';
       case 'like': return 'liked your reel';
       case 'comment': return 'commented on your reel';
-      case 'profile_view': return 'viewed your profile';
       default: return 'interacted with you';
     }
   };
@@ -223,7 +221,6 @@ const Inbox = () => {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
-      case 'profile_view': return <Eye className="w-4 h-4 text-purple-500" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };
@@ -266,10 +263,12 @@ const Inbox = () => {
     );
 
     // Navigate based on type
-    if (notif.type === 'follow' && notif.from_user) {
-      navigate(`/user/${notif.from_user.username}`);
-    } else if (notif.reel_id) {
-      // Could open reel modal here
+    if (notif.reel_id) {
+      // Open reel modal
+      setViewState({ type: 'reel', reelId: notif.reel_id });
+    } else if (notif.type === 'follow' && notif.from_user_id) {
+      // Show profile view within notification sheet
+      setViewState({ type: 'profile', userId: notif.from_user_id });
     }
   };
 
@@ -281,11 +280,30 @@ const Inbox = () => {
   };
 
   const handleSearch = () => {
-    toast({
-      title: "Search",
-      description: "Search functionality coming soon!",
-    });
+    navigate('/search');
   };
+
+  const handleBackToList = () => {
+    setViewState({ type: 'list' });
+  };
+
+  const handleProfileReelClick = (reelId: string) => {
+    setViewState({ type: 'reel', reelId });
+  };
+
+  // Profile view within notifications
+  if (viewState.type === 'profile') {
+    return (
+      <div className="relative h-screen overflow-hidden bg-background">
+        <NotificationProfileView
+          userId={viewState.userId}
+          onBack={handleBackToList}
+          onReelClick={handleProfileReelClick}
+        />
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
@@ -435,6 +453,15 @@ const Inbox = () => {
           }}
           conversationId={selectedConversation.id}
           otherUser={selectedConversation.other_user}
+        />
+      )}
+
+      {/* Notification Reel Modal */}
+      {viewState.type === 'reel' && (
+        <NotificationReelModal
+          isOpen={true}
+          onClose={handleBackToList}
+          reelId={viewState.reelId}
         />
       )}
     </div>
