@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_ratings: {
+        Row: {
+          created_at: string
+          has_rated: boolean
+          id: string
+          last_prompted_at: string | null
+          rating: number | null
+          reels_viewed_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          has_rated?: boolean
+          id?: string
+          last_prompted_at?: string | null
+          rating?: number | null
+          reels_viewed_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          has_rated?: boolean
+          id?: string
+          last_prompted_at?: string | null
+          rating?: number | null
+          reels_viewed_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -193,6 +223,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_preferences: {
+        Row: {
+          comments: boolean
+          created_at: string
+          follows: boolean
+          id: string
+          likes: boolean
+          mentions: boolean
+          messages: boolean
+          new_reels: boolean
+          push_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comments?: boolean
+          created_at?: string
+          follows?: boolean
+          id?: string
+          likes?: boolean
+          mentions?: boolean
+          messages?: boolean
+          new_reels?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comments?: boolean
+          created_at?: string
+          follows?: boolean
+          id?: string
+          likes?: boolean
+          mentions?: boolean
+          messages?: boolean
+          new_reels?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {

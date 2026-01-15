@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface PushPayload {
   userId: string;
-  type: 'like' | 'comment' | 'follow' | 'new_reel' | 'saved' | 'duet' | 'profile_view';
+  type: 'like' | 'comment' | 'follow' | 'new_reel' | 'saved' | 'duet' | 'message';
   fromUserId: string;
   reelId?: string;
   message?: string;
@@ -28,6 +28,44 @@ serve(async (req) => {
     const payload: PushPayload = await req.json();
     console.log('Push notification request:', payload);
 
+    // Check if the target user has this notification type enabled
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('user_id', payload.userId)
+      .maybeSingle();
+
+    // Map notification type to preference field
+    const prefMap: Record<string, string> = {
+      like: 'likes',
+      comment: 'comments',
+      follow: 'follows',
+      new_reel: 'new_reels',
+      saved: 'likes', // Treat saved as likes category
+      duet: 'mentions',
+      message: 'messages',
+    };
+
+    const prefField = prefMap[payload.type] as keyof typeof prefs || 'push_enabled';
+    
+    // If user has preferences and this type is disabled, skip
+    if (prefs && prefs[prefField] === false) {
+      console.log(`User has ${payload.type} notifications disabled`);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Notification type disabled by user' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if push is enabled globally
+    if (prefs && prefs.push_enabled === false) {
+      console.log('User has push notifications disabled');
+      return new Response(
+        JSON.stringify({ success: true, message: 'Push notifications disabled by user' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get user's FCM tokens
     const { data: tokens, error: tokensError } = await supabase
       .from('fcm_tokens')
@@ -36,15 +74,7 @@ serve(async (req) => {
 
     if (tokensError) {
       console.error('Error fetching tokens:', tokensError);
-      throw tokensError;
-    }
-
-    if (!tokens || tokens.length === 0) {
-      console.log('No FCM tokens found for user:', payload.userId);
-      return new Response(
-        JSON.stringify({ success: true, message: 'No tokens registered' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Continue to create in-app notification even if no push tokens
     }
 
     // Get sender's profile
@@ -85,35 +115,36 @@ serve(async (req) => {
         title = 'New Duet 🎭';
         body = `${senderName} created a duet with your reel`;
         break;
-      case 'profile_view':
-        title = 'Profile View 👀';
-        body = `${senderName} viewed your profile`;
+      case 'message':
+        title = 'New Message 💬';
+        body = payload.message ? `${senderName}: "${payload.message}"` : `${senderName} sent you a message`;
         break;
       default:
         title = "Reel'it";
         body = 'You have a new notification';
     }
 
-    console.log('Sending notification:', { title, body, tokens: tokens.length });
+    console.log('Sending notification:', { title, body, tokensCount: tokens?.length || 0 });
 
-    // For now, we'll store the notification in the database
-    // Real FCM would require Firebase Admin SDK
-    // This is a placeholder for when FCM is fully configured
-    
-    // Create notification record
-    await supabase.from('notifications').insert({
-      user_id: payload.userId,
-      from_user_id: payload.fromUserId,
-      type: payload.type,
-      reel_id: payload.reelId || null,
-      message: body,
-    });
+    // Create in-app notification record (except for messages which have their own system)
+    if (payload.type !== 'message') {
+      await supabase.from('notifications').insert({
+        user_id: payload.userId,
+        from_user_id: payload.fromUserId,
+        type: payload.type,
+        reel_id: payload.reelId || null,
+        message: body,
+      });
+    }
+
+    // TODO: When FCM is fully configured with Firebase Admin SDK,
+    // send actual push notifications to registered tokens here
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Notification sent',
-        data: { title, body, tokensCount: tokens.length }
+        data: { title, body, tokensCount: tokens?.length || 0 }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

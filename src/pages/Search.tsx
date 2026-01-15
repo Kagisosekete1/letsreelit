@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X } from 'lucide-react';
+import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import ReelCard from '@/components/ui/ReelCard';
@@ -11,6 +11,8 @@ import CreateReelModal from '@/components/CreateReelModal';
 import TrendingHashtags from '@/components/TrendingHashtags';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
+import SuggestedAccounts from '@/components/SuggestedAccounts';
+import AddFriendsFromContacts from '@/components/AddFriendsFromContacts';
 
 interface ReelData {
   id: string;
@@ -57,6 +59,7 @@ const Search = () => {
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const [hoveredReelId, setHoveredReelId] = useState<string | null>(null);
   const hoverVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [showAddFriends, setShowAddFriends] = useState(false);
 
   const hashtag = searchParams.get('hashtag');
 
@@ -502,6 +505,21 @@ const Search = () => {
           />
         </form>
 
+        {/* Suggested Accounts */}
+        <div className="mb-6">
+          <SuggestedAccounts limit={5} compact />
+        </div>
+
+        {/* Add Friends Button */}
+        <Button 
+          variant="outline" 
+          className="w-full mb-6 rounded-xl gap-2"
+          onClick={() => setShowAddFriends(true)}
+        >
+          <Users className="w-4 h-4" />
+          Add Friends from Contacts
+        </Button>
+
         {/* Trending Hashtags */}
         {trendingHashtags.length > 0 && (
           <div className="mb-6">
@@ -710,6 +728,7 @@ const Search = () => {
 
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
+      <AddFriendsFromContacts isOpen={showAddFriends} onClose={() => setShowAddFriends(false)} />
     </div>
   );
 };
