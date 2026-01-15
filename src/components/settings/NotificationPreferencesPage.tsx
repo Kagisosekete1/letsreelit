@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Bell, Heart, MessageCircle, UserPlus, Video, AtSign, Mail, AlertCircle, Settings, ExternalLink, Loader2 } from 'lucide-react';
@@ -6,10 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { Capacitor } from '@capacitor/core';
-
-interface NotificationPreferencesPageProps {
-  onBack: () => void;
-}
 
 interface Preferences {
   push_enabled: boolean;
@@ -21,7 +18,8 @@ interface Preferences {
   messages: boolean;
 }
 
-const NotificationPreferencesPage: React.FC<NotificationPreferencesPageProps> = ({ onBack }) => {
+const NotificationPreferencesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
   const [loading, setLoading] = useState(true);
@@ -216,19 +214,23 @@ const NotificationPreferencesPage: React.FC<NotificationPreferencesPageProps> = 
     },
   ];
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   if (loading) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
+      <div className="h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-background overflow-y-auto">
+    <div className="h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="rounded-full p-2">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full p-2">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold">Notification Settings</h1>

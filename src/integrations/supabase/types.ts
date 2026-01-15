@@ -488,6 +488,33 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          achieved_at: string
+          badge_type: string
+          created_at: string
+          id: string
+          milestone: number
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          badge_type: string
+          created_at?: string
+          id?: string
+          milestone: number
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          badge_type?: string
+          created_at?: string
+          id?: string
+          milestone?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

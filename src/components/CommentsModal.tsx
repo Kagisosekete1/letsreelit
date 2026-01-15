@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
+import { sendCommentNotification } from '@/services/notificationService';
 
 interface Comment {
   id: string;
@@ -24,6 +25,7 @@ interface CommentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   reelId: string;
+  reelOwnerId?: string;
   onCommentCountChange?: (count: number) => void;
 }
 
@@ -31,6 +33,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
   isOpen,
   onClose,
   reelId,
+  reelOwnerId,
   onCommentCountChange,
 }) => {
   const { authUser } = useUser();
@@ -101,12 +104,13 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
     if (!newComment.trim() || !authUser) return;
 
     setLoading(true);
+    const commentText = newComment.trim();
     const { error } = await supabase
       .from('comments')
       .insert({
         reel_id: reelId,
         user_id: authUser.id,
-        content: newComment.trim(),
+        content: commentText,
       });
 
     if (error) {
@@ -117,13 +121,12 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
       });
     } else {
       setNewComment('');
-      // Refetch comments to show the new one immediately
       await fetchComments();
       
-      // Update reel comments_count
+      // Update reel comments_count and get owner id
       const { data: reel } = await supabase
         .from('reels')
-        .select('comments_count')
+        .select('comments_count, user_id')
         .eq('id', reelId)
         .single();
       
@@ -131,8 +134,20 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         .from('reels')
         .update({ comments_count: (reel?.comments_count || 0) + 1 })
         .eq('id', reelId);
+
+      // Create notification and send push if not own reel
+      const ownerId = reelOwnerId || reel?.user_id;
+      if (ownerId && ownerId !== authUser.id) {
+        await supabase.from('notifications').insert({
+          user_id: ownerId,
+          from_user_id: authUser.id,
+          type: 'comment',
+          reel_id: reelId,
+          message: commentText.slice(0, 50),
+        });
+        sendCommentNotification(ownerId, authUser.id, reelId, commentText);
+      }
       
-      // Scroll to bottom after adding comment
       setTimeout(() => {
         commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
