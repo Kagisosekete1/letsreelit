@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Video, VideoOff, Mic, MicOff, RotateCcw, Play, Pause, Upload, Check } from 'lucide-react';
+import { X, Video, VideoOff, Mic, MicOff, RotateCcw, Play, Pause, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { Progress } from '@/components/ui/progress';
+import { useAudio } from '@/contexts/AudioContext';
 
 interface DuetModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ interface DuetModalProps {
 const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) => {
   const { toast } = useToast();
   const { authUser, currentUser } = useUser();
+  const { forceCleanupAll } = useAudio();
   
   const [step, setStep] = useState<'setup' | 'recording' | 'preview' | 'uploading'>('setup');
   const [isRecording, setIsRecording] = useState(false);
@@ -43,6 +45,13 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // Cleanup all background audio when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      forceCleanupAll();
+    }
+  }, [isOpen, forceCleanupAll]);
+
   // Setup camera
   useEffect(() => {
     if (isOpen && step === 'setup') {
@@ -56,6 +65,9 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
 
   const setupCamera = async () => {
     try {
+      // Stop any existing stream first
+      stopCamera();
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 720 }, height: { ideal: 1280 } },
         audio: isMicOn,
@@ -65,6 +77,8 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
       
       if (userVideoRef.current) {
         userVideoRef.current.srcObject = stream;
+        userVideoRef.current.muted = true;
+        await userVideoRef.current.play().catch(() => {});
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -78,8 +92,14 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
       streamRef.current = null;
+    }
+    if (userVideoRef.current) {
+      userVideoRef.current.srcObject = null;
     }
   };
 
@@ -109,47 +129,67 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
   };
 
   const startRecording = async () => {
-    if (!streamRef.current) return;
+    if (!streamRef.current) {
+      await setupCamera();
+      if (!streamRef.current) return;
+    }
 
     // Reset original video to start
     if (originalVideoRef.current) {
       originalVideoRef.current.currentTime = 0;
       originalVideoRef.current.muted = false;
-      originalVideoRef.current.play();
+      originalVideoRef.current.play().catch(() => {});
     }
 
     chunksRef.current = [];
     
-    const mediaRecorder = new MediaRecorder(streamRef.current, {
-      mimeType: 'video/webm;codecs=vp9',
-    });
-    
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        chunksRef.current.push(e.data);
-      }
-    };
-    
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      setRecordedBlob(blob);
-      setRecordedUrl(URL.createObjectURL(blob));
-      setStep('preview');
-    };
-    
-    mediaRecorderRef.current = mediaRecorder;
-    mediaRecorder.start();
-    setIsRecording(true);
-    setStep('recording');
+    try {
+      const mediaRecorder = new MediaRecorder(streamRef.current, {
+        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
+          ? 'video/webm;codecs=vp9' 
+          : 'video/webm',
+      });
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        setRecordedBlob(blob);
+        setRecordedUrl(URL.createObjectURL(blob));
+        setStep('preview');
+        stopCamera();
+      };
+      
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+      setStep('recording');
+    } catch (error) {
+      console.error('Recording error:', error);
+      toast({
+        title: 'Recording Error',
+        description: 'Could not start recording. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.error('Stop recording error:', e);
+      }
       setIsRecording(false);
       
       if (originalVideoRef.current) {
         originalVideoRef.current.pause();
+        originalVideoRef.current.muted = true;
       }
     }
   };
@@ -160,18 +200,24 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     }
     setRecordedBlob(null);
     setRecordedUrl(null);
+    setIsPlaying(false);
     setStep('setup');
     setupCamera();
   };
 
   const togglePreviewPlay = () => {
-    if (previewVideoRef.current && previewOriginalRef.current) {
+    const preview = previewVideoRef.current;
+    const original = previewOriginalRef.current;
+    
+    if (preview && original) {
       if (isPlaying) {
-        previewVideoRef.current.pause();
-        previewOriginalRef.current.pause();
+        preview.pause();
+        original.pause();
       } else {
-        previewVideoRef.current.play();
-        previewOriginalRef.current.play();
+        preview.currentTime = 0;
+        original.currentTime = 0;
+        preview.play().catch(() => {});
+        original.play().catch(() => {});
       }
       setIsPlaying(!isPlaying);
     }
@@ -190,7 +236,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
       // Upload user's recording
       const fileName = `duets/${authUser.id}/${Date.now()}.webm`;
       const { error: uploadError } = await supabase.storage
-        .from('videos')
+        .from('reels')
         .upload(fileName, recordedBlob, {
           contentType: 'video/webm',
           upsert: false,
@@ -200,11 +246,10 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
       setUploadProgress(50);
 
       // Get public URL
-      const { data: urlData } = supabase.storage.from('videos').getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from('reels').getPublicUrl(fileName);
       setUploadProgress(70);
 
-      // Create reel entry (note: for a true duet, you'd need server-side video composition)
-      // For now, we'll create a reel that references the duet
+      // Create reel entry
       const { error: reelError } = await supabase.from('reels').insert({
         user_id: authUser.id,
         title: `Duet with @${originalReel.user.username}`,
@@ -229,7 +274,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
         description: 'Your duet has been posted successfully.',
       });
 
-      onClose();
+      handleClose();
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -242,14 +287,45 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
   };
 
   const handleClose = () => {
+    // Stop all media
     stopCamera();
-    stopRecording();
+    
+    if (mediaRecorderRef.current && isRecording) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+    }
+    
+    // Pause and cleanup original video
+    if (originalVideoRef.current) {
+      originalVideoRef.current.pause();
+      originalVideoRef.current.muted = true;
+      originalVideoRef.current.currentTime = 0;
+    }
+    
+    // Cleanup preview videos
+    if (previewVideoRef.current) {
+      previewVideoRef.current.pause();
+      previewVideoRef.current.src = '';
+    }
+    if (previewOriginalRef.current) {
+      previewOriginalRef.current.pause();
+      previewOriginalRef.current.muted = true;
+    }
+    
+    // Cleanup recorded URL
     if (recordedUrl) {
       URL.revokeObjectURL(recordedUrl);
     }
+    
+    // Reset state
     setRecordedBlob(null);
     setRecordedUrl(null);
     setStep('setup');
+    setIsRecording(false);
+    setIsPlaying(false);
+    setUploadProgress(0);
+    
     onClose();
   };
 
@@ -302,6 +378,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
                     className="w-full h-full object-cover"
                     playsInline
                     loop
+                    muted={false}
                   />
                 ) : (
                   <video
