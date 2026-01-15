@@ -50,7 +50,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   // For "start paused until user taps play" - track if user has ever played
-  const [userTriggeredPlay, setUserTriggeredPlay] = useState(false);
+  // Changed default to TRUE for autoplay behavior
+  const [userTriggeredPlay, setUserTriggeredPlay] = useState(true);
 
   const displayedReels = reels;
 

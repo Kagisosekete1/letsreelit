@@ -12,6 +12,8 @@ interface AudioContextType {
   setIsMuted: (muted: boolean) => void;
   // Silence all audio globally
   silenceAll: () => void;
+  // Force cleanup all audio elements
+  forceCleanupAll: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | null>(null);
@@ -35,7 +37,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Global mute state - DEFAULT TO FALSE (sound ON)
   const [isMuted, setIsMutedState] = useState(() => {
     const saved = sessionStorage.getItem('reelAudioMuted');
-    // Default to false (sound ON) if no preference saved
     return saved === 'true';
   });
 
@@ -45,48 +46,79 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sessionStorage.setItem('reelAudioMuted', String(muted));
   }, []);
 
-  // Silence all videos except the active one
-  const silenceAllExcept = useCallback((exceptElement?: HTMLVideoElement) => {
-    registeredVideos.current.forEach((video, reelId) => {
-      if (video === exceptElement) return;
-      try {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      } catch {
-        // ignore
+  // Force mute and pause a single media element
+  const forceSilenceElement = useCallback((el: HTMLMediaElement) => {
+    try {
+      el.pause();
+      el.muted = true;
+      el.volume = 0;
+      if ('currentTime' in el) {
+        el.currentTime = 0;
       }
-    });
-
-    // Also silence any unregistered media elements in the DOM
-    const allVideos = document.querySelectorAll<HTMLVideoElement>('video');
-    allVideos.forEach((video) => {
-      if (video === exceptElement) return;
-      try {
-        video.pause();
-        video.muted = true;
-      } catch {
-        // ignore
-      }
-    });
-
-    const allAudios = document.querySelectorAll<HTMLAudioElement>('audio');
-    allAudios.forEach((audio) => {
-      try {
-        audio.pause();
-        audio.muted = true;
-      } catch {
-        // ignore
-      }
-    });
+    } catch {
+      // ignore
+    }
   }, []);
 
-  // Silence everything
+  // Silence all media elements except the active one
+  const silenceAllExcept = useCallback((exceptElement?: HTMLVideoElement) => {
+    // Silence registered videos
+    registeredVideos.current.forEach((video) => {
+      if (video === exceptElement) return;
+      forceSilenceElement(video);
+    });
+
+    // CRITICAL: Also silence any unregistered media elements in the DOM
+    document.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
+      if (video === exceptElement) return;
+      forceSilenceElement(video);
+    });
+
+    document.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
+      forceSilenceElement(audio);
+    });
+  }, [forceSilenceElement]);
+
+  // Silence everything including the active one
   const silenceAll = useCallback(() => {
     activeReelIdRef.current = null;
     activeVideoRef.current = null;
     silenceAllExcept(undefined);
   }, [silenceAllExcept]);
+
+  // Force cleanup all audio - more aggressive than silenceAll
+  const forceCleanupAll = useCallback(() => {
+    activeReelIdRef.current = null;
+    activeVideoRef.current = null;
+    registeredVideos.current.clear();
+
+    // Aggressively silence and reset all media
+    document.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
+      try {
+        video.pause();
+        video.muted = true;
+        video.volume = 0;
+        video.currentTime = 0;
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        // ignore
+      }
+    });
+
+    document.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
+      try {
+        audio.pause();
+        audio.muted = true;
+        audio.volume = 0;
+        audio.currentTime = 0;
+        audio.removeAttribute('src');
+        audio.load();
+      } catch {
+        // ignore
+      }
+    });
+  }, []);
 
   // Request audio focus for a reel
   const requestAudioFocus = useCallback((videoElement: HTMLVideoElement, reelId: string) => {
@@ -96,10 +128,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // If this reel already has focus, just ensure state is correct
     if (activeReelIdRef.current === reelId) {
       videoElement.muted = isMuted;
+      if (!isMuted) {
+        videoElement.volume = 1;
+      }
       return;
     }
 
-    // Silence all other videos first
+    // CRITICAL: Silence ALL other media first before granting focus
     silenceAllExcept(videoElement);
 
     // Grant focus to this reel
@@ -108,16 +143,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Apply mute state based on user preference
     videoElement.muted = isMuted;
+    if (!isMuted) {
+      videoElement.volume = 1;
+    }
   }, [isMuted, silenceAllExcept]);
 
   // Release audio focus
   const releaseAudioFocus = useCallback((reelId: string) => {
     const video = registeredVideos.current.get(reelId);
     if (video) {
+      forceSilenceElement(video);
       try {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
+        video.removeAttribute('src');
+        video.load();
       } catch {
         // ignore
       }
@@ -129,7 +167,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     registeredVideos.current.delete(reelId);
-  }, []);
+  }, [forceSilenceElement]);
 
   // Check if a reel has audio focus
   const hasAudioFocus = useCallback((reelId: string) => {
@@ -140,43 +178,64 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (activeVideoRef.current) {
       activeVideoRef.current.muted = isMuted;
+      if (!isMuted) {
+        activeVideoRef.current.volume = 1;
+      }
     }
   }, [isMuted]);
 
-  // Periodic safety check to ensure only one video plays audio
+  // AGGRESSIVE periodic safety check - runs every 150ms to catch any stray audio
   useEffect(() => {
     const interval = setInterval(() => {
       const activeVideo = activeVideoRef.current;
+      const activeReelId = activeReelIdRef.current;
 
-      const allVideos = document.querySelectorAll<HTMLVideoElement>('video');
-      allVideos.forEach((video) => {
-        if (activeVideo && video === activeVideo) return;
-        // If there is no active video, OR this isn't the active one, force it silent.
-        if (!video.paused || !video.muted) {
+      // Silence all videos that are NOT the active one
+      document.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
+        // Skip the active video
+        if (activeVideo && video === activeVideo) {
+          // Ensure active video respects mute state
+          if (isMuted && !video.muted) {
+            video.muted = true;
+          }
+          return;
+        }
+
+        // Any other video should be silent and paused
+        if (!video.paused || !video.muted || video.volume > 0) {
           try {
             video.pause();
             video.muted = true;
+            video.volume = 0;
           } catch {
             // ignore
           }
         }
       });
 
-      const allAudios = document.querySelectorAll<HTMLAudioElement>('audio');
-      allAudios.forEach((audio) => {
-        if (!audio.paused || !audio.muted) {
+      // ALL audio elements should always be silent (we don't use audio elements)
+      document.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
+        if (!audio.paused || !audio.muted || audio.volume > 0) {
           try {
             audio.pause();
             audio.muted = true;
+            audio.volume = 0;
           } catch {
             // ignore
           }
         }
       });
-    }, 300);
+    }, 150);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isMuted]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      forceCleanupAll();
+    };
+  }, [forceCleanupAll]);
 
   return (
     <AudioContext.Provider
@@ -187,6 +246,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isMuted,
         setIsMuted,
         silenceAll,
+        forceCleanupAll,
       }}
     >
       {children}

@@ -132,6 +132,18 @@ const Terms = () => {
                 Address: Sandton, South Africa
               </p>
             </div>
+
+            <div className="pt-4 border-t border-border space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Related policies:
+              </p>
+              <a 
+                href="/privacy" 
+                className="inline-flex items-center text-primary hover:underline text-sm"
+              >
+                View Privacy Policy →
+              </a>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
