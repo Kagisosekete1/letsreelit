@@ -16,6 +16,7 @@ import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
 import DuetModal from '@/components/DuetModal';
 import ProfileLink from '@/components/ui/ProfileLink';
+import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -114,13 +115,43 @@ const ReelCard: React.FC<ReelCardProps> = ({
   // Tracks whether user has interacted to play (for startPaused mode)
   const [userHasPlayed, setUserHasPlayed] = useState(!startPaused);
 
-  // Realtime subscription for likes
+  // Realtime subscription for likes - show animation when someone likes this reel
   useEffect(() => {
     const channel = supabase
       .channel(`likes-${reel.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
+        { event: 'INSERT', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
+        async (payload) => {
+          const { count } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('reel_id', reel.id);
+          setLikeCount(count || 0);
+
+          // Show realtime like animation if it's not from the current user
+          const likerId = (payload.new as any).user_id;
+          if (likerId && likerId !== authUser?.id && isActive) {
+            // Fetch liker's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('user_id', likerId)
+              .single();
+
+            if (profile) {
+              setRealtimeLiker({
+                avatarUrl: profile.avatar_url || '',
+                username: profile.username,
+              });
+              setTimeout(() => setRealtimeLiker(null), 2000);
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
         async () => {
           const { count } = await supabase
             .from('likes')
@@ -134,7 +165,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [reel.id]);
+  }, [reel.id, authUser?.id, isActive]);
 
   // Realtime subscription for comments
   useEffect(() => {
@@ -161,6 +192,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDuetModal, setShowDuetModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [realtimeLiker, setRealtimeLiker] = useState<{ avatarUrl: string; username: string } | null>(null);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
   const [isFollowPending, setIsFollowPending] = useState(false);
@@ -717,15 +749,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
         />
       </div>
       
-      {/* Double-tap Heart Animation */}
-      {showDoubleTapHeart && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-          <Heart 
-            className="w-24 h-24 text-red-500 fill-red-500 animate-ping" 
-            style={{ animationDuration: '0.6s' }}
-          />
-        </div>
-      )}
+      {/* Double-tap Heart Animation (own action) */}
+      <DoubleTapLikeAnimation show={showDoubleTapHeart} />
+      
+      {/* Realtime Like Animation (from other users) */}
+      <DoubleTapLikeAnimation 
+        show={!!realtimeLiker} 
+        likerAvatarUrl={realtimeLiker?.avatarUrl}
+        likerUsername={realtimeLiker?.username}
+      />
       
       {/* Buffering Indicator Only - No play/pause icon */}
       {isBuffering && isActive && userHasPlayed && (

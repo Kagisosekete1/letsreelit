@@ -340,14 +340,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             {/* Logo on left */}
             <span className="text-white font-bold text-lg opacity-80 drop-shadow-md">Reel'it</span>
             
-            {/* Following + Live Now in center-right */}
+          {/* For You / Following Tabs + Live */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setScreen('following' as any)}
-                className="px-3 py-1.5 text-xs text-white bg-white/20 rounded-full backdrop-blur-sm font-medium"
-              >
-                Following
-              </button>
+              <div className="flex bg-black/30 rounded-full p-0.5 backdrop-blur-sm">
+                <button
+                  className="px-3 py-1.5 text-xs text-white font-semibold rounded-full bg-white/20"
+                >
+                  For You
+                </button>
+                <button
+                  onClick={() => setScreen('following' as any)}
+                  className="px-3 py-1.5 text-xs text-white/70 font-medium rounded-full hover:text-white transition-colors"
+                >
+                  Following
+                </button>
+              </div>
               <button
                 onClick={() => setScreen('live' as any)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-pink-500/80 rounded-full backdrop-blur-sm font-medium"
