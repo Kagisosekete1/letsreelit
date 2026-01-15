@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
@@ -35,6 +36,7 @@ const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
   const { currentUser, authUser, refreshProfile } = useUser();
+  const { forceCleanupAll } = useAudio();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -58,6 +60,31 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const reachedMilestones = useRef<Set<number>>(new Set());
 
   const viewerCount = viewers.size;
+
+  // When opening the live modal, hard-stop any reel audio playing behind it.
+  useEffect(() => {
+    if (isOpen) {
+      forceCleanupAll();
+    }
+  }, [isOpen, forceCleanupAll]);
+
+  // If modal is closed while a MediaStream exists, stop tracks immediately.
+  useEffect(() => {
+    if (isOpen) return;
+
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+
+    if (videoRef.current) {
+      try {
+        videoRef.current.srcObject = null;
+      } catch {
+        // ignore
+      }
+    }
+  }, [isOpen, stream]);
 
   // Check for viewer milestones
   useEffect(() => {

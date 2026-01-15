@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { X, Heart, Send, Users, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
 import ProfileLink from '@/components/ui/ProfileLink';
@@ -39,6 +40,7 @@ const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', 
 const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, liveStream }) => {
   const { toast } = useToast();
   const { currentUser, authUser } = useUser();
+  const { forceCleanupAll } = useAudio();
   const [viewerCount, setViewerCount] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
   const [likeTrigger, setLikeTrigger] = useState(0);
@@ -46,6 +48,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [newComment, setNewComment] = useState('');
   const [hasLiked, setHasLiked] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // When opening the watcher modal, hard-stop any reel audio playing behind it.
+  useEffect(() => {
+    if (isOpen) {
+      forceCleanupAll();
+    }
+  }, [isOpen, forceCleanupAll]);
 
   useEffect(() => {
     if (!isOpen || !liveStream.session_id || !authUser) return;
