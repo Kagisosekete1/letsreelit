@@ -1,26 +1,27 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 
 const Terms = () => {
   const navigate = useNavigate();
 
-  const handleClose = () => {
+  const handleBack = () => {
     navigate(-1);
   };
 
   return (
-    <Dialog open={true} onOpenChange={handleClose}>
+    <Dialog open={true} onOpenChange={handleBack}>
       <DialogContent className="sm:max-w-[90vw] md:max-w-[600px] max-h-[90vh] bg-card border-border rounded-3xl p-0 overflow-hidden">
         <DialogHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">Terms & Policies</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={handleClose} className="rounded-full">
-              <X className="w-5 h-5" />
+            <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full -ml-2">
+              <ArrowLeft className="w-5 h-5" />
             </Button>
+            <DialogTitle className="text-xl font-bold">Terms & Policies</DialogTitle>
+            <div className="w-9" />
           </div>
         </DialogHeader>
 

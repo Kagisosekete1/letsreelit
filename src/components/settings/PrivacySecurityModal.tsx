@@ -70,7 +70,7 @@ const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ isOpen, onC
               <p className="font-medium text-foreground">Security Tip</p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Never share your password with anyone. Reel'It will never ask for your password via email or messages.
+              Never share your password with anyone. Muv'it will never ask for your password via email or messages.
             </p>
           </div>
         </div>
