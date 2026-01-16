@@ -6,10 +6,15 @@ import {
   Eye, 
   Users, 
   Video, 
-  Trophy, 
+  Award,
   Lock,
-  ChevronRight,
-  Sparkles
+  TrendingUp,
+  Flame,
+  Star,
+  Zap,
+  Crown,
+  Diamond,
+  Gem
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -38,31 +43,53 @@ const BADGE_CONFIG = {
   likes: {
     icon: Heart,
     label: 'Likes',
-    color: 'text-red-500',
-    bgColor: 'bg-red-500/10',
-    borderColor: 'border-red-500/30',
+    gradient: 'from-rose-500 to-pink-600',
+    bgGradient: 'from-rose-500/10 to-pink-600/10',
+    ringColor: 'ring-rose-500/30',
+    textColor: 'text-rose-500',
   },
   views: {
     icon: Eye,
     label: 'Views',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/30',
+    gradient: 'from-sky-500 to-blue-600',
+    bgGradient: 'from-sky-500/10 to-blue-600/10',
+    ringColor: 'ring-sky-500/30',
+    textColor: 'text-sky-500',
   },
   followers: {
     icon: Users,
     label: 'Followers',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
-    borderColor: 'border-purple-500/30',
+    gradient: 'from-violet-500 to-purple-600',
+    bgGradient: 'from-violet-500/10 to-purple-600/10',
+    ringColor: 'ring-violet-500/30',
+    textColor: 'text-violet-500',
   },
   uploads: {
     icon: Video,
     label: 'Uploads',
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/10',
-    borderColor: 'border-green-500/30',
+    gradient: 'from-emerald-500 to-green-600',
+    bgGradient: 'from-emerald-500/10 to-green-600/10',
+    ringColor: 'ring-emerald-500/30',
+    textColor: 'text-emerald-500',
   },
+};
+
+const getTierIcon = (milestone: number) => {
+  if (milestone >= 10000000) return Diamond;
+  if (milestone >= 1000000) return Crown;
+  if (milestone >= 500000) return Gem;
+  if (milestone >= 100000) return Star;
+  if (milestone >= 10000) return Flame;
+  return Zap;
+};
+
+const getTierLabel = (milestone: number) => {
+  if (milestone >= 10000000) return 'Legendary';
+  if (milestone >= 1000000) return 'Elite';
+  if (milestone >= 500000) return 'Master';
+  if (milestone >= 100000) return 'Expert';
+  if (milestone >= 10000) return 'Rising';
+  return 'Starter';
 };
 
 const formatMilestone = (num: number): string => {
@@ -91,14 +118,12 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
   const fetchUserStats = async () => {
     if (!targetUserId) return;
 
-    // Get user's profile for followers count
     const { data: profile } = await supabase
       .from('profiles')
       .select('followers_count, reels_count')
       .eq('user_id', targetUserId)
       .single();
 
-    // Get total likes across all reels
     const { data: reels } = await supabase
       .from('reels')
       .select('likes_count, views_count')
@@ -156,7 +181,6 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
 
     const badgesToAward: { badge_type: string; milestone: number }[] = [];
 
-    // Check likes milestones
     MILESTONES.likes.forEach(milestone => {
       if (userStats.totalLikes >= milestone && 
           !badges.find(b => b.type === 'likes' && b.milestone === milestone && b.achieved)) {
@@ -164,7 +188,6 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       }
     });
 
-    // Check views milestones
     MILESTONES.views.forEach(milestone => {
       if (userStats.totalViews >= milestone && 
           !badges.find(b => b.type === 'views' && b.milestone === milestone && b.achieved)) {
@@ -172,7 +195,6 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       }
     });
 
-    // Check followers milestones
     MILESTONES.followers.forEach(milestone => {
       if (userStats.followers >= milestone && 
           !badges.find(b => b.type === 'followers' && b.milestone === milestone && b.achieved)) {
@@ -180,7 +202,6 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       }
     });
 
-    // Check uploads milestones
     MILESTONES.uploads.forEach(milestone => {
       if (userStats.uploads >= milestone && 
           !badges.find(b => b.type === 'uploads' && b.milestone === milestone && b.achieved)) {
@@ -188,7 +209,6 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       }
     });
 
-    // Award new badges
     for (const badge of badgesToAward) {
       await supabase.from('user_badges').insert({
         user_id: authUser.id,
@@ -226,120 +246,157 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     return MILESTONES[activeCategory].find(m => m > current) || null;
   };
 
+  const progressPercentage = () => {
+    const next = getNextMilestone();
+    if (!next) return 100;
+    const current = getCurrentProgress();
+    const prevMilestones = MILESTONES[activeCategory].filter(m => m < next);
+    const prev = prevMilestones.length > 0 ? prevMilestones[prevMilestones.length - 1] : 0;
+    return Math.min(((current - prev) / (next - prev)) * 100, 100);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto bg-card border-border rounded-3xl">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden bg-background border-border">
         <DialogHeader className="pb-4 border-b border-border">
-          <DialogTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-yellow-500" />
-            Milestone Badges
+          <DialogTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Award className="w-5 h-5 text-primary" />
+            Achievements
           </DialogTitle>
         </DialogHeader>
 
-        {/* Progress Summary */}
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Badges Achieved</p>
-              <p className="text-2xl font-bold text-foreground">{achievedCount} of {totalCount}</p>
+        <div className="overflow-y-auto max-h-[calc(85vh-100px)] pr-1">
+          {/* Stats Summary */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-secondary/50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{achievedCount}</p>
+              <p className="text-xs text-muted-foreground">Unlocked</p>
             </div>
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-primary" />
-              </div>
-              <div 
-                className="absolute inset-0 rounded-full border-4 border-primary"
-                style={{
-                  clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.sin((achievedCount / totalCount) * 2 * Math.PI)}% ${50 - 50 * Math.cos((achievedCount / totalCount) * 2 * Math.PI)}%, 50% 50%)`
-                }}
-              />
+            <div className="bg-secondary/50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-muted-foreground">{totalCount - achievedCount}</p>
+              <p className="text-xs text-muted-foreground">Remaining</p>
             </div>
           </div>
-        </div>
 
-        {/* Category Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
-          {(Object.keys(BADGE_CONFIG) as Array<keyof typeof BADGE_CONFIG>).map((cat) => {
-            const catConfig = BADGE_CONFIG[cat];
-            const CatIcon = catConfig.icon;
-            const catAchieved = badges.filter(b => b.type === cat && b.achieved).length;
-            const catTotal = badges.filter(b => b.type === cat).length;
-            
-            return (
-              <Button
-                key={cat}
-                variant={activeCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveCategory(cat)}
-                className={`flex-shrink-0 rounded-full gap-1 ${
-                  activeCategory === cat ? '' : catConfig.bgColor
-                }`}
-              >
-                <CatIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">{catConfig.label}</span>
-                <span className="text-xs opacity-70">({catAchieved}/{catTotal})</span>
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Current Progress */}
-        <div className={`${config.bgColor} rounded-xl p-3 mb-4 border ${config.borderColor}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CategoryIcon className={`w-5 h-5 ${config.color}`} />
-              <span className="font-medium">Current {config.label}</span>
-            </div>
-            <span className="font-bold">{formatMilestone(getCurrentProgress())}</span>
+          {/* Category Tabs */}
+          <div className="flex gap-1.5 mb-5 p-1 bg-secondary/30 rounded-xl">
+            {(Object.keys(BADGE_CONFIG) as Array<keyof typeof BADGE_CONFIG>).map((cat) => {
+              const catConfig = BADGE_CONFIG[cat];
+              const CatIcon = catConfig.icon;
+              const catAchieved = badges.filter(b => b.type === cat && b.achieved).length;
+              
+              return (
+                <Button
+                  key={cat}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex-1 h-10 rounded-lg gap-1.5 transition-all ${
+                    activeCategory === cat 
+                      ? `bg-gradient-to-r ${catConfig.gradient} text-white shadow-sm` 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <CatIcon className="w-4 h-4" />
+                  <span className="text-xs font-medium hidden sm:inline">{catConfig.label}</span>
+                  {catAchieved > 0 && (
+                    <span className={`text-[10px] ${activeCategory === cat ? 'text-white/80' : 'text-muted-foreground'}`}>
+                      {catAchieved}
+                    </span>
+                  )}
+                </Button>
+              );
+            })}
           </div>
-          {getNextMilestone() && (
-            <div className="mt-2">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Progress to {formatMilestone(getNextMilestone()!)}</span>
-                <span>{Math.round((getCurrentProgress() / getNextMilestone()!) * 100)}%</span>
+
+          {/* Current Progress */}
+          <div className={`bg-gradient-to-r ${config.bgGradient} rounded-xl p-4 mb-5 ring-1 ${config.ringColor}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${config.gradient} flex items-center justify-center`}>
+                  <CategoryIcon className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{formatMilestone(getCurrentProgress())}</p>
+                  <p className="text-xs text-muted-foreground">{config.label}</p>
+                </div>
               </div>
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+              {getNextMilestone() && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Next</p>
+                  <p className={`text-sm font-semibold ${config.textColor}`}>{formatMilestone(getNextMilestone()!)}</p>
+                </div>
+              )}
+            </div>
+            {getNextMilestone() && (
+              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${config.color.replace('text-', 'bg-')} transition-all duration-300`}
-                  style={{ width: `${Math.min((getCurrentProgress() / getNextMilestone()!) * 100, 100)}%` }}
+                  className={`h-full bg-gradient-to-r ${config.gradient} transition-all duration-500`}
+                  style={{ width: `${progressPercentage()}%` }}
                 />
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Badges Grid */}
-        <div className="grid grid-cols-4 gap-3">
-          {categoryBadges.map((badge) => (
-            <div
-              key={`${badge.type}-${badge.milestone}`}
-              className={`relative flex flex-col items-center p-3 rounded-xl transition-all ${
-                badge.achieved 
-                  ? `${config.bgColor} border-2 ${config.borderColor}` 
-                  : 'bg-secondary/30 opacity-50'
-              }`}
-            >
-              {badge.achieved ? (
-                <CategoryIcon className={`w-8 h-8 ${config.color} mb-1`} />
-              ) : (
-                <Lock className="w-8 h-8 text-muted-foreground mb-1" />
-              )}
-              <span className={`text-sm font-bold ${badge.achieved ? 'text-foreground' : 'text-muted-foreground'}`}>
-                {formatMilestone(badge.milestone)}
-              </span>
-              {badge.achieved && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-[10px] text-primary-foreground">✓</span>
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
+          {/* Badges List */}
+          <div className="space-y-2.5">
+            {categoryBadges.map((badge) => {
+              const TierIcon = getTierIcon(badge.milestone);
+              const tierLabel = getTierLabel(badge.milestone);
+              
+              return (
+                <div
+                  key={`${badge.type}-${badge.milestone}`}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                    badge.achieved 
+                      ? `bg-gradient-to-r ${config.bgGradient} ring-1 ${config.ringColor}` 
+                      : 'bg-secondary/30 opacity-60'
+                  }`}
+                >
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                    badge.achieved 
+                      ? `bg-gradient-to-r ${config.gradient} shadow-lg` 
+                      : 'bg-secondary'
+                  }`}>
+                    {badge.achieved ? (
+                      <TierIcon className="w-5 h-5 text-white" />
+                    ) : (
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${badge.achieved ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {formatMilestone(badge.milestone)} {config.label}
+                      </span>
+                      {badge.achieved && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded bg-gradient-to-r ${config.gradient} text-white`}>
+                          {tierLabel}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {badge.achieved 
+                        ? `Achieved ${badge.achievedAt ? new Date(badge.achievedAt).toLocaleDateString() : 'recently'}`
+                        : `${formatMilestone(Math.max(0, badge.milestone - getCurrentProgress()))} more to unlock`
+                      }
+                    </p>
+                  </div>
 
-        {/* Legend */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">
-            Earn badges by reaching milestones. Keep creating to unlock more!
+                  {badge.achieved && (
+                    <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${config.gradient} flex items-center justify-center`}>
+                      <TrendingUp className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <p className="text-xs text-muted-foreground text-center mt-5 pb-2">
+            Keep creating to unlock more achievements
           </p>
         </div>
       </DialogContent>

@@ -144,8 +144,8 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     title: reel.title,
     description: reel.description || '',
     user: {
-      id: userId,
-      profileId: userId,
+      id: reel.user_id,
+      profileId: reel.user_id,
       username,
       displayName,
       avatarUrl,
