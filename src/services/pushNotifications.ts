@@ -1,4 +1,4 @@
-// Push Notification Service for Reel'it
+// Push Notification Service for Muv'it
 // This service handles Firebase Cloud Messaging integration for real-time alerts
 
 import { supabase } from '@/integrations/supabase/client';
@@ -183,7 +183,7 @@ class PushNotificationService {
               break;
             default:
               this.showNotification({
-                title: 'Reel\'it',
+                title: "Muv'it",
                 body: notification.message || 'You have a new notification',
               });
           }

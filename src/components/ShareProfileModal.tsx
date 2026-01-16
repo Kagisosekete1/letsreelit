@@ -13,7 +13,7 @@ interface ShareProfileModalProps {
 
 const ShareProfileModal: React.FC<ShareProfileModalProps> = ({ isOpen, onClose, username }) => {
   const { toast } = useToast();
-  const profileUrl = `https://reelit.app/@${username}`;
+  const profileUrl = `https://muvit.app/@${username}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
@@ -29,7 +29,7 @@ const ShareProfileModal: React.FC<ShareProfileModalProps> = ({ isOpen, onClose, 
       label: 'Share via Message', 
       action: () => {
         if (navigator.share) {
-          navigator.share({ title: 'Check out my Reel\'It profile', url: profileUrl });
+          navigator.share({ title: 'Check out my Muv\'it profile', url: profileUrl });
         }
       }
     },
@@ -37,7 +37,7 @@ const ShareProfileModal: React.FC<ShareProfileModalProps> = ({ isOpen, onClose, 
       icon: Mail, 
       label: 'Share via Email', 
       action: () => {
-        window.location.href = `mailto:?subject=Check out my Reel'It profile&body=${profileUrl}`;
+        window.location.href = `mailto:?subject=Check out my Muv'it profile&body=${profileUrl}`;
       }
     },
     { 
@@ -45,7 +45,7 @@ const ShareProfileModal: React.FC<ShareProfileModalProps> = ({ isOpen, onClose, 
       label: 'More options', 
       action: () => {
         if (navigator.share) {
-          navigator.share({ title: 'Check out my Reel\'It profile', url: profileUrl });
+          navigator.share({ title: 'Check out my Muv\'it profile', url: profileUrl });
         }
       }
     },

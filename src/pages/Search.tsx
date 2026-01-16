@@ -130,7 +130,7 @@ const Search = () => {
     try {
       const { data: reelsData } = await supabase
         .from('reels')
-        .select('title, description, views_count')
+        .select('id, title, description')
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -140,9 +140,12 @@ const Search = () => {
         reelsData.forEach(reel => {
           const text = `${reel.title || ''} ${reel.description || ''}`;
           const matches = text.match(/#\w+/g) || [];
-          matches.forEach(tag => {
-            const cleanTag = tag.slice(1).toLowerCase();
-            hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + (reel.views_count || 1);
+          
+          // Use Set to count unique hashtags per reel (no duplicates from same reel)
+          const uniqueTagsInReel = new Set(matches.map(tag => tag.slice(1).toLowerCase()));
+          
+          uniqueTagsInReel.forEach(cleanTag => {
+            hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
           });
         });
 

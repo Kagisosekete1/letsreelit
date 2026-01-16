@@ -28,20 +28,26 @@ const TrendingHashtags: React.FC<TrendingHashtagsProps> = ({
   }, []);
 
   const fetchTrendingHashtags = async () => {
-    // Extract hashtags from reels descriptions
+    // Extract hashtags from reels descriptions - count unique occurrences per reel
     const { data: reels } = await supabase
       .from('reels')
-      .select('description')
+      .select('id, description, title')
       .not('description', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (reels) {
       const hashtagCounts: Record<string, number> = {};
+      
       reels.forEach(reel => {
-        const matches = reel.description?.match(/#\w+/g) || [];
-        matches.forEach(tag => {
-          const cleanTag = tag.slice(1).toLowerCase();
+        // Combine title and description
+        const text = `${reel.title || ''} ${reel.description || ''}`;
+        const matches = text.match(/#\w+/g) || [];
+        
+        // Use Set to count unique hashtags per reel (no duplicates from same reel)
+        const uniqueTagsInReel = new Set(matches.map(tag => tag.slice(1).toLowerCase()));
+        
+        uniqueTagsInReel.forEach(cleanTag => {
           hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
         });
       });

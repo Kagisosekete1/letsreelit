@@ -342,7 +342,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
           {/* Top Header */}
           <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
             {/* Logo on left */}
-            <span className="text-white font-bold text-lg opacity-80 drop-shadow-md">Reel'it</span>
+            <span className="text-white font-bold text-lg opacity-80 drop-shadow-md">Muv'it</span>
             
           {/* For You / Following Tabs + Live */}
             <div className="flex items-center gap-2">

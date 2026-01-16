@@ -659,13 +659,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      // Watermark filename like TikTok/Instagram: "Reel'it_username_id.mp4"
-      a.download = `Reel'it_@${reel.user.username}_${reel.id}.mp4`;
+      // Watermark filename like TikTok/Instagram: "Muv'it_username_id.mp4"
+      a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: 'Download started', description: "Your Reel'it video is being downloaded." });
+      toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
     } catch {
       toast({ title: 'Download failed', description: 'Could not download video.', variant: 'destructive' });
     }
