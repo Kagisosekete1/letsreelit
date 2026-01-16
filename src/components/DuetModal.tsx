@@ -35,7 +35,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [cameraReady, setCameraReady] = useState(false);
   
   const originalVideoRef = useRef<HTMLVideoElement>(null);
   const userVideoRef = useRef<HTMLVideoElement>(null);
@@ -52,25 +52,33 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     }
   }, [isOpen, forceCleanupAll]);
 
-  // Setup camera
+  // Setup camera - always use front camera (selfie) for duets
   useEffect(() => {
     if (isOpen && step === 'setup') {
       setupCamera();
     }
     
     return () => {
-      stopCamera();
+      if (!isOpen) {
+        stopCamera();
+      }
     };
-  }, [isOpen, step, facingMode]);
+  }, [isOpen, step]);
 
   const setupCamera = async () => {
     try {
       // Stop any existing stream first
       stopCamera();
+      setCameraReady(false);
       
+      // Always use front camera (user facing) for duets
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 720 }, height: { ideal: 1280 } },
-        audio: isMicOn,
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: 720 }, 
+          height: { ideal: 1280 } 
+        },
+        audio: true,
       });
       
       streamRef.current = stream;
@@ -78,7 +86,22 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
       if (userVideoRef.current) {
         userVideoRef.current.srcObject = stream;
         userVideoRef.current.muted = true;
-        await userVideoRef.current.play().catch(() => {});
+        
+        // Wait for video to be ready
+        userVideoRef.current.onloadedmetadata = async () => {
+          try {
+            await userVideoRef.current?.play();
+            setCameraReady(true);
+          } catch (e) {
+            console.error('Camera play error:', e);
+          }
+        };
+      }
+
+      // Set initial mic state
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = isMicOn;
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -101,6 +124,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     if (userVideoRef.current) {
       userVideoRef.current.srcObject = null;
     }
+    setCameraReady(false);
   };
 
   const toggleCamera = () => {
@@ -123,32 +147,34 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     }
   };
 
-  const flipCamera = async () => {
-    stopCamera();
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  };
-
   const startRecording = async () => {
     if (!streamRef.current) {
       await setupCamera();
+      // Wait for camera to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
       if (!streamRef.current) return;
     }
 
-    // Reset original video to start
+    // Reset and prepare original video
     if (originalVideoRef.current) {
       originalVideoRef.current.currentTime = 0;
       originalVideoRef.current.muted = false;
-      originalVideoRef.current.play().catch(() => {});
+      originalVideoRef.current.volume = 1;
     }
 
     chunksRef.current = [];
     
     try {
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
-          ? 'video/webm;codecs=vp9' 
-          : 'video/webm',
-      });
+      // Determine supported mime type
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
       
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -165,9 +191,17 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
       };
       
       mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(100); // Collect data every 100ms
+      
+      // Start recording and play original video simultaneously
+      mediaRecorder.start(100);
       setIsRecording(true);
       setStep('recording');
+
+      // Play original video after a tiny delay to sync
+      setTimeout(() => {
+        originalVideoRef.current?.play().catch(console.error);
+      }, 50);
+
     } catch (error) {
       console.error('Recording error:', error);
       toast({
@@ -202,7 +236,11 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     setRecordedUrl(null);
     setIsPlaying(false);
     setStep('setup');
-    setupCamera();
+    
+    // Small delay before setting up camera again
+    setTimeout(() => {
+      setupCamera();
+    }, 100);
   };
 
   const togglePreviewPlay = () => {
@@ -325,6 +363,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
     setIsRecording(false);
     setIsPlaying(false);
     setUploadProgress(0);
+    setCameraReady(false);
     
     onClose();
   };
@@ -388,6 +427,7 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
                     playsInline
                     loop
                     muted={step !== 'recording'}
+                    preload="auto"
                   />
                 )}
               </div>
@@ -415,13 +455,23 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
                     autoPlay
                     playsInline
                     muted
-                    style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                    style={{ transform: 'scaleX(-1)' }}
                   />
                 )}
                 
                 {!isCameraOn && step !== 'preview' && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                     <VideoOff className="w-12 h-12 text-white/50" />
+                  </div>
+                )}
+
+                {/* Camera loading indicator */}
+                {step === 'setup' && !cameraReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                    <div className="text-center">
+                      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-white/60 text-sm">Starting camera...</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -444,8 +494,9 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
                 </Button>
 
                 <Button
-                  className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 border-4 border-white"
+                  className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 border-4 border-white disabled:opacity-50"
                   onClick={startRecording}
+                  disabled={!cameraReady}
                 >
                   <div className="w-8 h-8 bg-white rounded-full" />
                 </Button>
@@ -457,15 +508,6 @@ const DuetModal: React.FC<DuetModalProps> = ({ isOpen, onClose, originalReel }) 
                   onClick={toggleMic}
                 >
                   {isMicOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12 rounded-full bg-white/20 text-white"
-                  onClick={flipCamera}
-                >
-                  <RotateCcw className="w-6 h-6" />
                 </Button>
               </div>
             )}

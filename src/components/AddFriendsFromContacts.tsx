@@ -25,7 +25,7 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
       // In a real app, this would use @capacitor-community/contacts
       toast({
         title: 'Contacts synced',
-        description: 'We found 0 friends on Reel\'it. Invite them to join!',
+        description: "We found 0 friends on Muv'it. Invite them to join!",
       });
     } else {
       toast({
@@ -39,8 +39,8 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
 
   const handleShareInvite = async () => {
     const shareData = {
-      title: "Join me on Reel'it!",
-      text: "Hey! I'm using Reel'it to share and discover amazing dance videos. Join me!",
+      title: "Join me on Muv'it!",
+      text: "Hey! I'm using Muv'it to share and discover amazing dance videos. Join me!",
       url: 'https://letsreelit.lovable.app',
     };
 
@@ -84,7 +84,7 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
               <div className="flex-1">
                 <p className="font-medium">Sync Contacts</p>
                 <p className="text-sm text-muted-foreground">
-                  Find friends who are already on Reel'it
+                  Find friends who are already on Muv'it
                 </p>
               </div>
             </div>
@@ -116,7 +116,7 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
               <div className="flex-1">
                 <p className="font-medium">Invite Friends</p>
                 <p className="text-sm text-muted-foreground">
-                  Share Reel'it with friends via message or social media
+                  Share Muv'it with friends via message or social media
                 </p>
               </div>
             </div>
@@ -134,7 +134,7 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
           <div className="flex items-start gap-2 text-xs text-muted-foreground px-2">
             <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p>
-              Your contacts are only used to find friends on Reel'it. 
+              Your contacts are only used to find friends on Muv'it. 
               We never store or share your contact information.
             </p>
           </div>

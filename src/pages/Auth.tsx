@@ -100,7 +100,7 @@ const Auth = () => {
         } else {
           toast({
             title: "Account created!",
-            description: "Welcome to Reel'It!",
+            description: "Welcome to Muv'it!",
           });
         }
       } else {
@@ -133,10 +133,10 @@ const Auth = () => {
         {/* Logo */}
         <div className="text-center space-y-3">
           <div className="w-16 h-16 mx-auto bg-primary rounded-2xl flex items-center justify-center font-bold text-primary-foreground text-3xl shadow-lg">
-            R
+            M
           </div>
           <h1 className="text-4xl font-bold text-foreground" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800 }}>
-            Reel'It
+            Muv'it
           </h1>
           <p className="text-muted-foreground">
             {isSignUp ? 'Create your account' : 'Welcome back'}

@@ -1,14 +1,14 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Video, Swords, Flame, Users, User, Disc } from 'lucide-react';
+import { ArrowLeft, Video, Swords, Flame, Users, User, Disc } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 
 const About = () => {
   const navigate = useNavigate();
 
-  const handleClose = () => {
+  const handleBack = () => {
     navigate(-1);
   };
 
@@ -22,14 +22,15 @@ const About = () => {
   ];
 
   return (
-    <Dialog open={true} onOpenChange={handleClose}>
+    <Dialog open={true} onOpenChange={handleBack}>
       <DialogContent className="sm:max-w-[90vw] md:max-w-[600px] max-h-[90vh] bg-card border-border rounded-3xl p-0 overflow-hidden">
         <DialogHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">About Muv'it</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={handleClose} className="rounded-full">
-              <X className="w-5 h-5" />
+            <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full -ml-2">
+              <ArrowLeft className="w-5 h-5" />
             </Button>
+            <DialogTitle className="text-xl font-bold">About Muv'it</DialogTitle>
+            <div className="w-9" />
           </div>
         </DialogHeader>
 
@@ -135,7 +136,7 @@ const About = () => {
                   <h3 className="text-base font-semibold">7. How can I report abuse?</h3>
                   <p className="text-foreground/90 text-sm">
                     Tap the "Report" button on any video or profile that breaks our guidelines, or contact our support team at{' '}
-                    <a href="mailto:support@se-mogroup.com" className="text-primary hover:underline">support@se-mogroup.com</a>.
+                    <a href="mailto:support@muvit.app" className="text-primary hover:underline">support@muvit.app</a>.
                   </p>
                 </div>
 
@@ -150,7 +151,7 @@ const About = () => {
                   <h3 className="text-base font-semibold">9. How can I contact Muv'it?</h3>
                   <p className="text-foreground/90 text-sm">
                     Email us at{' '}
-                    <a href="mailto:info@se-mogroup.com" className="text-primary hover:underline">info@se-mogroup.com</a> or use the in-app Help Center.
+                    <a href="mailto:support@muvit.app" className="text-primary hover:underline">support@muvit.app</a> or <a href="mailto:Info@semogroup.com" className="text-primary hover:underline">Info@semogroup.com</a>, or use the in-app Help Center.
                   </p>
                 </div>
               </div>
