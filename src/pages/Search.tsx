@@ -4,6 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X, Users } from 'lucide-react';
+import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import ReelCard from '@/components/ui/ReelCard';
@@ -563,55 +564,18 @@ const Search = () => {
                   key={reel.id} 
                   className="flex-shrink-0 w-32 relative cursor-pointer group"
                   onClick={() => handleReelClick(reel)}
-                  onMouseEnter={() => handleMouseEnter(reel.id, reel.video_url)}
-                  onMouseLeave={handleMouseLeave}
                 >
                   {/* Ranking Badge */}
                   <div className="absolute -top-1 -left-1 z-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                     <span className="text-xs font-bold text-primary-foreground">#{index + 1}</span>
                   </div>
                   
-                  <div className="relative aspect-[9/16] bg-secondary rounded-xl overflow-hidden">
-                    {reel.thumbnail_url ? (
-                      <img 
-                        src={reel.thumbnail_url} 
-                        alt={reel.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <video 
-                        src={reel.video_url}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        muted
-                        playsInline
-                      />
-                    )}
-                    
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    
-                    {/* Play Icon */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
-                      </div>
-                    </div>
-                    
-                    {/* Stats */}
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-white text-xs font-medium line-clamp-1 mb-1">{reel.title}</p>
-                      <div className="flex items-center space-x-2 text-white/80">
-                        <div className="flex items-center space-x-1">
-                          <Heart className="w-3 h-3" />
-                          <span className="text-[10px]">{formatCount(reel.likes_count || 0)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Eye className="w-3 h-3" />
-                          <span className="text-[10px]">{formatCount(reel.views_count || 0)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <VideoThumbnail
+                    videoUrl={reel.video_url}
+                    thumbnailUrl={reel.thumbnail_url}
+                    viewsCount={reel.views_count || 0}
+                    className="rounded-xl"
+                  />
                   
                   {/* Creator Info */}
                   {reel.profile && (
@@ -663,50 +627,13 @@ const Search = () => {
                   key={reel.id} 
                   className="relative cursor-pointer group"
                   onClick={() => handleReelClick(reel)}
-                  onMouseEnter={() => handleMouseEnter(reel.id, reel.video_url)}
-                  onMouseLeave={handleMouseLeave}
                 >
-                  <div className="relative aspect-[9/16] bg-secondary rounded-xl overflow-hidden">
-                    {reel.thumbnail_url ? (
-                      <img 
-                        src={reel.thumbnail_url} 
-                        alt={reel.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <video 
-                        src={reel.video_url}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        muted
-                        playsInline
-                      />
-                    )}
-                    
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    
-                    {/* Play Icon */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
-                      </div>
-                    </div>
-                    
-                    {/* Stats */}
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-white text-sm font-medium line-clamp-2 mb-1">{reel.title}</p>
-                      <div className="flex items-center space-x-2 text-white/80">
-                        <div className="flex items-center space-x-1">
-                          <Heart className="w-3 h-3" />
-                          <span className="text-xs">{formatCount(reel.likes_count || 0)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Eye className="w-3 h-3" />
-                          <span className="text-xs">{formatCount(reel.views_count || 0)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <VideoThumbnail
+                    videoUrl={reel.video_url}
+                    thumbnailUrl={reel.thumbnail_url}
+                    viewsCount={reel.views_count || 0}
+                    className="rounded-xl"
+                  />
                   
                   {/* Creator Info */}
                   {reel.profile && (

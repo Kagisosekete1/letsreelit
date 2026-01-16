@@ -6,9 +6,9 @@ export const TikTokHeader: React.FC = () => {
       <div className="flex items-center justify-center px-5 py-3.5">
         <div className="flex items-center space-x-3">
           <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center font-bold text-white text-xl shadow-md" style={{fontFamily: "'Inter', sans-serif"}}>
-            R
+            M
           </div>
-          <span className="text-2xl font-bold text-foreground" style={{fontFamily: "'Inter', sans-serif", fontWeight: 800}}>Reel'It</span>
+          <span className="text-2xl font-bold text-foreground" style={{fontFamily: "'Inter', sans-serif", fontWeight: 800}}>Muv'it</span>
         </div>
       </div>
     </header>

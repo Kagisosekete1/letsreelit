@@ -32,23 +32,25 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
     video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
-    video.preload = 'metadata';
+    video.preload = 'auto';
 
-    const handleLoadedData = () => {
-      // Seek to 1 second or 10% of duration
-      video.currentTime = Math.min(1, video.duration * 0.1);
-    };
+    let hasGenerated = false;
 
-    const handleSeeked = () => {
+    const generateThumbnail = () => {
+      if (hasGenerated) return;
+      hasGenerated = true;
+      
       try {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth || 360;
         canvas.height = video.videoHeight || 640;
         const ctx = canvas.getContext('2d');
-        if (ctx) {
+        if (ctx && video.videoWidth > 0 && video.videoHeight > 0) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          setGeneratedThumbnail(dataUrl);
+          if (dataUrl && dataUrl !== 'data:,') {
+            setGeneratedThumbnail(dataUrl);
+          }
         }
       } catch (e) {
         console.error('Failed to generate thumbnail:', e);
@@ -58,26 +60,42 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
       }
     };
 
+    const handleLoadedMetadata = () => {
+      // Seek to 0.5 second or 10% of duration
+      const seekTime = Math.min(0.5, video.duration * 0.1);
+      video.currentTime = seekTime;
+    };
+
+    const handleSeeked = () => {
+      // Wait a frame to ensure the video has rendered
+      requestAnimationFrame(() => {
+        generateThumbnail();
+      });
+    };
+
     const handleError = () => {
       setIsLoading(false);
       video.remove();
     };
 
-    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('seeked', handleSeeked);
     video.addEventListener('error', handleError);
 
     // Set timeout to prevent infinite loading
     const timeout = setTimeout(() => {
-      setIsLoading(false);
-      video.remove();
-    }, 5000);
+      if (!hasGenerated) {
+        setIsLoading(false);
+        video.remove();
+      }
+    }, 8000);
 
     video.src = videoUrl;
+    video.load();
 
     return () => {
       clearTimeout(timeout);
-      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('seeked', handleSeeked);
       video.removeEventListener('error', handleError);
       video.remove();
