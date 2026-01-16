@@ -140,8 +140,8 @@ const NotificationPreferencesPage: React.FC = () => {
       toast({
         title: "Open Settings",
         description: isAndroid 
-          ? "Go to Settings → Apps → Reel'it → Notifications → Enable"
-          : "Go to Settings → Reel'it → Notifications → Allow",
+          ? "Go to Settings → Apps → Muv'it → Notifications → Enable"
+          : "Go to Settings → Muv'it → Notifications → Allow",
         duration: 10000,
       });
     } else {

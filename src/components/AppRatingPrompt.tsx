@@ -159,7 +159,7 @@ const AppRatingPrompt: React.FC<AppRatingPromptProps> = ({ reelsViewedThisSessio
             </div>
           </div>
           
-          <h2 className="text-xl font-bold text-foreground mb-1">Enjoying Reel'it?</h2>
+          <h2 className="text-xl font-bold text-foreground mb-1">Enjoying Muv'it?</h2>
           <p className="text-sm text-muted-foreground">
             Your feedback helps us make the app better!
           </p>

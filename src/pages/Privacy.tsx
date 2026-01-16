@@ -27,10 +27,10 @@ const Privacy = () => {
         <ScrollArea className="h-[calc(90vh-80px)]">
           <div className="px-6 py-6 space-y-6">
             <div className="space-y-4">
-              <h2 className="text-xl font-bold">Reel'it – Privacy Policy</h2>
+              <h2 className="text-xl font-bold">Muv'it – Privacy Policy</h2>
               <p className="text-muted-foreground text-sm">Effective Date: January 2025</p>
               <p className="leading-relaxed text-sm">
-                Your privacy is important to us. This Privacy Policy explains how Reel'it ("we," "our," or "us") collects, uses, discloses, and protects your information when you use our mobile application and services.
+                Your privacy is important to us. This Privacy Policy explains how Muv'it ("we," "our," or "us") collects, uses, discloses, and protects your information when you use our mobile application and services.
               </p>
             </div>
 
@@ -113,7 +113,7 @@ const Privacy = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">7. Children's Privacy</h3>
               <p className="leading-relaxed text-foreground/90 text-sm">
-                Reel'it is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
+                Muv'it is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
               </p>
             </div>
 
@@ -153,7 +153,7 @@ const Privacy = () => {
 
             <div className="pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                By using Reel'it, you acknowledge that you have read and understood this Privacy Policy and agree to the collection, use, and disclosure of your information as described herein.
+                By using Muv'it, you acknowledge that you have read and understood this Privacy Policy and agree to the collection, use, and disclosure of your information as described herein.
               </p>
             </div>
           </div>
