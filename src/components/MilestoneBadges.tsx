@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import ConfettiBurst from '@/components/ui/ConfettiBurst';
 import { 
   Heart, 
   Eye, 
@@ -106,6 +107,10 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
   const [activeCategory, setActiveCategory] = useState<'likes' | 'views' | 'followers' | 'uploads'>('likes');
   const [userStats, setUserStats] = useState({ totalLikes: 0, totalViews: 0, followers: 0, uploads: 0 });
 
+  // Confetti burst trigger (increment to play)
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
+
+
   const targetUserId = userId || authUser?.id;
 
   useEffect(() => {
@@ -209,15 +214,21 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       }
     });
 
+    let awardedCount = 0;
+
     for (const badge of badgesToAward) {
-      await supabase.from('user_badges').insert({
+      const { error } = await supabase.from('user_badges').insert({
         user_id: authUser.id,
         badge_type: badge.badge_type,
         milestone: badge.milestone,
       });
+
+      if (!error) awardedCount += 1;
     }
 
-    if (badgesToAward.length > 0) {
+    if (awardedCount > 0) {
+      // Celebrate once per awarding batch (even if multiple badges unlock at once)
+      setConfettiTrigger((t) => t + 1);
       fetchBadges();
     }
   };
@@ -258,6 +269,9 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden bg-background border-border">
+        {/* Confetti celebration when a new badge is awarded */}
+        <ConfettiBurst trigger={confettiTrigger} />
+
         <DialogHeader className="pb-4 border-b border-border">
           <DialogTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Award className="w-5 h-5 text-primary" />
