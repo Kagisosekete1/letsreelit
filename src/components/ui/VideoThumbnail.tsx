@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Play } from 'lucide-react';
+import { Play, BarChart2 } from 'lucide-react';
 
 interface VideoThumbnailProps {
   videoUrl: string;
   thumbnailUrl?: string | null;
   viewsCount?: number;
   onClick?: () => void;
+  onAnalyticsClick?: () => void;
+  showAnalytics?: boolean;
   className?: string;
 }
 
@@ -14,6 +16,8 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   thumbnailUrl,
   viewsCount,
   onClick,
+  onAnalyticsClick,
+  showAnalytics = false,
   className = '',
 }) => {
   const [generatedThumbnail, setGeneratedThumbnail] = useState<string | null>(null);
@@ -129,6 +133,19 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
         <Play className="w-8 h-8 text-white" fill="currentColor" />
       </div>
+
+      {/* Analytics Button */}
+      {showAnalytics && onAnalyticsClick && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAnalyticsClick();
+          }}
+          className="absolute top-1 right-1 p-1.5 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+        >
+          <BarChart2 className="w-4 h-4 text-white" />
+        </button>
+      )}
 
       {/* Views Count */}
       {viewsCount !== undefined && (

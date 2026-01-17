@@ -12,7 +12,8 @@ import {
   Moon,
   Globe,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import AccountInfoModal from './settings/AccountInfoModal';
@@ -20,6 +21,7 @@ import PrivacySecurityModal from './settings/PrivacySecurityModal';
 import NotificationsModal from './settings/NotificationsModal';
 import LanguageModal from './settings/LanguageModal';
 import HelpCenterModal from './settings/HelpCenterModal';
+import CreatorDashboardModal from './CreatorDashboardModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -50,6 +52,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         { icon: User, label: 'Account Information', action: () => setOpenModal('account') },
         { icon: Lock, label: 'Privacy & Security', action: () => setOpenModal('privacy') },
         { icon: Bell, label: 'Notifications', action: () => setOpenModal('notifications') },
+      ],
+    },
+    {
+      title: 'Creator',
+      items: [
+        { icon: DollarSign, label: 'Creator Dashboard & Earnings', action: () => setOpenModal('creator') },
       ],
     },
     {
@@ -125,6 +133,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       <NotificationsModal isOpen={openModal === 'notifications'} onClose={() => setOpenModal(null)} />
       <LanguageModal isOpen={openModal === 'language'} onClose={() => setOpenModal(null)} />
       <HelpCenterModal isOpen={openModal === 'help'} onClose={() => setOpenModal(null)} />
+      <CreatorDashboardModal isOpen={openModal === 'creator'} onClose={() => setOpenModal(null)} />
     </>
   );
 };
