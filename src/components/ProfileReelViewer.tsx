@@ -45,6 +45,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToInitial = useRef(false);
 
   const currentReel = reels[currentIndex];
 
@@ -58,6 +59,24 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   useEffect(() => {
     silenceAll();
   }, [silenceAll]);
+
+  // Scroll to the initial reel on mount (fixes clicking wrong reel issue)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || hasScrolledToInitial.current) return;
+
+    // Wait for container to render
+    requestAnimationFrame(() => {
+      const itemHeight = container.clientHeight;
+      if (itemHeight > 0 && initialIndex > 0) {
+        container.scrollTo({
+          top: initialIndex * itemHeight,
+          behavior: 'instant'
+        });
+      }
+      hasScrolledToInitial.current = true;
+    });
+  }, [initialIndex]);
 
   const fetchFollowing = async () => {
     if (!authUser) return;

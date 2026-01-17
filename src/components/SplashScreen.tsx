@@ -1,4 +1,5 @@
 import React from 'react';
+import muvitLogo from '@/assets/muvit-logo.png';
 
 const SplashScreen: React.FC = () => {
   return (
@@ -25,9 +26,13 @@ const SplashScreen: React.FC = () => {
           {/* Pulsing ring */}
           <div className="absolute inset-0 w-28 h-28 mx-auto rounded-2xl bg-primary/20 animate-ping-slow" />
           
-          {/* Main logo - M letter styled */}
-          <div className="relative mx-auto w-28 h-28 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center animate-bounce-gentle">
-            <span className="text-5xl font-black text-primary-foreground tracking-tight">M</span>
+          {/* Main logo */}
+          <div className="relative mx-auto w-28 h-28 rounded-2xl overflow-hidden shadow-2xl animate-bounce-gentle">
+            <img 
+              src={muvitLogo} 
+              alt="Muv'it Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
 

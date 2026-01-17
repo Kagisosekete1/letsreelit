@@ -120,7 +120,7 @@ serve(async (req) => {
         body = payload.message ? `${senderName}: "${payload.message}"` : `${senderName} sent you a message`;
         break;
       default:
-        title = "Reel'it";
+        title = "Muv'it";
         body = 'You have a new notification';
     }
 
