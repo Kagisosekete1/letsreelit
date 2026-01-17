@@ -761,13 +761,39 @@ const ReelCard: React.FC<ReelCardProps> = ({
           className="w-full h-full object-contain sm:object-cover transition-opacity duration-300"
           style={{ opacity: isActive && isVideoReady ? 1 : 0 }}
           src={videoSrc}
-          preload={isActive ? 'auto' : 'none'}
+          preload={isActive ? 'auto' : 'metadata'}
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
           poster={reel.thumbnailUrl}
-          onLoadedData={() => setIsVideoReady(true)}
-          onCanPlay={() => setIsVideoReady(true)}
+          onLoadedData={() => {
+            setIsVideoReady(true);
+            setIsBuffering(false);
+          }}
+          onCanPlay={() => {
+            setIsVideoReady(true);
+            setIsBuffering(false);
+          }}
+          onLoadedMetadata={() => {
+            // Preload first frame
+            if (videoRef.current && videoRef.current.readyState >= 1) {
+              setIsBuffering(false);
+            }
+          }}
+          onError={(e) => {
+            console.error('Video load error:', e);
+            setIsBuffering(false);
+            // Try to reload the video source
+            if (videoRef.current && reel.videoUrl) {
+              videoRef.current.load();
+            }
+          }}
+          onStalled={() => setIsBuffering(true)}
+          onWaiting={() => setIsBuffering(true)}
+          onPlaying={() => {
+            setIsVideoReady(true);
+            setIsBuffering(false);
+          }}
           onClick={handleVideoTap}
         />
       </div>
