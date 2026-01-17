@@ -285,7 +285,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
         }
 
         try {
-          video.currentTime = 0;
+          // Don't reset currentTime if video has already played (scrolling back)
+          if (video.currentTime === 0 || video.ended) {
+            video.currentTime = 0;
+          }
           await video.play();
           setIsPlaying(true);
         } catch {
@@ -315,7 +318,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     } else {
-      // Release audio focus and stop this video
+      // Release audio focus but keep video state for smooth scroll back
       releaseAudioFocus(reel.id);
       
       try {
@@ -326,7 +329,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
       }
 
       setIsPlaying(false);
-      setIsVideoReady(false);
+      // Don't reset isVideoReady - keep it true so video plays immediately when scrolling back
     }
 
     return () => {
@@ -583,17 +586,26 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    // Store current time to prevent restart
+    // Store current time and playing state to prevent restart
     const currentTime = video.currentTime;
+    const wasPlaying = !video.paused;
 
     const nextMuted = !isMuted;
+    
+    // Update mute state without affecting playback
     video.muted = nextMuted;
     setIsMuted(nextMuted);
 
     // Restore time in case browser resets it
-    if (video.currentTime !== currentTime) {
-      video.currentTime = currentTime;
-    }
+    requestAnimationFrame(() => {
+      if (video.currentTime !== currentTime) {
+        video.currentTime = currentTime;
+      }
+      // Ensure video continues playing if it was playing
+      if (wasPlaying && video.paused) {
+        video.play().catch(() => {});
+      }
+    });
 
     if (!nextMuted) {
       // Request audio focus when unmuting
@@ -739,19 +751,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
       <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
-        {/* Cover the video with the thumbnail until the video can actually render a frame */}
-        {reel.thumbnailUrl ? (
+        {/* Thumbnail shown only when video is not ready - no black/white loader */}
+        {reel.thumbnailUrl && !isVideoReady && (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
-            style={{ opacity: isActive && isVideoReady ? 0 : 1 }}
+            className="absolute inset-0 w-full h-full object-cover"
             draggable={false}
-          />
-        ) : (
-          <div
-            className="absolute inset-0 bg-black transition-opacity duration-300"
-            style={{ opacity: isActive && isVideoReady ? 0 : 1 }}
           />
         )}
 

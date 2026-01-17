@@ -30,6 +30,38 @@ export const sendPushNotification = async (payload: NotificationPayload): Promis
 };
 
 /**
+ * Check if a notification already exists to prevent duplicates
+ */
+const checkNotificationExists = async (
+  userId: string,
+  fromUserId: string,
+  type: string,
+  reelId?: string,
+  timeWindowMs: number = 60000 // 1 minute window
+): Promise<boolean> => {
+  try {
+    const since = new Date(Date.now() - timeWindowMs).toISOString();
+    
+    let query = supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('from_user_id', fromUserId)
+      .eq('type', type)
+      .gte('created_at', since);
+    
+    if (reelId) {
+      query = query.eq('reel_id', reelId);
+    }
+    
+    const { data } = await query.limit(1);
+    return (data && data.length > 0);
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Send notification when someone likes a reel
  */
 export const sendLikeNotification = async (
@@ -39,6 +71,10 @@ export const sendLikeNotification = async (
 ): Promise<void> => {
   // Don't notify if user liked their own reel
   if (reelOwnerId === likerId) return;
+
+  // Check for duplicate notification
+  const exists = await checkNotificationExists(reelOwnerId, likerId, 'like', reelId);
+  if (exists) return;
 
   await sendPushNotification({
     userId: reelOwnerId,
@@ -60,6 +96,10 @@ export const sendCommentNotification = async (
   // Don't notify if user commented on their own reel
   if (reelOwnerId === commenterId) return;
 
+  // Check for duplicate notification (5 second window for comments)
+  const exists = await checkNotificationExists(reelOwnerId, commenterId, 'comment', reelId, 5000);
+  if (exists) return;
+
   await sendPushNotification({
     userId: reelOwnerId,
     fromUserId: commenterId,
@@ -76,6 +116,10 @@ export const sendFollowNotification = async (
   followedUserId: string,
   followerId: string
 ): Promise<void> => {
+  // Check for duplicate notification
+  const exists = await checkNotificationExists(followedUserId, followerId, 'follow');
+  if (exists) return;
+
   await sendPushNotification({
     userId: followedUserId,
     fromUserId: followerId,

@@ -7,6 +7,7 @@ import { Mail, Lock, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { authSchema, signUpSchema } from '@/lib/validations';
+import muvitLogo from '@/assets/muvit-logo.png';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -130,10 +131,14 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
-        {/* Logo */}
+        {/* Logo with bounce animation */}
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto bg-primary rounded-2xl flex items-center justify-center font-bold text-primary-foreground text-3xl shadow-lg">
-            M
+          <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-lg animate-bounce-gentle">
+            <img 
+              src={muvitLogo} 
+              alt="Muv'it Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-4xl font-bold text-foreground" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800 }}>
             Muv'it
