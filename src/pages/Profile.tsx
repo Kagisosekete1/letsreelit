@@ -13,6 +13,7 @@ import FollowersModal from '@/components/FollowersModal';
 import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
 import MilestoneBadges from '@/components/MilestoneBadges';
+import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -50,6 +51,7 @@ const Profile = () => {
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
   const [reelsLoading, setReelsLoading] = useState(true);
+  const [analyticsReel, setAnalyticsReel] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     if (authUser) {
@@ -98,6 +100,7 @@ const Profile = () => {
 
   const handleBack = () => navigate('/');
   const handleReelClick = (reels: ReelData[], index: number) => { setViewingReelsList(reels); setSelectedReelIndex(index); };
+  const handleAnalyticsClick = (reel: ReelData) => { setAnalyticsReel({ id: reel.id, title: reel.title }); };
 
   if (loading) {
     return (
@@ -165,11 +168,11 @@ const Profile = () => {
 
         {contentTab === 'reels' && (reelsLoading ? <ProfileGridSkeleton count={6} /> : userReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No Muv'z yet</p><p className="text-sm">Your Muv'z will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first Muv</Button></div></div>
-        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{userReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(userReels, index)} />)}</div>)}
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{userReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(userReels, index)} showAnalytics={true} onAnalyticsClick={() => handleAnalyticsClick(reel)} />)}</div>)}
 
         {contentTab === 'tutorials' && (tutorialReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No tutorials yet</p><p className="text-sm">Your tutorials will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first tutorial</Button></div></div>
-        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{tutorialReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(tutorialReels, index)} />)}</div>)}
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{tutorialReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(tutorialReels, index)} showAnalytics={true} onAnalyticsClick={() => handleAnalyticsClick(reel)} />)}</div>)}
 
         {contentTab === 'saved' && (savedReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved Muv'z</p><p className="text-sm">Your saved Muv'z will appear here</p></div></div>
@@ -188,6 +191,12 @@ const Profile = () => {
       <FollowersModal isOpen={followingModal} onClose={() => setFollowingModal(false)} userId={authUser?.id || ''} type="following" count={currentUser.stats?.following ?? 0} />
       <ReelsModal isOpen={reelsModal} onClose={() => setReelsModal(false)} userId={authUser?.id || ''} count={currentUser.stats?.reels ?? 0} isOwnProfile={true} />
       <MilestoneBadges isOpen={badgesModal} onClose={() => setBadgesModal(false)} userId={authUser?.id} />
+      <VideoAnalyticsModal 
+        isOpen={analyticsReel !== null} 
+        onClose={() => setAnalyticsReel(null)} 
+        reelId={analyticsReel?.id || ''} 
+        reelTitle={analyticsReel?.title || ''} 
+      />
     </div>
   );
 };
