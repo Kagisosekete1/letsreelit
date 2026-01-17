@@ -35,10 +35,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const registeredVideos = useRef<Map<string, HTMLVideoElement>>(new Map());
   
   // Global mute state - DEFAULT TO FALSE (sound ON)
-  const [isMuted, setIsMutedState] = useState(() => {
-    const saved = sessionStorage.getItem('reelAudioMuted');
-    return saved === 'true';
-  });
+  const [isMuted, setIsMutedState] = useState(false);
 
   // Persist mute preference
   const setIsMuted = useCallback((muted: boolean) => {

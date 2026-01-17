@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -54,6 +54,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState(0);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
+  const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('user');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -375,17 +377,44 @@ const startCamera = async () => {
       stream.getTracks().forEach(track => track.stop());
     }
     try {
+      const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: isCameraOn ? 'environment' : 'user' },
+        video: { 
+          facingMode: { ideal: newFacingMode },
+          width: { ideal: 1080 }, 
+          height: { ideal: 1920 } 
+        },
         audio: true,
       });
       setStream(newStream);
+      setCurrentFacingMode(newFacingMode);
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
       }
     } catch (error) {
       console.error('Error flipping camera:', error);
+      toast({
+        title: "Camera switch failed",
+        description: "Could not switch camera. Please try again.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleDeleteLive = async () => {
+    if (liveSessionId) {
+      await supabase
+        .from('live_streams')
+        .delete()
+        .eq('session_id', liveSessionId);
+      
+      toast({
+        title: "Live deleted",
+        description: "Your live stream has been removed.",
+      });
+    }
+    setShowDeleteConfirm(false);
+    handleClose();
   };
 
   const sendComment = () => {
@@ -519,13 +548,45 @@ const startCamera = async () => {
                   <p className="font-medium text-sm truncate">{liveTitle}</p>
                 </div>
 
-                {/* Close button */}
-                <Button 
-                  className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 h-10"
-                  onClick={handleClose}
-                >
-                  Done
-                </Button>
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <Button 
+                    className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 h-10"
+                    onClick={handleClose}
+                  >
+                    Done
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="rounded-xl h-10 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+
+                {/* Delete confirmation */}
+                {showDeleteConfirm && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 space-y-2">
+                    <p className="text-sm text-center">Delete this live stream permanently?</p>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline"
+                        className="flex-1 h-8 text-sm"
+                        onClick={() => setShowDeleteConfirm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        className="flex-1 h-8 text-sm bg-red-500 hover:bg-red-600"
+                        onClick={handleDeleteLive}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -577,14 +638,26 @@ const startCamera = async () => {
                 </div>
               </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                className="bg-white/10 backdrop-blur-md text-white hover:bg-red-500/80 rounded-full w-10 h-10 border border-white/10"
-                onClick={handleEndLive}
-              >
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-red-500/80 backdrop-blur-md text-white hover:bg-red-600 rounded-full w-10 h-10 border border-white/10"
+                  onClick={handleEndLive}
+                  title="End Live"
+                >
+                  <Power className="w-5 h-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-white/10 backdrop-blur-md text-white hover:bg-white/20 rounded-full w-10 h-10 border border-white/10"
+                  onClick={onClose}
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
             
             {/* Title with subtle background */}
