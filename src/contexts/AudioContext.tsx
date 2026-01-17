@@ -43,19 +43,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sessionStorage.setItem('reelAudioMuted', String(muted));
   }, []);
 
-  // Force mute and pause a single media element
+  // Force mute and pause a single media element (do NOT reset currentTime; we want instant resume when user scrolls back)
   const forceSilenceElement = useCallback((el: HTMLMediaElement) => {
     try {
       el.pause();
       el.muted = true;
       el.volume = 0;
-      if ('currentTime' in el) {
-        el.currentTime = 0;
-      }
     } catch {
       // ignore
     }
   }, []);
+
 
   // Silence all media elements except the active one
   const silenceAllExcept = useCallback((exceptElement?: HTMLVideoElement) => {
@@ -145,16 +143,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [isMuted, silenceAllExcept]);
 
-  // Release audio focus
+  // Release audio focus (pause + mute, but keep src + currentTime so scrolling back is instant)
   const releaseAudioFocus = useCallback((reelId: string) => {
     const video = registeredVideos.current.get(reelId);
     if (video) {
-      forceSilenceElement(video);
       try {
-        video.removeAttribute('src');
-        video.load();
+        video.pause();
+        video.muted = true;
+        video.volume = 0;
       } catch {
         // ignore
+      }
+
+      // If the element is no longer in the DOM (unmounted), drop the reference.
+      if (!video.isConnected) {
+        registeredVideos.current.delete(reelId);
       }
     }
 
@@ -162,9 +165,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       activeReelIdRef.current = null;
       activeVideoRef.current = null;
     }
+  }, []);
 
-    registeredVideos.current.delete(reelId);
-  }, [forceSilenceElement]);
 
   // Check if a reel has audio focus
   const hasAudioFocus = useCallback((reelId: string) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Power } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -47,7 +47,11 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [hasLiked, setHasLiked] = useState(false);
+  const [isEndingLive, setIsEndingLive] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const isOwner = !!authUser && authUser.id === liveStream.user_id;
+
 
   // When opening the watcher modal, hard-stop any reel audio playing behind it.
   useEffect(() => {
@@ -70,8 +74,8 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        // Count all users in the channel
-        const count = Object.keys(state).length;
+        const rawCount = Object.keys(state).length;
+        const count = isOwner ? Math.max(0, rawCount - 1) : rawCount;
         setViewerCount(count);
       })
       .on('broadcast', { event: 'like' }, () => {
@@ -104,7 +108,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [isOpen, liveStream.session_id, authUser?.id]);
+  }, [isOpen, liveStream.session_id, authUser?.id, isOwner]);
 
   const handleLike = () => {
     if (!channelRef.current || hasLiked) return;
@@ -178,6 +182,39 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     onClose();
   };
 
+  const handleEndLive = async () => {
+    if (!isOwner || !liveStream.session_id || isEndingLive) return;
+    setIsEndingLive(true);
+
+    try {
+      await supabase
+        .from('live_streams')
+        .update({
+          is_active: false,
+          ended_at: new Date().toISOString(),
+          viewer_count: viewerCount,
+          likes_count: likeCount,
+        })
+        .eq('session_id', liveStream.session_id);
+
+      toast({
+        title: 'Live ended',
+        description: 'Your live has ended.',
+      });
+
+      handleClose();
+    } catch (e) {
+      console.error('Error ending live:', e);
+      toast({
+        title: 'Failed to end live',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsEndingLive(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
@@ -212,15 +249,33 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
                   <Users className="w-3 h-3 text-white" />
                   <span className="text-white text-sm">{viewerCount}</span>
                 </div>
+                <div className="bg-black/50 px-3 py-1 rounded-full flex items-center gap-1">
+                  <Heart className="w-3 h-3 text-white" />
+                  <span className="text-white text-sm">{likeCount}</span>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="bg-black/50 text-white hover:bg-black/70 rounded-full"
-                onClick={handleClose}
-              >
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="bg-red-500/80 text-white hover:bg-red-600 rounded-full"
+                    onClick={handleEndLive}
+                    disabled={isEndingLive}
+                    title="End Live"
+                  >
+                    <Power className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="bg-black/50 text-white hover:bg-black/70 rounded-full"
+                  onClick={handleClose}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Stream Title */}
