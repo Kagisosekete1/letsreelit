@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play, Edit2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import { useAudio } from '@/contexts/AudioContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
 import DuetModal from '@/components/DuetModal';
+import EditReelModal from '@/components/EditReelModal';
 import ProfileLink from '@/components/ui/ProfileLink';
 import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
 import { sendLikeNotification } from '@/services/notificationService';
@@ -192,6 +193,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDuetModal, setShowDuetModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [realtimeLiker, setRealtimeLiker] = useState<{ avatarUrl: string; username: string } | null>(null);
   const [progress, setProgress] = useState(0);
@@ -202,6 +204,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const isHoldingRef = useRef(false);
   const [videoSrc, setVideoSrc] = useState<string | undefined>(reel.videoUrl);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [reelTitle, setReelTitle] = useState(reel.title);
+  const [reelDescription, setReelDescription] = useState(reel.description || '');
 
   // Check if user has liked/saved this reel
   useEffect(() => {
@@ -579,9 +583,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    // Store current time to prevent restart
+    const currentTime = video.currentTime;
+
     const nextMuted = !isMuted;
     video.muted = nextMuted;
     setIsMuted(nextMuted);
+
+    // Restore time in case browser resets it
+    if (video.currentTime !== currentTime) {
+      video.currentTime = currentTime;
+    }
 
     if (!nextMuted) {
       // Request audio focus when unmuting
@@ -591,7 +603,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   const handleLike = async () => {
     if (!authUser) {
-      toast({ title: 'Sign in required', description: 'Please sign in to like reels' });
+      toast({ title: 'Sign in required', description: "Please sign in to like Muv'z" });
       return;
     }
 
@@ -625,7 +637,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   const handleSave = async () => {
     if (!authUser) {
-      toast({ title: 'Sign in required', description: 'Please sign in to save reels' });
+      toast({ title: 'Sign in required', description: "Please sign in to save Muv'z" });
       return;
     }
 
@@ -634,10 +646,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
     if (newIsSaved) {
       await supabase.from('saved_reels').insert({ user_id: authUser.id, reel_id: reel.id });
-      toast({ title: 'Saved', description: 'Reel saved to your collection' });
+      toast({ title: 'Saved', description: "Muv saved to your collection" });
     } else {
       await supabase.from('saved_reels').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
-      toast({ title: 'Removed', description: 'Reel removed from saved' });
+      toast({ title: 'Removed', description: "Muv removed from saved" });
     }
   };
 
@@ -698,10 +710,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const handleDelete = async () => {
     const { error } = await supabase.from('reels').delete().eq('id', reel.id);
     if (!error) {
-      toast({ title: 'Reel deleted', description: 'Your reel has been removed.' });
+      toast({ title: 'Muv deleted', description: 'Your Muv has been removed.' });
       onDelete?.(reel.id);
     } else {
-      toast({ title: 'Error', description: 'Failed to delete reel.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to delete Muv.', variant: 'destructive' });
     }
   };
 
@@ -836,12 +848,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
             </div>
             {/* Title/Caption */}
             <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
-              {renderTextWithHashtags(reel.title, navigate)}
+              {renderTextWithHashtags(reelTitle, navigate)}
             </p>
             {/* Description */}
-            {reel.description && (
+            {reelDescription && (
               <p className="text-white/90 text-xs sm:text-sm line-clamp-2 drop-shadow-md break-words">
-                {renderTextWithHashtags(reel.description, navigate)}
+                {renderTextWithHashtags(reelDescription, navigate)}
               </p>
             )}
           </div>
@@ -968,10 +980,16 @@ const ReelCard: React.FC<ReelCardProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl">
               {isOwner && (
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Reel
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Muv
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Muv
+                  </DropdownMenuItem>
+                </>
               )}
               {!isOwner && (
                 <>
@@ -1026,6 +1044,31 @@ const ReelCard: React.FC<ReelCardProps> = ({
             username: reel.user.username,
             avatarUrl: reel.user.avatarUrl,
           },
+        }}
+      />
+
+      {/* Edit Reel Modal */}
+      <EditReelModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        reel={{
+          id: reel.id,
+          title: reelTitle,
+          description: reelDescription,
+        }}
+        onUpdate={() => {
+          // Refresh the title/description from DB
+          supabase
+            .from('reels')
+            .select('title, description')
+            .eq('id', reel.id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                setReelTitle(data.title);
+                setReelDescription(data.description || '');
+              }
+            });
         }}
       />
     </div>

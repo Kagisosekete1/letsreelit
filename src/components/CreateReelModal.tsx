@@ -59,7 +59,7 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
           } else {
             toast({
               title: "Invalid orientation",
-              description: "Please upload a portrait reel (vertical)",
+              description: "Please upload a portrait Muv (vertical)",
               variant: "destructive",
             });
           }
@@ -103,7 +103,7 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     {
       icon: Upload,
       title: 'Upload from Gallery',
-      description: 'Choose a portrait reel from your device',
+      description: 'Choose a portrait Muv from your device',
       color: 'bg-primary',
       action: handleUpload,
     },
@@ -142,12 +142,12 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Create Reel</DialogTitle>
+          <DialogTitle>Create Muv</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-3 py-4">
           <p className="text-sm text-muted-foreground px-1">
-            Portrait reels only (vertical orientation)
+            Portrait Muv'z only (vertical orientation)
           </p>
           
           {options.map((option, idx) => (

@@ -141,7 +141,7 @@ const Profile = () => {
               </Button>
               <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg" onClick={() => setReelsModal(true)}>
                 <p className="text-lg font-bold">{currentUser.stats?.reels ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Reels</p>
+                <p className="text-xs text-muted-foreground">Muv'z</p>
               </Button>
             </div>
             
@@ -164,7 +164,7 @@ const Profile = () => {
         </div>
 
         {contentTab === 'reels' && (reelsLoading ? <ProfileGridSkeleton count={6} /> : userReels.length === 0 ? (
-          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No reels yet</p><p className="text-sm">Your reels will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first reel</Button></div></div>
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No Muv'z yet</p><p className="text-sm">Your Muv'z will appear here</p><Button className="mt-4 rounded-xl" onClick={() => setIsCreateReelOpen(true)}>Create your first Muv</Button></div></div>
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{userReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(userReels, index)} />)}</div>)}
 
         {contentTab === 'tutorials' && (tutorialReels.length === 0 ? (
@@ -172,7 +172,7 @@ const Profile = () => {
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{tutorialReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(tutorialReels, index)} />)}</div>)}
 
         {contentTab === 'saved' && (savedReels.length === 0 ? (
-          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved reels</p><p className="text-sm">Your saved reels will appear here</p></div></div>
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved Muv'z</p><p className="text-sm">Your saved Muv'z will appear here</p></div></div>
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{savedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(savedReels, index)} />)}</div>)}
       </div>
 

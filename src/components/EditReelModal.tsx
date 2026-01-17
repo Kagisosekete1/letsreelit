@@ -38,7 +38,7 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
     if (!title.trim()) {
       toast({
         title: 'Title required',
-        description: 'Please enter a title for your reel.',
+        description: 'Please enter a title for your Muv.',
         variant: 'destructive',
       });
       return;
@@ -58,8 +58,8 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
       if (error) throw error;
 
       toast({
-        title: 'Reel updated',
-        description: 'Your reel has been updated successfully.',
+        title: 'Muv updated',
+        description: 'Your Muv has been updated successfully.',
       });
 
       onUpdate?.();
@@ -67,7 +67,7 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
     } catch (error: any) {
       toast({
         title: 'Update failed',
-        description: error.message || 'Could not update reel.',
+        description: error.message || 'Could not update Muv.',
         variant: 'destructive',
       });
     } finally {
@@ -85,7 +85,7 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border rounded-3xl">
         <DialogHeader className="pb-4 border-b border-border">
-          <DialogTitle className="text-xl font-semibold text-foreground">Edit Reel</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-foreground">Edit Muv</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -97,7 +97,7 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter reel title"
+              placeholder="Enter Muv title"
               className="rounded-xl"
               maxLength={100}
             />
@@ -126,7 +126,7 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
 
           <div className="bg-secondary/30 rounded-xl p-3">
             <p className="text-xs text-muted-foreground">
-              💡 Tip: Use hashtags like #dance #challenge to help others discover your reel.
+              💡 Tip: Use hashtags like #dance #challenge to help others discover your Muv.
             </p>
           </div>
         </div>

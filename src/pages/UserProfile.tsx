@@ -435,7 +435,7 @@ const UserProfile = () => {
                 onClick={() => setContentTab('reels')}
               >
                 <p className="text-lg font-bold">{userReels.length}</p>
-                <p className="text-xs text-muted-foreground">Reels</p>
+                <p className="text-xs text-muted-foreground">Muv'z</p>
               </Button>
             </div>
 
@@ -491,8 +491,8 @@ const UserProfile = () => {
           userReels.length === 0 ? (
             <div className="px-4 py-8">
               <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium mb-2">No reels yet</p>
-                <p className="text-sm">This user hasn't posted any reels</p>
+                <p className="text-lg font-medium mb-2">No Muv'z yet</p>
+                <p className="text-sm">This user hasn't posted any Muv'z</p>
               </div>
             </div>
           ) : (
