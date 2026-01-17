@@ -1,72 +1,71 @@
 import React from 'react';
-import { Music } from 'lucide-react';
 
 const SplashScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black z-50">
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-primary/20 rounded-full animate-float"
+            className="absolute w-2 h-2 bg-primary/30 rounded-full animate-float"
             style={{
-              left: `${15 + i * 15}%`,
-              top: `${20 + (i % 3) * 25}%`,
-              animationDelay: `${i * 0.3}s`,
-              animationDuration: `${3 + i * 0.5}s`,
+              left: `${10 + i * 12}%`,
+              top: `${15 + (i % 4) * 20}%`,
+              animationDelay: `${i * 0.25}s`,
+              animationDuration: `${3 + i * 0.4}s`,
             }}
           />
         ))}
       </div>
 
-      <div className="text-center space-y-6 px-8 animate-fade-in">
+      <div className="text-center space-y-8 px-8 animate-fade-in">
         {/* Animated logo container */}
         <div className="relative mx-auto">
           {/* Pulsing ring */}
-          <div className="absolute inset-0 w-24 h-24 mx-auto rounded-2xl bg-primary/30 animate-ping-slow" />
+          <div className="absolute inset-0 w-28 h-28 mx-auto rounded-2xl bg-primary/20 animate-ping-slow" />
           
-          {/* Main logo */}
-          <div className="relative mx-auto w-24 h-24 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center animate-bounce-gentle">
-            <Music className="w-12 h-12 text-primary-foreground animate-pulse" />
+          {/* Main logo - M letter styled */}
+          <div className="relative mx-auto w-28 h-28 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary via-primary to-primary/80 flex items-center justify-center animate-bounce-gentle">
+            <span className="text-5xl font-black text-primary-foreground tracking-tight">M</span>
           </div>
         </div>
 
         {/* Brand name with staggered animation */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent animate-scale-in">
             Muv'it
           </h1>
-          <p className="text-muted-foreground text-base font-medium animate-fade-in-delayed">
+          <p className="text-white/60 text-base font-medium animate-fade-in-delayed">
             Don't scroll it. Muv'it.
           </p>
         </div>
 
         {/* Animated loading bar */}
-        <div className="w-32 h-1.5 mx-auto bg-secondary rounded-full overflow-hidden">
+        <div className="w-40 h-1.5 mx-auto bg-white/10 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full animate-loading-bar" />
         </div>
       </div>
 
       <style>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
-          50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.4; }
+          50% { transform: translateY(-25px) rotate(180deg); opacity: 0.8; }
         }
         .animate-float { animation: float 4s ease-in-out infinite; }
         
         @keyframes ping-slow {
-          0% { transform: scale(1); opacity: 0.3; }
-          50% { transform: scale(1.15); opacity: 0.1; }
-          100% { transform: scale(1); opacity: 0.3; }
+          0% { transform: scale(1); opacity: 0.2; }
+          50% { transform: scale(1.2); opacity: 0.05; }
+          100% { transform: scale(1); opacity: 0.2; }
         }
         .animate-ping-slow { animation: ping-slow 2s ease-in-out infinite; }
         
         @keyframes bounce-gentle {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+          50% { transform: translateY(-10px); }
         }
-        .animate-bounce-gentle { animation: bounce-gentle 2s ease-in-out infinite; }
+        .animate-bounce-gentle { animation: bounce-gentle 2.5s ease-in-out infinite; }
         
         @keyframes fade-in-delayed {
           0% { opacity: 0; transform: translateY(10px); }

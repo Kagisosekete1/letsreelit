@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -247,6 +247,20 @@ const Auth = () => {
             >
               {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
             </Button>
+          </div>
+
+          {/* Terms of Use */}
+          <div className="text-center pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              By continuing, you agree to our{' '}
+              <Link to="/terms" className="text-primary hover:underline">
+                Terms of Use
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>
+            </p>
           </div>
         </div>
       </div>

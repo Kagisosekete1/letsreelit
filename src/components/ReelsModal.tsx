@@ -114,7 +114,7 @@ const ReelsModal: React.FC<ReelsModalProps> = ({ isOpen, onClose, userId, count,
       <DialogContent className="sm:max-w-[500px] max-h-[80vh]">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Reels</DialogTitle>
+            <DialogTitle>Muv'z</DialogTitle>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-5 w-5" />
             </Button>
@@ -131,7 +131,7 @@ const ReelsModal: React.FC<ReelsModalProps> = ({ isOpen, onClose, userId, count,
               <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
                 <Film className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-muted-foreground">No reels yet</p>
+              <p className="text-muted-foreground">No Muv'z yet</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
