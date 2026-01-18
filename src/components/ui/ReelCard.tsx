@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play, Edit2 } from 'lucide-react';
@@ -736,6 +736,39 @@ const ReelCard: React.FC<ReelCardProps> = ({
     return num.toString();
   };
 
+  // De-dupe noisy captions that sometimes repeat username/title across devices
+  const displayTitle = useMemo(() => {
+    const username = (reel.user.username || '').trim();
+    const handle = username ? `@${username}`.toLowerCase() : '';
+
+    const raw = (reelTitle || '').trim();
+    if (!raw) return '';
+
+    const withoutLeadingHandle = handle && raw.toLowerCase().startsWith(handle)
+      ? raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '')
+      : raw;
+
+    return withoutLeadingHandle;
+  }, [reelTitle, reel.user.username]);
+
+  const displayDescription = useMemo(() => {
+    const username = (reel.user.username || '').trim();
+    const handle = username ? `@${username}`.toLowerCase() : '';
+
+    const raw = (reelDescription || '').trim();
+    if (!raw) return '';
+
+    const withoutLeadingHandle = handle && raw.toLowerCase().startsWith(handle)
+      ? raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '')
+      : raw;
+
+    // If description is effectively the same as the title, hide it.
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (displayTitle && norm(withoutLeadingHandle) === norm(displayTitle)) return '';
+
+    return withoutLeadingHandle;
+  }, [reelDescription, reel.user.username, displayTitle]);
+
   // Button size based on variant
   const buttonSize = variant === 'profile' ? 'w-9 h-9' : 'w-9 h-9';
   const iconSize = variant === 'profile' ? 'w-4 h-4' : 'w-5 h-5';
@@ -888,13 +921,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
               )}
             </div>
             {/* Title/Caption */}
-            <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
-              {renderTextWithHashtags(reelTitle, navigate)}
-            </p>
+            {displayTitle && (
+              <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
+                {renderTextWithHashtags(displayTitle, navigate)}
+              </p>
+            )}
             {/* Description */}
-            {reelDescription && (
+            {displayDescription && (
               <p className="text-white/90 text-xs sm:text-sm line-clamp-2 drop-shadow-md break-words">
-                {renderTextWithHashtags(reelDescription, navigate)}
+                {renderTextWithHashtags(displayDescription, navigate)}
               </p>
             )}
           </div>

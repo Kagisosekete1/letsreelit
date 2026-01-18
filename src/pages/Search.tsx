@@ -352,10 +352,17 @@ const Search = () => {
 
   // Scroll to initial reel when opening viewer
   useEffect(() => {
-    if (selectedReelIndex !== null && viewerContainerRef.current) {
-      const itemHeight = viewerContainerRef.current.clientHeight;
-      viewerContainerRef.current.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
-    }
+    if (selectedReelIndex === null || !viewerContainerRef.current) return;
+
+    const container = viewerContainerRef.current;
+
+    // Ensure index and scroll position agree (prevents "audio plays but video is hidden")
+    setCurrentViewerIndex(selectedReelIndex);
+
+    requestAnimationFrame(() => {
+      const itemHeight = container.clientHeight;
+      container.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'auto' });
+    });
   }, [selectedReelIndex]);
 
   // Reel Viewer Modal with vertical scrolling
@@ -373,7 +380,7 @@ const Search = () => {
 
         <div
           ref={viewerContainerRef}
-          className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+          className="h-[100dvh] overflow-y-auto snap-y snap-mandatory scrollbar-hide"
           onScroll={handleViewerScroll}
         >
           {selectedReelList.map((reel, index) => {
@@ -402,7 +409,7 @@ const Search = () => {
             return (
               <div
                 key={reel.id}
-                className="h-full w-full snap-start snap-always"
+                className="h-[100dvh] w-full snap-start snap-always overflow-hidden"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <ReelCard
