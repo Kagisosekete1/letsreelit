@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, TrendingUp, Flame, Eye, Heart, Share2, Loader2, X } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Flame, Eye, Heart, Share2, Loader2, X, Clock, Play, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -9,6 +9,7 @@ import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import ReelCard from '@/components/ui/ReelCard';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
+import { useContinueWatching } from '@/hooks/useContinueWatching';
 
 interface TrendingReel {
   id: string;
@@ -42,6 +43,7 @@ const Trending = () => {
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [currentViewerIndex, setCurrentViewerIndex] = useState(0);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const { continueWatching, getResumeTime } = useContinueWatching();
 
   const handleRefresh = useCallback(async () => {
     await fetchTrendingReels();
@@ -284,6 +286,66 @@ const Trending = () => {
             <h1 className="text-xl font-bold">Trending Muv'z</h1>
           </div>
         </div>
+
+        {/* Continue Watching Section */}
+        {continueWatching.length > 0 && (
+          <div className="px-4 mb-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Clock className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Continue Watching</h2>
+            </div>
+            <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+              {continueWatching.map((item) => (
+                <div 
+                  key={item.reelId} 
+                  className="flex-shrink-0 w-32 relative cursor-pointer group"
+                  onClick={() => {
+                    const index = trendingReels.findIndex(r => r.id === item.reelId);
+                    if (index >= 0) {
+                      handleReelClick(index);
+                    }
+                  }}
+                >
+                  <div className="relative aspect-[9/16] bg-secondary rounded-xl overflow-hidden">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-secondary flex items-center justify-center">
+                        <Video className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    {/* Progress bar */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                      <div 
+                        className="h-full bg-primary"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+                        <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
+                      </div>
+                    </div>
+                  </div>
+                  {item.profile && (
+                    <div className="flex items-center space-x-1 mt-2">
+                      <img 
+                        src={item.profile.avatar_url || ''} 
+                        alt={item.profile.username}
+                        className="w-4 h-4 rounded-full"
+                      />
+                      <span className="text-xs text-muted-foreground truncate">@{item.profile.username}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         <div className="px-4 mb-6">

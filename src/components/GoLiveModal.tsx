@@ -366,6 +366,68 @@ const checkCameraPermissions = async (): Promise<boolean> => {
       return;
     }
 
+    // START CAMERA FIRST - before anything else
+    // This ensures camera is working before we create the live stream
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: { 
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 } 
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      setCurrentFacingMode('user');
+
+      // Start recording
+      let mimeType = 'video/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = '';
+        }
+      }
+
+      const options = mimeType ? { mimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(mediaStream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      recordedChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(1000);
+
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      
+      let errorMessage = "Please allow camera and microphone access to go live.";
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = "Camera/microphone access was denied. Please enable in your browser or device settings.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "No camera or microphone found on this device.";
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = "Camera is in use by another app. Please close other apps using the camera.";
+      }
+      
+      toast({
+        title: "Camera access required",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return; // Don't proceed if camera fails
+    }
+
     // Check for existing active live streams from this user and end them
     const { data: existingLives } = await supabase
       .from('live_streams')
@@ -374,7 +436,6 @@ const checkCameraPermissions = async (): Promise<boolean> => {
       .eq('is_active', true);
 
     if (existingLives && existingLives.length > 0) {
-      // End all existing active streams
       await supabase
         .from('live_streams')
         .update({ is_active: false, ended_at: new Date().toISOString() })
@@ -406,7 +467,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
       return;
     }
 
-    await startCamera();
+    // Move to live step - video will attach in useEffect
     setStep('live');
     setIsLive(true);
     setLiveStartTime(new Date());
@@ -702,6 +763,16 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     );
   }
 
+  // Attach stream to video element when step becomes 'live'
+  useEffect(() => {
+    if (step === 'live' && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((err) => {
+        console.log('Video play error (expected on some devices):', err);
+      });
+    }
+  }, [step, stream]);
+
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
@@ -709,13 +780,14 @@ const checkCameraPermissions = async (): Promise<boolean> => {
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
-          {/* Video Preview with gradient overlay */}
+          {/* Video Preview - camera feed */}
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            muted
+            muted={false}
             className="w-full h-full object-cover"
+            style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
           />
           
           {/* Gradient overlays for modern look */}

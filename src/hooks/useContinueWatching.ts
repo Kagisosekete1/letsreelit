@@ -6,7 +6,9 @@ interface WatchProgress {
   title: string;
   thumbnailUrl: string | null;
   videoUrl: string;
-  progress: number; // 0-100
+  progress: number; // 0-100 percentage
+  currentTime: number; // actual seconds into the video
+  duration: number; // total duration in seconds
   lastWatched: number; // timestamp
   userId: string;
   profile?: {
@@ -60,6 +62,8 @@ export const useContinueWatching = () => {
   const updateProgress = useCallback((
     reelId: string,
     progress: number,
+    currentTime: number,
+    duration: number,
     reelData: {
       title: string;
       thumbnailUrl: string | null;
@@ -87,6 +91,8 @@ export const useContinueWatching = () => {
         thumbnailUrl: reelData.thumbnailUrl,
         videoUrl: reelData.videoUrl,
         progress,
+        currentTime,
+        duration,
         lastWatched: Date.now(),
         userId: reelData.userId,
         profile: reelData.profile,
@@ -107,6 +113,11 @@ export const useContinueWatching = () => {
     });
   }, [authUser]);
 
+  const getResumeTime = useCallback((reelId: string): number => {
+    const item = continueWatching.find(w => w.reelId === reelId);
+    return item?.currentTime || 0;
+  }, [continueWatching]);
+
   const removeFromContinueWatching = useCallback((reelId: string) => {
     setContinueWatching(prev => prev.filter(item => item.reelId !== reelId));
   }, []);
@@ -121,6 +132,7 @@ export const useContinueWatching = () => {
   return {
     continueWatching,
     updateProgress,
+    getResumeTime,
     removeFromContinueWatching,
     clearAll,
   };

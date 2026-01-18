@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play, Edit2 } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play, Edit2, Maximize } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -477,6 +477,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       (navigator as Navigator & { vibrate?: (pattern: number | number[]) => boolean }).vibrate?.(20);
     }
+  };
+
+  // Format seconds to MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Hold-to-clear screen: hold 0.5s to hide UI; when hidden, hold 3s to show UI again
@@ -1095,10 +1102,60 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </DropdownMenu>
         </div>
 
-        {/* Views Count - Bottom */}
-        <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
-          <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
-        </div>
+        {/* Progress bar + Fullscreen - Only for home variant */}
+        {variant === 'home' && (
+          <div className="absolute bottom-4 left-3 right-3 z-10 flex items-center gap-2">
+            {/* Time Display */}
+            <span className="text-[10px] text-white/80 font-medium min-w-[32px]">
+              {videoRef.current ? formatTime(videoRef.current.currentTime) : '0:00'}
+            </span>
+            
+            {/* Progress Bar */}
+            <div 
+              className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                const video = videoRef.current;
+                if (!video) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percent = clickX / rect.width;
+                video.currentTime = percent * video.duration;
+              }}
+            >
+              <div 
+                className="h-full bg-white rounded-full transition-all duration-100"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            
+            {/* Fullscreen Button */}
+            <button
+              className="p-1 rounded-full bg-black/30 hover:bg-black/50 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                const video = videoRef.current;
+                if (!video) return;
+                if (video.requestFullscreen) {
+                  video.requestFullscreen();
+                } else if ((video as any).webkitRequestFullscreen) {
+                  (video as any).webkitRequestFullscreen();
+                } else if ((video as any).webkitEnterFullscreen) {
+                  (video as any).webkitEnterFullscreen();
+                }
+              }}
+            >
+              <Maximize className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        )}
+
+        {/* Views Count - Only for non-home variant */}
+        {variant !== 'home' && (
+          <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
+            <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
+          </div>
+        )}
       </div>
 
 
