@@ -352,19 +352,21 @@ const Search = () => {
     }
   }, [currentViewerIndex, selectedReelList.length]);
 
-  // Scroll to initial reel when opening viewer
+  // Scroll to initial reel when opening viewer (deterministic to avoid playing a different Muv)
   useEffect(() => {
     if (selectedReelIndex === null || !viewerContainerRef.current) return;
 
     const container = viewerContainerRef.current;
 
-    // Ensure index and scroll position agree (prevents "audio plays but video is hidden")
+    // Ensure index and scroll position agree
     setCurrentViewerIndex(selectedReelIndex);
 
-    requestAnimationFrame(() => {
+    const t = window.setTimeout(() => {
       const itemHeight = container.clientHeight;
-      container.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'auto' });
-    });
+      container.scrollTop = selectedReelIndex * itemHeight;
+    }, 0);
+
+    return () => window.clearTimeout(t);
   }, [selectedReelIndex]);
 
   // Reel Viewer Modal with vertical scrolling

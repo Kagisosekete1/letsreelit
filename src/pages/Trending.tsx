@@ -186,20 +186,23 @@ const Trending = () => {
     }
   }, [currentViewerIndex, trendingReels.length]);
 
-  // Scroll to initial reel when opening viewer
+  // Scroll to initial reel when opening viewer (must be deterministic or audio/video mismatch happens)
   useEffect(() => {
     if (selectedReelIndex === null || !viewerContainerRef.current) return;
-    
+
+    const container = viewerContainerRef.current;
+
     // Sync viewer index with selected index
     setCurrentViewerIndex(selectedReelIndex);
-    
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => {
-      const container = viewerContainerRef.current;
-      if (!container) return;
+
+    // Ensure DOM layout is settled before computing height/scrolling.
+    // Using scrollTop avoids non-standard scrollTo behaviors (e.g. "instant").
+    const t = window.setTimeout(() => {
       const itemHeight = container.clientHeight;
-      container.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
-    });
+      container.scrollTop = selectedReelIndex * itemHeight;
+    }, 0);
+
+    return () => window.clearTimeout(t);
   }, [selectedReelIndex]);
   if (selectedReelIndex !== null) {
     return (

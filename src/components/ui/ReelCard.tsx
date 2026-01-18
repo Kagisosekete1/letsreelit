@@ -207,6 +207,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [reelTitle, setReelTitle] = useState(reel.title);
   const [reelDescription, setReelDescription] = useState(reel.description || '');
 
+  // If the same ReelCard instance is ever reused for a different reel, force-sync media + text.
+  // This prevents "I clicked one Muv but another plays" and avoids stale overlays.
+  useEffect(() => {
+    setVideoSrc(reel.videoUrl);
+    setReelTitle(reel.title);
+    setReelDescription(reel.description || '');
+    setIsVideoReady(false);
+    setIsPlaying(false);
+    setIsBuffering(false);
+  }, [reel.id, reel.videoUrl, reel.title, reel.description]);
+
   // Check if user has liked/saved this reel
   useEffect(() => {
     if (authUser) {
@@ -875,13 +886,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
         likerUsername={realtimeLiker?.username}
       />
       
-      {/* Buffering Indicator Only - No play/pause icon */}
-      {isBuffering && isActive && userHasPlayed && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
-
       {/* Big play button overlay for startPaused mode */}
       {isActive && !userHasPlayed && (
         <button
