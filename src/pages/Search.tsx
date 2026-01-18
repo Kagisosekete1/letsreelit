@@ -15,7 +15,7 @@ import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
 import SuggestedAccounts from '@/components/SuggestedAccounts';
 import AddFriendsFromContacts from '@/components/AddFriendsFromContacts';
 
-interface ReelData {
+interface MuvData {
   id: string;
   title: string;
   description?: string | null;
@@ -48,14 +48,14 @@ const Search = () => {
   const { authUser } = useUser();
   const [activeTab, setActiveTab] = useState('tutorials');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ReelData[]>([]);
+  const [searchResults, setSearchResults] = useState<MuvData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [trendingReels, setTrendingReels] = useState<ReelData[]>([]);
-  const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
+  const [trendingMuvs, setTrendingMuvs] = useState<MuvData[]>([]);
+  const [tutorialMuvs, setTutorialMuvs] = useState<MuvData[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
-  const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
-  const [selectedReelList, setSelectedReelList] = useState<ReelData[]>([]);
+  const [selectedMuvIndex, setSelectedMuvIndex] = useState<number | null>(null);
+  const [selectedMuvList, setSelectedMuvList] = useState<MuvData[]>([]);
   const [currentViewerIndex, setCurrentViewerIndex] = useState(0);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
@@ -69,8 +69,8 @@ const Search = () => {
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
-      fetchTrendingReels(),
-      fetchTutorialReels(),
+      fetchTrendingMuvs(),
+      fetchTutorialMuvs(),
       fetchTrendingHashtags(),
       authUser ? fetchFollowing() : Promise.resolve(),
     ]);
@@ -81,8 +81,8 @@ const Search = () => {
   });
 
   useEffect(() => {
-    fetchTrendingReels();
-    fetchTutorialReels();
+    fetchTrendingMuvs();
+    fetchTutorialMuvs();
     fetchTrendingHashtags();
     if (authUser) fetchFollowing();
   }, [authUser]);
@@ -164,39 +164,39 @@ const Search = () => {
     }
   };
 
-  const fetchTrendingReels = async () => {
+  const fetchTrendingMuvs = async () => {
     try {
-      const { data: reelsData } = await supabase
+      const { data: muvsData } = await supabase
         .from('reels')
         .select('*')
         .order('likes_count', { ascending: false })
         .limit(10);
 
-      if (reelsData && reelsData.length > 0) {
-        // Deduplicate reels by id
-        const uniqueReels = Array.from(
-          new Map(reelsData.map(r => [r.id, r])).values()
+      if (muvsData && muvsData.length > 0) {
+        // Deduplicate muvs by id
+        const uniqueMuvs = Array.from(
+          new Map(muvsData.map(m => [m.id, m])).values()
         );
 
-        const userIds = [...new Set(uniqueReels.map(r => r.user_id))];
+        const userIds = [...new Set(uniqueMuvs.map(m => m.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-        const reelsWithProfiles = uniqueReels.map(r => ({
-          ...r,
-          profile: profileMap.get(r.user_id)
+        const muvsWithProfiles = uniqueMuvs.map(m => ({
+          ...m,
+          profile: profileMap.get(m.user_id)
         }));
 
-        reelsWithProfiles.sort((a, b) => {
+        muvsWithProfiles.sort((a, b) => {
           const scoreA = (a.likes_count || 0) * 2 + (a.views_count || 0);
           const scoreB = (b.likes_count || 0) * 2 + (b.views_count || 0);
           return scoreB - scoreA;
         });
 
-        setTrendingReels(reelsWithProfiles);
+        setTrendingMuvs(muvsWithProfiles);
       }
     } catch (error) {
       console.error('Error fetching trending:', error);
@@ -205,33 +205,33 @@ const Search = () => {
     }
   };
 
-  const fetchTutorialReels = async () => {
+  const fetchTutorialMuvs = async () => {
     try {
-      const { data: reelsData } = await supabase
+      const { data: muvsData } = await supabase
         .from('reels')
         .select('*')
         .eq('is_tutorial', true)
         .order('created_at', { ascending: false });
 
-      if (reelsData && reelsData.length > 0) {
-        // Deduplicate reels by id
-        const uniqueReels = Array.from(
-          new Map(reelsData.map(r => [r.id, r])).values()
+      if (muvsData && muvsData.length > 0) {
+        // Deduplicate muvs by id
+        const uniqueMuvs = Array.from(
+          new Map(muvsData.map(m => [m.id, m])).values()
         );
 
-        const userIds = [...new Set(uniqueReels.map(r => r.user_id))];
+        const userIds = [...new Set(uniqueMuvs.map(m => m.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-        const reelsWithProfiles = uniqueReels.map(r => ({
-          ...r,
-          profile: profileMap.get(r.user_id)
+        const muvsWithProfiles = uniqueMuvs.map(m => ({
+          ...m,
+          profile: profileMap.get(m.user_id)
         }));
 
-        setTutorialReels(reelsWithProfiles);
+        setTutorialMuvs(muvsWithProfiles);
       }
     } catch (error) {
       console.error('Error fetching tutorials:', error);
@@ -311,15 +311,15 @@ const Search = () => {
     navigate('/live', { state: { from: location.pathname } });
   };
 
-  const handleReelClick = (reelList: ReelData[], index: number) => {
-    setSelectedReelList(reelList);
-    setSelectedReelIndex(index);
+  const handleMuvClick = (muvList: MuvData[], index: number) => {
+    setSelectedMuvList(muvList);
+    setSelectedMuvIndex(index);
     setCurrentViewerIndex(index);
   };
 
-  const closeReelViewer = () => {
-    setSelectedReelIndex(null);
-    setSelectedReelList([]);
+  const closeMuvViewer = () => {
+    setSelectedMuvIndex(null);
+    setSelectedMuvList([]);
   };
 
   // Hover preview handlers
@@ -336,7 +336,7 @@ const Search = () => {
     }
   };
 
-  // Handle scroll in reel viewer
+  // Handle scroll in muv viewer
   const handleViewerScroll = useCallback(() => {
     const container = viewerContainerRef.current;
     if (!container) return;
@@ -345,35 +345,35 @@ const Search = () => {
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
 
-    if (newIndex !== currentViewerIndex && newIndex >= 0 && newIndex < selectedReelList.length) {
+    if (newIndex !== currentViewerIndex && newIndex >= 0 && newIndex < selectedMuvList.length) {
       setCurrentViewerIndex(newIndex);
     }
-  }, [currentViewerIndex, selectedReelList.length]);
+  }, [currentViewerIndex, selectedMuvList.length]);
 
-  // Scroll to initial reel when opening viewer
+  // Scroll to initial muv when opening viewer
   useEffect(() => {
-    if (selectedReelIndex === null || !viewerContainerRef.current) return;
+    if (selectedMuvIndex === null || !viewerContainerRef.current) return;
 
     const container = viewerContainerRef.current;
 
-    // Ensure index and scroll position agree (prevents "audio plays but video is hidden")
-    setCurrentViewerIndex(selectedReelIndex);
+    // Ensure index and scroll position agree
+    setCurrentViewerIndex(selectedMuvIndex);
 
     requestAnimationFrame(() => {
       const itemHeight = container.clientHeight;
-      container.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'auto' });
+      container.scrollTo({ top: selectedMuvIndex * itemHeight, behavior: 'auto' });
     });
-  }, [selectedReelIndex]);
+  }, [selectedMuvIndex]);
 
-  // Reel Viewer Modal with vertical scrolling
-  if (selectedReelIndex !== null && selectedReelList.length > 0) {
+  // Muv Viewer Modal with vertical scrolling
+  if (selectedMuvIndex !== null && selectedMuvList.length > 0) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
         <Button
           variant="ghost"
           size="sm"
           className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
-          onClick={closeReelViewer}
+          onClick={closeMuvViewer}
         >
           <X className="w-5 h-5" />
         </Button>
@@ -383,41 +383,40 @@ const Search = () => {
           className="h-[100dvh] overflow-y-auto snap-y snap-mandatory scrollbar-hide"
           onScroll={handleViewerScroll}
         >
-          {selectedReelList.map((reel, index) => {
-            const formattedReel = {
-              id: reel.id,
-              videoUrl: reel.video_url,
-              thumbnailUrl: reel.thumbnail_url || '',
-              title: reel.title,
-              description: reel.description || '',
+          {selectedMuvList.map((muv, index) => {
+            const formattedMuv = {
+              id: muv.id,
+              videoUrl: muv.video_url,
+              thumbnailUrl: muv.thumbnail_url || '',
+              title: muv.title,
+              description: muv.description || '',
               user: {
-                id: reel.user_id,
-                profileId: reel.profile?.id || reel.user_id,
-                username: reel.profile?.username || 'user',
-                displayName: reel.profile?.display_name || reel.profile?.username || 'User',
-                avatarUrl: reel.profile?.avatar_url || '',
-                verified: reel.profile?.verified || false,
+                id: muv.user_id,
+                profileId: muv.profile?.id || muv.user_id,
+                username: muv.profile?.username || 'user',
+                displayName: muv.profile?.display_name || muv.profile?.username || 'User',
+                avatarUrl: muv.profile?.avatar_url || '',
+                verified: muv.profile?.verified || false,
               },
               stats: {
-                likes: reel.likes_count || 0,
-                comments: reel.comments_count || 0,
-                shares: reel.shares_count || 0,
-                views: reel.views_count || 0,
+                likes: muv.likes_count || 0,
+                comments: muv.comments_count || 0,
+                shares: muv.shares_count || 0,
+                views: muv.views_count || 0,
               },
             };
 
             return (
               <div
-                key={reel.id}
+                key={muv.id}
                 className="h-[100dvh] w-full snap-start snap-always overflow-hidden"
-                style={{ scrollSnapAlign: 'start' }}
               >
                 <ReelCard
-                  reel={formattedReel}
+                  reel={formattedMuv}
                   followingIds={followingIds}
                   toggleFollow={toggleFollow}
                   isActive={index === currentViewerIndex}
-                  isOwner={authUser?.id === reel.user_id}
+                  isOwner={authUser?.id === muv.user_id}
                   autoAdvance={false}
                 />
               </div>
@@ -465,7 +464,7 @@ const Search = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold">#{hashtag}</h1>
-                <p className="text-sm text-muted-foreground">{searchResults.length} videos</p>
+                <p className="text-sm text-muted-foreground">{searchResults.length} Muv'z</p>
               </div>
             </div>
           </div>
@@ -473,29 +472,29 @@ const Search = () => {
           {/* Results Grid */}
           {searchResults.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-lg font-medium mb-2">No videos found</p>
-              <p className="text-sm">No videos with #{hashtag} yet</p>
+              <p className="text-lg font-medium mb-2">No Muv'z found</p>
+              <p className="text-sm">No Muv'z with #{hashtag} yet</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 px-4">
-              {searchResults.map((reel, index) => (
+              {searchResults.map((muv, index) => (
                 <div
-                  key={reel.id}
+                  key={muv.id}
                   className="relative cursor-pointer group"
-                  onClick={() => handleReelClick(searchResults, index)}
-                  onMouseEnter={() => handleMouseEnter(reel.id, reel.video_url)}
+                  onClick={() => handleMuvClick(searchResults, index)}
+                  onMouseEnter={() => handleMouseEnter(muv.id, muv.video_url)}
                   onMouseLeave={handleMouseLeave}
                 >
                   <div className="relative aspect-[9/16] bg-secondary rounded-xl overflow-hidden">
-                    {reel.thumbnail_url ? (
+                    {muv.thumbnail_url ? (
                       <img
-                        src={reel.thumbnail_url}
-                        alt={reel.title}
+                        src={muv.thumbnail_url}
+                        alt={muv.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : (
                       <video
-                        src={reel.video_url}
+                        src={muv.video_url}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         muted
                         playsInline
@@ -508,23 +507,23 @@ const Search = () => {
                       </div>
                     </div>
                     <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-white text-sm font-medium line-clamp-2 mb-1">{reel.title}</p>
+                      <p className="text-white text-sm font-medium line-clamp-2 mb-1">{muv.title}</p>
                       <div className="flex items-center space-x-2 text-white/80">
                         <div className="flex items-center space-x-1">
                           <Eye className="w-3 h-3" />
-                          <span className="text-xs">{formatCount(reel.views_count || 0)}</span>
+                          <span className="text-xs">{formatCount(muv.views_count || 0)}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  {reel.profile && (
+                  {muv.profile && (
                     <div className="flex items-center space-x-1 mt-2">
                       <img
-                        src={reel.profile.avatar_url || ''}
-                        alt={reel.profile.username}
+                        src={muv.profile.avatar_url || ''}
+                        alt={muv.profile.username}
                         className="w-5 h-5 rounded-full"
                       />
-                      <span className="text-xs text-muted-foreground truncate">@{reel.profile.username}</span>
+                      <span className="text-xs text-muted-foreground truncate">@{muv.profile.username}</span>
                     </div>
                   )}
                 </div>
@@ -609,12 +608,12 @@ const Search = () => {
           </div>
         )}
 
-        {/* Trending Section */}
+        {/* Trending Muv'z Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-semibold">Trending Now</h2>
+              <h2 className="text-lg font-semibold">Trending Muv'z</h2>
             </div>
             <Button 
               variant="ghost" 
@@ -634,13 +633,13 @@ const Search = () => {
                 <div key={i} className="flex-shrink-0 w-32 h-48 bg-secondary rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : trendingReels.length > 0 ? (
+          ) : trendingMuvs.length > 0 ? (
             <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
-              {trendingReels.map((reel, index) => (
+              {trendingMuvs.map((muv, index) => (
                 <div 
-                  key={reel.id} 
+                  key={muv.id} 
                   className="flex-shrink-0 w-32 relative cursor-pointer group"
-                  onClick={() => handleReelClick(trendingReels, index)}
+                  onClick={() => handleMuvClick(trendingMuvs, index)}
                 >
                   {/* Ranking Badge */}
                   <div className="absolute -top-1 -left-1 z-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -648,28 +647,28 @@ const Search = () => {
                   </div>
                   
                   <VideoThumbnail
-                    videoUrl={reel.video_url}
-                    thumbnailUrl={reel.thumbnail_url}
-                    viewsCount={reel.views_count || 0}
+                    videoUrl={muv.video_url}
+                    thumbnailUrl={muv.thumbnail_url}
+                    viewsCount={muv.views_count || 0}
                     className="rounded-xl"
                   />
                   
                   {/* Creator Info */}
-                  {reel.profile && (
+                  {muv.profile && (
                     <div className="flex items-center space-x-1 mt-2">
                       <img 
-                        src={reel.profile.avatar_url || ''} 
-                        alt={reel.profile.username}
+                        src={muv.profile.avatar_url || ''} 
+                        alt={muv.profile.username}
                         className="w-4 h-4 rounded-full"
                       />
-                      <span className="text-xs text-muted-foreground truncate">@{reel.profile.username}</span>
+                      <span className="text-xs text-muted-foreground truncate">@{muv.profile.username}</span>
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">No trending content yet</p>
+            <p className="text-muted-foreground text-sm">No trending Muv'z yet</p>
           )}
         </div>
 
@@ -683,44 +682,44 @@ const Search = () => {
                 <div key={i} className="flex-shrink-0 w-32 h-48 bg-secondary rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : tutorialReels.length === 0 ? (
+          ) : tutorialMuvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 bg-secondary/30 rounded-2xl">
               <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
                 <Video className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-base font-semibold mb-2">No tutorials yet</h3>
+              <h3 className="text-base font-semibold mb-2">No Tutorial Muv'z yet</h3>
               <p className="text-muted-foreground text-center text-sm mb-4 px-4">
                 Be the first to share your dance moves!
               </p>
               <Button className="rounded-xl" onClick={() => setIsCreateReelOpen(true)}>
                 <Video className="w-4 h-4 mr-2" />
-                Create Tutorial
+                Create Tutorial Muv
               </Button>
             </div>
           ) : (
             <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
-              {tutorialReels.map((reel, index) => (
+              {tutorialMuvs.map((muv, index) => (
                 <div 
-                  key={reel.id} 
+                  key={muv.id} 
                   className="flex-shrink-0 w-32 relative cursor-pointer group"
-                  onClick={() => handleReelClick(tutorialReels, index)}
+                  onClick={() => handleMuvClick(tutorialMuvs, index)}
                 >
                   <VideoThumbnail
-                    videoUrl={reel.video_url}
-                    thumbnailUrl={reel.thumbnail_url}
-                    viewsCount={reel.views_count || 0}
+                    videoUrl={muv.video_url}
+                    thumbnailUrl={muv.thumbnail_url}
+                    viewsCount={muv.views_count || 0}
                     className="rounded-xl"
                   />
                   
                   {/* Creator Info */}
-                  {reel.profile && (
+                  {muv.profile && (
                     <div className="flex items-center space-x-1 mt-2">
                       <img 
-                        src={reel.profile.avatar_url || ''} 
-                        alt={reel.profile.username}
+                        src={muv.profile.avatar_url || ''} 
+                        alt={muv.profile.username}
                         className="w-5 h-5 rounded-full"
                       />
-                      <span className="text-xs text-muted-foreground truncate">@{reel.profile.username}</span>
+                      <span className="text-xs text-muted-foreground truncate">@{muv.profile.username}</span>
                     </div>
                   )}
                 </div>
