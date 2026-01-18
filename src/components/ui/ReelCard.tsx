@@ -738,36 +738,55 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   // De-dupe noisy captions that sometimes repeat username/title across devices
   const displayTitle = useMemo(() => {
-    const username = (reel.user.username || '').trim();
-    const handle = username ? `@${username}`.toLowerCase() : '';
+    const username = (reel.user.username || '').trim().toLowerCase();
+    const handle = username ? `@${username}` : '';
+    const displayName = (reel.user.displayName || '').trim().toLowerCase();
 
-    const raw = (reelTitle || '').trim();
+    let raw = (reelTitle || '').trim();
     if (!raw) return '';
 
-    const withoutLeadingHandle = handle && raw.toLowerCase().startsWith(handle)
-      ? raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '')
-      : raw;
+    // Remove leading @username or display name
+    const lowerRaw = raw.toLowerCase();
+    if (handle && lowerRaw.startsWith(handle)) {
+      raw = raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '');
+    } else if (displayName && lowerRaw.startsWith(displayName)) {
+      raw = raw.slice(displayName.length).trimStart().replace(/^[-–—:|]+\s*/, '');
+    }
 
-    return withoutLeadingHandle;
-  }, [reelTitle, reel.user.username]);
+    return raw;
+  }, [reelTitle, reel.user.username, reel.user.displayName]);
 
   const displayDescription = useMemo(() => {
-    const username = (reel.user.username || '').trim();
-    const handle = username ? `@${username}`.toLowerCase() : '';
+    const username = (reel.user.username || '').trim().toLowerCase();
+    const handle = username ? `@${username}` : '';
+    const displayName = (reel.user.displayName || '').trim().toLowerCase();
 
-    const raw = (reelDescription || '').trim();
+    let raw = (reelDescription || '').trim();
     if (!raw) return '';
 
-    const withoutLeadingHandle = handle && raw.toLowerCase().startsWith(handle)
-      ? raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '')
-      : raw;
+    // Remove leading @username or display name
+    const lowerRaw = raw.toLowerCase();
+    if (handle && lowerRaw.startsWith(handle)) {
+      raw = raw.slice(handle.length).trimStart().replace(/^[-–—:|]+\s*/, '');
+    } else if (displayName && lowerRaw.startsWith(displayName)) {
+      raw = raw.slice(displayName.length).trimStart().replace(/^[-–—:|]+\s*/, '');
+    }
 
-    // If description is effectively the same as the title, hide it.
-    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-    if (displayTitle && norm(withoutLeadingHandle) === norm(displayTitle)) return '';
+    // If description is effectively the same as the title, hide it
+    const norm = (s: string) => s.toLowerCase().replace(/[#\s]+/g, ' ').trim();
+    if (displayTitle && norm(raw) === norm(displayTitle)) return '';
 
-    return withoutLeadingHandle;
-  }, [reelDescription, reel.user.username, displayTitle]);
+    // If description only contains hashtags already in title, hide it
+    const titleHashtags = new Set((displayTitle.match(/#\w+/g) || []).map(t => t.toLowerCase()));
+    const descHashtags = raw.match(/#\w+/g) || [];
+    const descWithoutHashtags = raw.replace(/#\w+/g, '').trim();
+    
+    if (!descWithoutHashtags && descHashtags.every(h => titleHashtags.has(h.toLowerCase()))) {
+      return '';
+    }
+
+    return raw;
+  }, [reelDescription, reel.user.username, reel.user.displayName, displayTitle]);
 
   // Button size based on variant
   const buttonSize = variant === 'profile' ? 'w-9 h-9' : 'w-9 h-9';
@@ -899,17 +918,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </Button>
         </div>
 
-        {/* User Info & Description - Bottom Left - Fixed layout for all screen sizes */}
-        <div className="absolute bottom-16 left-3 right-16 sm:right-20 md:right-24 z-10 max-w-[calc(100%-5rem)] sm:max-w-md">
+        {/* User Info & Description - Bottom Left - Single instance only */}
+        <div className="absolute bottom-16 left-3 right-16 sm:right-20 md:right-24 z-10 max-w-[calc(100%-5rem)] sm:max-w-md pointer-events-auto">
           <div className="space-y-1.5 sm:space-y-2">
-            {/* Username row */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <ProfileLink username={reel.user.username} className="flex items-center gap-2 min-w-0">
-                <img
-                  src={reel.user.avatarUrl}
-                  alt={reel.user.username}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white/50 flex-shrink-0"
-                />
+            {/* Username row - SINGLE INSTANCE */}
+            <div className="flex items-center gap-2">
+              <ProfileLink username={reel.user.username} className="flex items-center gap-2 min-w-0 shrink">
                 <span className="text-white font-bold text-sm sm:text-base drop-shadow-lg truncate">
                   @{reel.user.username}
                 </span>
@@ -920,13 +934,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 </div>
               )}
             </div>
-            {/* Title/Caption */}
+            {/* Title/Caption - SINGLE INSTANCE */}
             {displayTitle && (
               <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
                 {renderTextWithHashtags(displayTitle, navigate)}
               </p>
             )}
-            {/* Description */}
+            {/* Description - SINGLE INSTANCE, only if different from title */}
             {displayDescription && (
               <p className="text-white/90 text-xs sm:text-sm line-clamp-2 drop-shadow-md break-words">
                 {renderTextWithHashtags(displayDescription, navigate)}

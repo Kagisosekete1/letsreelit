@@ -223,16 +223,29 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     try {
       // Check if permissions API is available
       if (navigator.permissions) {
-        const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        
-        if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
-          toast({
-            title: "Permission Required",
-            description: "Please enable camera and microphone access in your browser settings to go live.",
-            variant: "destructive",
-          });
-          return false;
+        try {
+          const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          
+          if (cameraPermission.state === 'denied') {
+            toast({
+              title: "Camera Permission Denied",
+              description: "Please enable camera access in your browser/device settings to go live.",
+              variant: "destructive",
+            });
+            return false;
+          }
+          
+          if (micPermission.state === 'denied') {
+            toast({
+              title: "Microphone Permission Denied",
+              description: "Please enable microphone access in your browser/device settings to go live.",
+              variant: "destructive",
+            });
+            return false;
+          }
+        } catch {
+          // Some browsers don't support permissions.query for camera/microphone
         }
       }
       return true;
