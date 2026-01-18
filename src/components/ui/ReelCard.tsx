@@ -805,7 +805,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   return (
     <div 
-      className="absolute inset-0 flex items-center justify-center bg-black"
+      className="relative w-full h-full flex items-center justify-center bg-black"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleTouchStart}
@@ -922,10 +922,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </Button>
         </div>
 
-        {/* User Info & Description - Bottom Left - Single instance only */}
+        {/* User Info & Caption - Bottom Left (single block, no duplicates) */}
         <div className="absolute bottom-16 left-3 right-16 sm:right-20 md:right-24 z-10 max-w-[calc(100%-5rem)] sm:max-w-md pointer-events-auto">
           <div className="space-y-1.5 sm:space-y-2">
-            {/* Username row - SINGLE INSTANCE */}
             <div className="flex items-center gap-2">
               <ProfileLink username={reel.user.username} className="flex items-center gap-2 min-w-0 shrink">
                 <span className="text-white font-bold text-sm sm:text-base drop-shadow-lg truncate">
@@ -938,16 +937,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 </div>
               )}
             </div>
-            {/* Title/Caption - SINGLE INSTANCE */}
-            {displayTitle && (
-              <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
-                {renderTextWithHashtags(displayTitle, navigate)}
-              </p>
-            )}
-            {/* Description - SINGLE INSTANCE, only if different from title */}
-            {displayDescription && (
-              <p className="text-white/90 text-xs sm:text-sm line-clamp-2 drop-shadow-md break-words">
-                {renderTextWithHashtags(displayDescription, navigate)}
+
+            {/* ONE caption only: prefer description+hashtags, otherwise title */}
+            {(displayDescription || displayTitle) && (
+              <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-3 drop-shadow-lg break-words">
+                {renderTextWithHashtags(displayDescription || displayTitle, navigate)}
               </p>
             )}
           </div>
