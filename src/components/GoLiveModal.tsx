@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2, SwitchCamera } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2, SwitchCamera, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -30,6 +30,18 @@ interface Viewer {
   avatarUrl?: string;
 }
 
+// Beauty filters for live camera
+const BEAUTY_FILTERS = [
+  { name: 'None', class: '', icon: '✨' },
+  { name: 'Soft', class: 'brightness(105%) contrast(95%) saturate(90%)', icon: '🌸' },
+  { name: 'Warm', class: 'sepia(15%) saturate(120%) brightness(105%)', icon: '☀️' },
+  { name: 'Cool', class: 'hue-rotate(10deg) saturate(90%) brightness(105%)', icon: '❄️' },
+  { name: 'Glow', class: 'brightness(110%) contrast(90%) saturate(110%)', icon: '💫' },
+  { name: 'Vivid', class: 'saturate(130%) contrast(105%)', icon: '🌈' },
+  { name: 'Portrait', class: 'brightness(108%) contrast(92%) saturate(95%)', icon: '📸' },
+  { name: 'Dreamy', class: 'brightness(105%) blur(0.3px) saturate(85%)', icon: '🌙' },
+];
+
 // Viewer milestones for confetti
 const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
 
@@ -51,12 +63,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [liveTitle, setLiveTitle] = useState('');
-  const [step, setStep] = useState<'setup' | 'live' | 'ended'>('setup');
+  const [step, setStep] = useState<'setup' | 'countdown' | 'live' | 'ended'>('setup');
+  const [countdown, setCountdown] = useState(3);
   const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState(0);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('user');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -264,30 +279,25 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   // Start camera preview when setup step is shown
   useEffect(() => {
-    if (step === 'setup' && isOpen && !stream) {
+    if ((step === 'setup' || step === 'countdown') && isOpen && !stream) {
       startPreviewCamera();
     }
   }, [step, isOpen]);
 
-  const handleGoLive = async () => {
-    if (!liveTitle.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please add a title for your live stream.",
-        variant: "destructive",
-      });
-      return;
+  // Countdown timer effect
+  useEffect(() => {
+    if (step === 'countdown') {
+      if (countdown > 0) {
+        const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Countdown finished, start the actual live
+        startActualLive();
+      }
     }
+  }, [step, countdown]);
 
-    if (!authUser) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to go live.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const startActualLive = async () => {
     try {
       // Stop preview stream first
       if (stream) {
@@ -309,6 +319,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
+
+      // Attach to live video element
+      if (liveVideoRef.current) {
+        liveVideoRef.current.srcObject = mediaStream;
+        liveVideoRef.current.play().catch(console.log);
+      }
 
       // Start recording
       let mimeType = 'video/webm';
@@ -332,22 +348,57 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       mediaRecorder.start(1000);
 
-    } catch (error: any) {
-      console.error('Camera access error:', error);
-      
-      let errorMessage = "Please allow camera and microphone access to go live.";
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage = "Camera/microphone access was denied. Please enable in your browser or device settings.";
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = "No camera or microphone found on this device.";
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = "Camera is in use by another app. Please close other apps using the camera.";
+      // Create live stream record in database
+      const sessionId = `live_${authUser!.id}_${Date.now()}`;
+      setLiveSessionId(sessionId);
+
+      const { error } = await supabase
+        .from('live_streams')
+        .insert({
+          user_id: authUser!.id,
+          title: liveTitle.trim(),
+          session_id: sessionId,
+          is_active: true,
+        });
+
+      if (error) {
+        console.error('Error creating live stream:', error);
       }
+
+      setStep('live');
+      setIsLive(true);
+      setLiveStartTime(new Date());
       
       toast({
+        title: "You're live!",
+        description: "Real viewers will appear when they join your stream.",
+      });
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      toast({
         title: "Camera access required",
-        description: errorMessage,
+        description: "Please allow camera and microphone access to go live.",
+        variant: "destructive",
+      });
+      setStep('setup');
+      setCountdown(3);
+    }
+  };
+
+  const handleGoLive = async () => {
+    if (!liveTitle.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please add a title for your live stream.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!authUser) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to go live.",
         variant: "destructive",
       });
       return;
@@ -368,38 +419,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         .eq('is_active', true);
     }
 
-    // Generate unique session ID for this live stream
-    const sessionId = `live_${authUser.id}_${Date.now()}`;
-    setLiveSessionId(sessionId);
-
-    // Create live stream record in database
-    const { error } = await supabase
-      .from('live_streams')
-      .insert({
-        user_id: authUser.id,
-        title: liveTitle.trim(),
-        session_id: sessionId,
-        is_active: true,
-      });
-
-    if (error) {
-      console.error('Error creating live stream:', error);
-      toast({
-        title: "Failed to start live",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setStep('live');
-    setIsLive(true);
-    setLiveStartTime(new Date());
-    
-    toast({
-      title: "You're live!",
-      description: "Real viewers will appear when they join your stream.",
-    });
+    // Start countdown
+    setCountdown(3);
+    setStep('countdown');
   };
 
   const handleEndLive = async () => {
@@ -562,8 +584,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="rounded-xl text-sm"
             />
 
-            {/* Camera Preview */}
-            <div className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative">
+            {/* Camera Preview with Beauty Filter */}
+            <div 
+              className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative"
+              style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
+            >
               {stream ? (
                 <video
                   ref={previewVideoRef}
@@ -591,21 +616,54 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 </div>
               )}
               
-              {/* Preview indicator + flip camera */}
+              {/* Preview indicator + controls */}
               {stream && (
                 <>
                   <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
                     <Radio className="w-3 h-3 text-pink-500" />
                     <span className="text-white text-xs font-medium">Preview</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
-                    onClick={flipCamera}
-                  >
-                    <SwitchCamera className="w-4 h-4" />
-                  </Button>
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
+                      onClick={() => setShowFilters(!showFilters)}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
+                      onClick={flipCamera}
+                    >
+                      <SwitchCamera className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Beauty Filters Panel */}
+                  {showFilters && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                      <p className="text-white text-xs font-medium mb-2 text-center">Beauty Filters</p>
+                      <div className="flex gap-1 overflow-x-auto pb-1">
+                        {BEAUTY_FILTERS.map((filter, index) => (
+                          <button
+                            key={filter.name}
+                            onClick={() => setSelectedFilter(index)}
+                            className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                              selectedFilter === index 
+                                ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                                : 'bg-white/10 hover:bg-white/20'
+                            }`}
+                          >
+                            <span className="text-lg">{filter.icon}</span>
+                            <span className="text-[10px] text-white/80">{filter.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -625,6 +683,66 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               onClick={handleClose}
             >
               Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // COUNTDOWN SCREEN
+  if (step === 'countdown') {
+    return (
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
+          <div className="relative h-full bg-black">
+            {/* Camera Preview during countdown */}
+            <div 
+              className="w-full h-full"
+              style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
+            >
+              {stream ? (
+                <video
+                  ref={previewVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-500/20 to-purple-600/20">
+                  <Camera className="w-20 h-20 text-white/50" />
+                </div>
+              )}
+            </div>
+            
+            {/* Countdown Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <div className="text-center">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-pink-500 rounded-full blur-3xl opacity-30 animate-pulse" />
+                  <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-2xl">
+                    <span className="text-7xl font-bold text-white animate-bounce">
+                      {countdown}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-white text-xl font-medium mt-6">Going live in...</p>
+                <p className="text-white/60 text-sm mt-2">{liveTitle}</p>
+              </div>
+            </div>
+            
+            {/* Cancel Button */}
+            <Button
+              variant="ghost"
+              className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full"
+              onClick={() => {
+                setStep('setup');
+                setCountdown(3);
+              }}
+            >
+              <X className="w-6 h-6" />
             </Button>
           </div>
         </DialogContent>
@@ -746,15 +864,20 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
-          {/* Video Preview - camera feed */}
-          <video
-            ref={liveVideoRef}
-            autoPlay
-            playsInline
-            muted={false}
-            className="w-full h-full object-cover"
-            style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
-          />
+          {/* Video Preview - camera feed with beauty filter */}
+          <div 
+            className="w-full h-full"
+            style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
+          >
+            <video
+              ref={liveVideoRef}
+              autoPlay
+              playsInline
+              muted={false}
+              className="w-full h-full object-cover"
+              style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+            />
+          </div>
           
           {/* Gradient overlays for modern look */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />

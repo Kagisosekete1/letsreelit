@@ -61,8 +61,13 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     }
   }, [videoFile]);
 
+  // Auto-play video when preview URL is set
   useEffect(() => {
-    if (videoRef.current && videoPreviewUrl) {
+    if (videoPreviewUrl && videoRef.current) {
+      videoRef.current.src = videoPreviewUrl;
+      videoRef.current.load();
+      videoRef.current.play().catch(console.log);
+      
       videoRef.current.onloadedmetadata = () => {
         setVideoDuration(videoRef.current?.duration || 0);
       };
@@ -386,7 +391,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'details' && (
           <div className="space-y-4 py-4">
-            {/* Video Preview - Playable */}
+            {/* Video Preview - Auto-plays */}
             <div 
               className="relative aspect-video bg-black rounded-xl overflow-hidden"
               style={{ filter: FILTERS[selectedFilter].class }}
@@ -394,16 +399,10 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <video
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
-                controls
+                autoPlay
+                loop
+                muted
                 playsInline
-                onClick={(e) => {
-                  const video = e.currentTarget;
-                  if (video.paused) {
-                    video.play().catch(() => {});
-                  } else {
-                    video.pause();
-                  }
-                }}
               />
             </div>
 
