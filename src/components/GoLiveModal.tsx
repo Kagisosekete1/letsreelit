@@ -614,6 +614,36 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     }
   };
 
+  // Start camera preview for setup screen
+  const startPreviewCamera = async () => {
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: { 
+          facingMode: { ideal: 'user' },
+          width: { ideal: 720 }, 
+          height: { ideal: 1280 } 
+        },
+        audio: false, // No audio needed for preview
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        await videoRef.current.play();
+      }
+    } catch (error) {
+      console.log('Camera preview not available:', error);
+    }
+  };
+
+  // Start camera preview when setup step is shown
+  useEffect(() => {
+    if (step === 'setup' && isOpen && !stream) {
+      startPreviewCamera();
+    }
+  }, [step, isOpen]);
+
   if (step === 'setup') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -630,12 +660,42 @@ const checkCameraPermissions = async (): Promise<boolean> => {
               className="rounded-xl text-sm"
             />
 
-            <div className="aspect-[9/16] max-h-[40vh] bg-muted rounded-xl flex items-center justify-center">
-              <div className="text-center px-4">
-                <Radio className="w-10 h-10 text-pink-500 mx-auto mb-2" />
-                <p className="text-base font-semibold mb-1">Ready to go live?</p>
-                <p className="text-muted-foreground text-xs">Real-time viewer tracking</p>
-              </div>
+            {/* Camera Preview */}
+            <div className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative">
+              {stream ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-muted">
+                  <div className="text-center px-4">
+                    <Camera className="w-10 h-10 text-pink-500 mx-auto mb-2" />
+                    <p className="text-base font-semibold mb-1">Camera Preview</p>
+                    <p className="text-muted-foreground text-xs">Allow camera access to see yourself</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={startPreviewCamera}
+                    >
+                      Enable Camera
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Live indicator overlay */}
+              {stream && (
+                <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <Radio className="w-3 h-3 text-pink-500" />
+                  <span className="text-white text-xs font-medium">Preview</span>
+                </div>
+              )}
             </div>
 
             <Button 

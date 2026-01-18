@@ -363,6 +363,31 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
   }, [isMuted, isActive]);
 
+  // Handle app visibility change - resume playback when coming back to foreground
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleVisibilityChange = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (document.visibilityState === 'visible') {
+        // App came back to foreground - resume playback from current position
+        if (userHasPlayed && !video.ended) {
+          video.play().catch(() => {});
+          setIsPlaying(true);
+        }
+      } else {
+        // App went to background - pause but keep position
+        video.pause();
+        setIsPlaying(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isActive, userHasPlayed]);
+
   // Safety net: whenever THIS video plays or is unmuted, ensure it has audio focus
   useEffect(() => {
     const video = videoRef.current;
@@ -1102,7 +1127,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </DropdownMenu>
         </div>
 
-        {/* Progress bar + Fullscreen - Only for home variant */}
+        {/* Progress bar + Fullscreen - For home variant (with time display) */}
         {variant === 'home' && (
           <div className="absolute bottom-4 left-3 right-3 z-10 flex items-center gap-2">
             {/* Time Display */}
@@ -1129,19 +1154,31 @@ const ReelCard: React.FC<ReelCardProps> = ({
               />
             </div>
             
-            {/* Fullscreen Button */}
+            {/* Fullscreen Button - opens in container with black bars */}
             <button
               className="p-1 rounded-full bg-black/30 hover:bg-black/50 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                const video = videoRef.current;
-                if (!video) return;
-                if (video.requestFullscreen) {
-                  video.requestFullscreen();
-                } else if ((video as any).webkitRequestFullscreen) {
-                  (video as any).webkitRequestFullscreen();
-                } else if ((video as any).webkitEnterFullscreen) {
-                  (video as any).webkitEnterFullscreen();
+                // Find the parent container to fullscreen (shows video centered with black bars)
+                const container = (e.currentTarget as HTMLElement).closest('[data-reel-item="true"]') || 
+                                   (e.currentTarget as HTMLElement).closest('.relative.w-full.h-full');
+                if (container) {
+                  if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                  } else if ((container as any).webkitRequestFullscreen) {
+                    (container as any).webkitRequestFullscreen();
+                  }
+                } else {
+                  // Fallback to video element
+                  const video = videoRef.current;
+                  if (!video) return;
+                  if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                  } else if ((video as any).webkitRequestFullscreen) {
+                    (video as any).webkitRequestFullscreen();
+                  } else if ((video as any).webkitEnterFullscreen) {
+                    (video as any).webkitEnterFullscreen();
+                  }
                 }
               }}
             >
@@ -1150,10 +1187,27 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </div>
         )}
 
-        {/* Views Count - Only for non-home variant */}
+        {/* Progress bar only - For non-home variants (trending, tutorials) */}
         {variant !== 'home' && (
-          <div className="absolute bottom-4 left-3 z-10" style={{ opacity: 0.6 }}>
-            <span className="text-[10px] text-white">{formatCount(reel.stats.views)} views</span>
+          <div className="absolute bottom-4 left-3 right-3 z-10">
+            {/* Progress Bar Only - no time display */}
+            <div 
+              className="h-1 bg-white/30 rounded-full overflow-hidden cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                const video = videoRef.current;
+                if (!video) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percent = clickX / rect.width;
+                video.currentTime = percent * video.duration;
+              }}
+            >
+              <div 
+                className="h-full bg-white rounded-full transition-all duration-100"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         )}
       </div>
