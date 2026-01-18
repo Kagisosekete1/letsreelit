@@ -197,8 +197,8 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
       setUploadProgress(100);
 
       toast({
-        title: postAs === 'reel' ? "Muv uploaded!" : "Tutorial Muv uploaded!",
-        description: `Your ${postAs === 'reel' ? 'Muv' : 'Tutorial Muv'} is now live.`,
+        title: postAs === 'reel' ? "Reel uploaded!" : "Tutorial uploaded!",
+        description: `Your ${postAs} is now live.`,
       });
 
       setTimeout(() => {
@@ -228,11 +228,11 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-             <DialogTitle className="flex-1 text-center">
-              {step === 'edit' && 'Edit Muv'}
-              {step === 'crop' && 'Crop Muv'}
+            <DialogTitle className="flex-1 text-center">
+              {step === 'edit' && 'Edit Reel'}
+              {step === 'crop' && 'Crop Reel'}
               {step === 'filters' && 'Filters & Effects'}
-              {step === 'details' && 'Muv Details'}
+              {step === 'details' && 'Reel Details'}
               {step === 'uploading' && 'Uploading...'}
             </DialogTitle>
           </div>
@@ -250,9 +250,6 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
                 controls
-                autoPlay
-                loop
-                muted
                 playsInline
               />
             </div>
@@ -268,7 +265,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                   <Scissors className="w-5 h-5 text-accent-foreground" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold">Crop Muv</p>
+                  <p className="font-semibold">Crop Reel</p>
                   <p className="text-sm text-muted-foreground">Crop & trim your video</p>
                 </div>
               </Button>
@@ -302,8 +299,6 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
                 controls
-                autoPlay
-                loop
                 playsInline
               />
             </div>
@@ -385,7 +380,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'details' && (
           <div className="space-y-4 py-4">
-            {/* Video Thumbnail Preview - with playback */}
+            {/* Video Thumbnail Preview */}
             <div 
               className="relative aspect-video bg-black rounded-xl overflow-hidden"
               style={{ filter: FILTERS[selectedFilter].class }}
@@ -393,10 +388,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <video
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
-                controls
-                autoPlay
-                loop
-                playsInline
+                muted
               />
             </div>
 
@@ -452,6 +444,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
               </div>
 
+              {/* Post As Selection */}
               <div className="space-y-2">
                 <p className="text-sm font-medium">Post as:</p>
                 <div className="flex gap-2">
@@ -460,14 +453,14 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                     className="flex-1 rounded-xl"
                     onClick={() => setPostAs('reel')}
                   >
-                    Muv
+                    Reel
                   </Button>
                   <Button
                     variant={postAs === 'tutorial' ? 'default' : 'outline'}
                     className="flex-1 rounded-xl"
                     onClick={() => setPostAs('tutorial')}
                   >
-                    Tutorial Muv
+                    Tutorial
                   </Button>
                 </div>
               </div>
@@ -475,7 +468,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
             <Button className="w-full rounded-xl" onClick={handleUpload} disabled={!title.trim()}>
               <Upload className="w-4 h-4 mr-2" />
-              Upload {postAs === 'reel' ? 'Muv' : 'Tutorial Muv'}
+              Upload {postAs === 'reel' ? 'Reel' : 'Tutorial'}
             </Button>
 
             <MusicLibraryModal

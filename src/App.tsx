@@ -20,7 +20,6 @@ import LiveDiscovery from "./pages/LiveDiscovery";
 import Search from "./pages/Search";
 import SuggestedMuvaz from "./pages/SuggestedMuvaz";
 import Trending from "./pages/Trending";
-import Tutorials from "./pages/Tutorials";
 import NotificationPreferencesPage from "./components/settings/NotificationPreferencesPage";
 import NotFound from "./pages/NotFound";
 
@@ -46,7 +45,7 @@ const App = () => {
                   } />
                   <Route path="/tutorials" element={
                     <ProtectedRoute>
-                      <Tutorials />
+                      <Search />
                     </ProtectedRoute>
                   } />
                   <Route path="/live" element={

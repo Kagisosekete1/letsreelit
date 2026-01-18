@@ -10,7 +10,7 @@ import ReelCard from '@/components/ui/ReelCard';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
 
-interface TrendingMuv {
+interface TrendingReel {
   id: string;
   title: string;
   description?: string | null;
@@ -35,17 +35,16 @@ const Trending = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { authUser } = useUser();
-  const [trendingMuvs, setTrendingMuvs] = useState<TrendingMuv[]>([]);
+  const [trendingReels, setTrendingReels] = useState<TrendingReel[]>([]);
   const [loading, setLoading] = useState(true);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('tutorials');
-  const [selectedMuvIndex, setSelectedMuvIndex] = useState<number | null>(null);
+  const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [currentViewerIndex, setCurrentViewerIndex] = useState(0);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToInitial = useRef(false);
 
   const handleRefresh = useCallback(async () => {
-    await fetchTrendingMuvs();
+    await fetchTrendingReels();
     if (authUser) await fetchFollowing();
   }, [authUser]);
 
@@ -54,7 +53,7 @@ const Trending = () => {
   });
 
   useEffect(() => {
-    fetchTrendingMuvs();
+    fetchTrendingReels();
     if (authUser) fetchFollowing();
   }, [authUser]);
 
@@ -93,22 +92,22 @@ const Trending = () => {
     }
   };
 
-  const fetchTrendingMuvs = async () => {
+  const fetchTrendingReels = async () => {
     setLoading(true);
     try {
-      const { data: muvsData } = await supabase
+      const { data: reelsData } = await supabase
         .from('reels')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (muvsData && muvsData.length > 0) {
-        // Deduplicate muvs by id
-        const uniqueMuvs = Array.from(
-          new Map(muvsData.map(m => [m.id, m])).values()
+      if (reelsData && reelsData.length > 0) {
+        // Deduplicate reels by id
+        const uniqueReels = Array.from(
+          new Map(reelsData.map(r => [r.id, r])).values()
         );
 
-        const userIds = [...new Set(uniqueMuvs.map(m => m.user_id))];
+        const userIds = [...new Set(uniqueReels.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, user_id, username, display_name, avatar_url, verified')
@@ -116,31 +115,33 @@ const Trending = () => {
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-        // Calculate engagement score for each muv
-        const muvsWithScore = uniqueMuvs.map(muv => {
-          const views = muv.views_count || 0;
-          const likes = muv.likes_count || 0;
-          const comments = muv.comments_count || 0;
-          const shares = muv.shares_count || 0;
+        // Calculate engagement score for each reel
+        const reelsWithScore = uniqueReels.map(reel => {
+          const views = reel.views_count || 0;
+          const likes = reel.likes_count || 0;
+          const comments = reel.comments_count || 0;
+          const shares = reel.shares_count || 0;
 
+          // Engagement rate = (likes + comments*2 + shares*3) / views * 100
+          // Higher weight for shares and comments as they indicate deeper engagement
           const engagementScore = views > 0
             ? ((likes + comments * 2 + shares * 3) / views) * 100 + (views / 100)
             : likes + comments * 2 + shares * 3;
 
           return {
-            ...muv,
+            ...reel,
             engagement_score: engagementScore,
-            profile: profileMap.get(muv.user_id),
+            profile: profileMap.get(reel.user_id),
           };
         });
 
         // Sort by engagement score
-        muvsWithScore.sort((a, b) => b.engagement_score - a.engagement_score);
+        reelsWithScore.sort((a, b) => b.engagement_score - a.engagement_score);
 
-        setTrendingMuvs(muvsWithScore);
+        setTrendingReels(reelsWithScore);
       }
     } catch (error) {
-      console.error('Error fetching trending muvs:', error);
+      console.error('Error fetching trending reels:', error);
     } finally {
       setLoading(false);
     }
@@ -162,18 +163,16 @@ const Trending = () => {
     return num.toString();
   };
 
-  const handleMuvClick = (index: number) => {
-    hasScrolledToInitial.current = false;
-    setSelectedMuvIndex(index);
+  const handleReelClick = (index: number) => {
+    setSelectedReelIndex(index);
     setCurrentViewerIndex(index);
   };
 
-  const closeMuvViewer = () => {
-    setSelectedMuvIndex(null);
-    hasScrolledToInitial.current = false;
+  const closeReelViewer = () => {
+    setSelectedReelIndex(null);
   };
 
-  // Handle scroll in muv viewer
+  // Handle scroll in reel viewer
   const handleViewerScroll = useCallback(() => {
     const container = viewerContainerRef.current;
     if (!container) return;
@@ -182,74 +181,70 @@ const Trending = () => {
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
 
-    if (newIndex !== currentViewerIndex && newIndex >= 0 && newIndex < trendingMuvs.length) {
+    if (newIndex !== currentViewerIndex && newIndex >= 0 && newIndex < trendingReels.length) {
       setCurrentViewerIndex(newIndex);
     }
-  }, [currentViewerIndex, trendingMuvs.length]);
+  }, [currentViewerIndex, trendingReels.length]);
 
-  // Scroll to initial muv when opening viewer
+  // Scroll to initial reel when opening viewer
   useEffect(() => {
-    if (selectedMuvIndex !== null && viewerContainerRef.current && !hasScrolledToInitial.current) {
-      hasScrolledToInitial.current = true;
-      const container = viewerContainerRef.current;
-      const itemHeight = container.clientHeight;
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        container.scrollTo({ top: selectedMuvIndex * itemHeight, behavior: 'auto' });
-      });
+    if (selectedReelIndex !== null && viewerContainerRef.current) {
+      const itemHeight = viewerContainerRef.current.clientHeight;
+      viewerContainerRef.current.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
     }
-  }, [selectedMuvIndex]);
-  if (selectedMuvIndex !== null) {
+  }, [selectedReelIndex]);
+  if (selectedReelIndex !== null) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
         <Button
           variant="ghost"
           size="sm"
           className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
-          onClick={closeMuvViewer}
+          onClick={closeReelViewer}
         >
           <X className="w-5 h-5" />
         </Button>
 
         <div
           ref={viewerContainerRef}
-          className="h-[100dvh] overflow-y-auto snap-y snap-mandatory scrollbar-hide"
+          className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
           onScroll={handleViewerScroll}
         >
-          {trendingMuvs.map((muv, index) => {
-            const formattedMuv = {
-              id: muv.id,
-              videoUrl: muv.video_url,
-              thumbnailUrl: muv.thumbnail_url || '',
-              title: muv.title,
-              description: muv.description || '',
+          {trendingReels.map((reel, index) => {
+            const formattedReel = {
+              id: reel.id,
+              videoUrl: reel.video_url,
+              thumbnailUrl: reel.thumbnail_url || '',
+              title: reel.title,
+              description: reel.description || '',
               user: {
-                id: muv.user_id,
-                profileId: muv.profile?.id || muv.user_id,
-                username: muv.profile?.username || 'user',
-                displayName: muv.profile?.display_name || muv.profile?.username || 'User',
-                avatarUrl: muv.profile?.avatar_url || '',
-                verified: muv.profile?.verified || false,
+                id: reel.user_id,
+                profileId: reel.profile?.id || reel.user_id,
+                username: reel.profile?.username || 'user',
+                displayName: reel.profile?.display_name || reel.profile?.username || 'User',
+                avatarUrl: reel.profile?.avatar_url || '',
+                verified: reel.profile?.verified || false,
               },
               stats: {
-                likes: muv.likes_count || 0,
-                comments: muv.comments_count || 0,
-                shares: muv.shares_count || 0,
-                views: muv.views_count || 0,
+                likes: reel.likes_count || 0,
+                comments: reel.comments_count || 0,
+                shares: reel.shares_count || 0,
+                views: reel.views_count || 0,
               },
             };
 
             return (
               <div
-                key={muv.id}
-                className="h-[100dvh] w-full snap-start snap-always"
+                key={reel.id}
+                className="h-full w-full snap-start snap-always"
+                style={{ scrollSnapAlign: 'start' }}
               >
                 <ReelCard
-                  reel={formattedMuv}
+                  reel={formattedReel}
                   followingIds={followingIds}
                   toggleFollow={toggleFollow}
                   isActive={index === currentViewerIndex}
-                  isOwner={authUser?.id === muv.user_id}
+                  isOwner={authUser?.id === reel.user_id}
                   autoAdvance={false}
                 />
               </div>
@@ -275,14 +270,14 @@ const Trending = () => {
           </Button>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
-            <h1 className="text-xl font-bold">Trending Muv'z</h1>
+            <h1 className="text-xl font-bold">Trending</h1>
           </div>
         </div>
 
         {/* Description */}
         <div className="px-4 mb-6">
           <p className="text-muted-foreground text-sm">
-            Muv'z ranked by engagement rate, views, and shares. Create viral content to appear here!
+            Videos ranked by engagement rate, views, and shares. Create viral content to appear here!
           </p>
         </div>
 
@@ -310,19 +305,19 @@ const Trending = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : trendingMuvs.length === 0 ? (
+        ) : trendingReels.length === 0 ? (
           <div className="text-center py-12 px-4">
             <Flame className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">No trending Muv'z yet</p>
+            <p className="text-lg font-medium mb-2">No trending videos yet</p>
             <p className="text-muted-foreground text-sm">Be the first to go viral!</p>
           </div>
         ) : (
           <div className="px-4 space-y-4">
-            {trendingMuvs.map((muv, index) => (
+            {trendingReels.map((reel, index) => (
               <div
-                key={muv.id}
+                key={reel.id}
                 className="flex gap-3 p-3 rounded-2xl bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-                onClick={() => handleMuvClick(index)}
+                onClick={() => handleReelClick(index)}
               >
                 {/* Rank Badge */}
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -332,25 +327,25 @@ const Trending = () => {
                 {/* Thumbnail */}
                 <div className="flex-shrink-0 w-20 h-28 rounded-xl overflow-hidden">
                   <VideoThumbnail
-                    videoUrl={muv.video_url}
-                    thumbnailUrl={muv.thumbnail_url}
+                    videoUrl={reel.video_url}
+                    thumbnailUrl={reel.thumbnail_url}
                     className="rounded-xl"
                   />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0 py-1">
-                  <p className="font-medium line-clamp-2 mb-1">{muv.title}</p>
+                  <p className="font-medium line-clamp-2 mb-1">{reel.title}</p>
 
-                  {muv.profile && (
+                  {reel.profile && (
                     <div className="flex items-center gap-1.5 mb-2">
                       <img
-                        src={muv.profile.avatar_url || ''}
-                        alt={muv.profile.username}
+                        src={reel.profile.avatar_url || ''}
+                        alt={reel.profile.username}
                         className="w-4 h-4 rounded-full"
                       />
-                      <span className="text-xs text-muted-foreground">@{muv.profile.username}</span>
-                      {muv.profile.verified && (
+                      <span className="text-xs text-muted-foreground">@{reel.profile.username}</span>
+                      {reel.profile.verified && (
                         <div className="w-3 h-3 bg-primary rounded-full flex items-center justify-center">
                           <span className="text-[6px] text-white font-bold">✓</span>
                         </div>
@@ -362,15 +357,15 @@ const Trending = () => {
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Eye className="w-3 h-3" />
-                      <span>{formatCount(muv.views_count)}</span>
+                      <span>{formatCount(reel.views_count)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Heart className="w-3 h-3" />
-                      <span>{formatCount(muv.likes_count)}</span>
+                      <span>{formatCount(reel.likes_count)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Share2 className="w-3 h-3" />
-                      <span>{formatCount(muv.shares_count)}</span>
+                      <span>{formatCount(reel.shares_count)}</span>
                     </div>
                   </div>
 
@@ -378,7 +373,7 @@ const Trending = () => {
                   <div className="flex items-center gap-1 mt-1.5">
                     <TrendingUp className="w-3 h-3 text-primary" />
                     <span className="text-xs font-medium text-primary">
-                      {muv.engagement_score.toFixed(1)}% engagement
+                      {reel.engagement_score.toFixed(1)}% engagement
                     </span>
                   </div>
                 </div>
