@@ -188,10 +188,18 @@ const Trending = () => {
 
   // Scroll to initial reel when opening viewer
   useEffect(() => {
-    if (selectedReelIndex !== null && viewerContainerRef.current) {
-      const itemHeight = viewerContainerRef.current.clientHeight;
-      viewerContainerRef.current.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
-    }
+    if (selectedReelIndex === null || !viewerContainerRef.current) return;
+    
+    // Sync viewer index with selected index
+    setCurrentViewerIndex(selectedReelIndex);
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      const container = viewerContainerRef.current;
+      if (!container) return;
+      const itemHeight = container.clientHeight;
+      container.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
+    });
   }, [selectedReelIndex]);
   if (selectedReelIndex !== null) {
     return (
@@ -270,14 +278,14 @@ const Trending = () => {
           </Button>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
-            <h1 className="text-xl font-bold">Trending</h1>
+            <h1 className="text-xl font-bold">Trending Muv'z</h1>
           </div>
         </div>
 
         {/* Description */}
         <div className="px-4 mb-6">
           <p className="text-muted-foreground text-sm">
-            Videos ranked by engagement rate, views, and shares. Create viral content to appear here!
+            Muv'z ranked by engagement rate, views, and shares. Create viral content to appear here!
           </p>
         </div>
 
@@ -308,7 +316,7 @@ const Trending = () => {
         ) : trendingReels.length === 0 ? (
           <div className="text-center py-12 px-4">
             <Flame className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">No trending videos yet</p>
+            <p className="text-lg font-medium mb-2">No trending Muv'z yet</p>
             <p className="text-muted-foreground text-sm">Be the first to go viral!</p>
           </div>
         ) : (

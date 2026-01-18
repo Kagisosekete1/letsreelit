@@ -221,8 +221,8 @@ const Inbox = () => {
   const getNotificationAction = (type: string) => {
     switch (type) {
       case 'follow': return 'started following you';
-      case 'like': return 'liked your reel';
-      case 'comment': return 'commented on your reel';
+      case 'like': return 'liked your Muv';
+      case 'comment': return 'commented on your Muv';
       default: return 'interacted with you';
     }
   };
