@@ -18,6 +18,8 @@ import About from "./pages/About";
 import Following from "./pages/Following";
 import LiveDiscovery from "./pages/LiveDiscovery";
 import Search from "./pages/Search";
+import SuggestedMuvaz from "./pages/SuggestedMuvaz";
+import Trending from "./pages/Trending";
 import NotificationPreferencesPage from "./components/settings/NotificationPreferencesPage";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +51,16 @@ const App = () => {
                   <Route path="/live" element={
                     <ProtectedRoute>
                       <LiveDiscovery />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/suggested-muvaz" element={
+                    <ProtectedRoute>
+                      <SuggestedMuvaz />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/trending" element={
+                    <ProtectedRoute>
+                      <Trending />
                     </ProtectedRoute>
                   } />
                   <Route path="/inbox" element={

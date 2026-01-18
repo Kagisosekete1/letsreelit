@@ -751,8 +751,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
       <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
-        {/* Thumbnail shown only when video is not ready - no black/white loader */}
-        {reel.thumbnailUrl && !isVideoReady && (
+        {/* Thumbnail always shown as background - prevents black screen during transitions */}
+        {reel.thumbnailUrl && (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
@@ -764,8 +764,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         <video
           ref={videoRef}
           data-reel-video="true"
-          className="w-full h-full object-contain sm:object-cover transition-opacity duration-300"
-          style={{ opacity: isActive && isVideoReady ? 1 : 0 }}
+          className="absolute inset-0 w-full h-full object-contain sm:object-cover transition-opacity duration-150"
+          style={{ opacity: isActive && (isVideoReady || isPlaying) ? 1 : 0 }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'metadata'}
           loop={!autoAdvance}
