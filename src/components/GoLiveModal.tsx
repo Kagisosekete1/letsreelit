@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2 } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2, SwitchCamera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -35,9 +35,10 @@ const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
-  const { currentUser, authUser, refreshProfile } = useUser();
+  const { currentUser, authUser } = useUser();
   const { forceCleanupAll } = useAudio();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const liveVideoRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -70,29 +71,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, forceCleanupAll]);
 
-  // If modal is closed while a MediaStream exists, stop tracks immediately.
-  useEffect(() => {
-    if (isOpen) return;
-
-    // Use a ref check to avoid triggering re-renders
-    return () => {
-      // Cleanup only on unmount or when isOpen changes to false
-    };
-  }, [isOpen]);
-
-  // Separate effect to handle stream cleanup when modal closes
+  // Cleanup streams when modal closes
   useEffect(() => {
     if (!isOpen && stream) {
       stream.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) {
-        try {
-          videoRef.current.srcObject = null;
-        } catch {
-          // ignore
-        }
-      }
+      setStream(null);
     }
-  }, [isOpen]); // Note: we intentionally omit stream to avoid re-render loop
+  }, [isOpen]);
 
   // Check for viewer milestones
   useEffect(() => {
@@ -110,17 +95,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   }, [viewerCount, toast]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      // Clean up realtime channel
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [stream]);
+  }, []);
 
   // Update live duration
   useEffect(() => {
@@ -175,7 +160,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             return next;
           });
           
-          // Show join notification
           toast({
             title: `${presence.username || 'Someone'} joined`,
             description: 'A new viewer is watching your live!',
@@ -193,7 +177,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       })
       .on('broadcast', { event: 'like' }, () => {
         setLikeCount(prev => prev + 1);
-        setLikeTrigger(prev => prev + 1); // Trigger floating hearts
+        setLikeTrigger(prev => prev + 1);
       })
       .on('broadcast', { event: 'comment' }, ({ payload }) => {
         const comment = payload as Comment;
@@ -201,7 +185,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Track the broadcaster's presence
           await channel.track({
             username: currentUser?.username || 'Broadcaster',
             avatarUrl: currentUser?.avatarUrl,
@@ -217,7 +200,27 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [isLive, liveSessionId, authUser?.id]); // Removed currentUser?.username to prevent re-subscribe on profile changes
+  }, [isLive, liveSessionId, authUser?.id]);
+
+  // Attach stream to video when step changes to live
+  useEffect(() => {
+    if (step === 'live' && stream && liveVideoRef.current) {
+      liveVideoRef.current.srcObject = stream;
+      liveVideoRef.current.play().catch((err) => {
+        console.log('Video play error:', err);
+      });
+    }
+  }, [step, stream]);
+
+  // Attach stream to preview video
+  useEffect(() => {
+    if (step === 'setup' && stream && previewVideoRef.current) {
+      previewVideoRef.current.srcObject = stream;
+      previewVideoRef.current.play().catch((err) => {
+        console.log('Preview video play error:', err);
+      });
+    }
+  }, [step, stream]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -225,133 +228,46 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-const checkCameraPermissions = async (): Promise<boolean> => {
+  // Start camera for preview
+  const startPreviewCamera = async () => {
     try {
-      // Check if permissions API is available
-      if (navigator.permissions) {
-        try {
-          const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          
-          if (cameraPermission.state === 'denied') {
-            toast({
-              title: "Camera Permission Denied",
-              description: "Please enable camera access in your browser/device settings to go live.",
-              variant: "destructive",
-            });
-            return false;
-          }
-          
-          if (micPermission.state === 'denied') {
-            toast({
-              title: "Microphone Permission Denied",
-              description: "Please enable microphone access in your browser/device settings to go live.",
-              variant: "destructive",
-            });
-            return false;
-          }
-        } catch {
-          // Some browsers don't support permissions.query for camera/microphone
-        }
+      // Stop existing stream first
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
-      return true;
-    } catch {
-      // Permissions API not fully supported, proceed with getUserMedia
-      return true;
-    }
-  };
 
-  const startCamera = async () => {
-    try {
-      // First check permissions
-      const hasPermission = await checkCameraPermissions();
-      if (!hasPermission) return;
-
-      // Request camera and microphone with explicit constraints
       const constraints: MediaStreamConstraints = {
         video: { 
-          facingMode: { ideal: 'user' },
-          width: { ideal: 1080 }, 
-          height: { ideal: 1920 } 
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: 720 }, 
+          height: { ideal: 1280 } 
         },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        audio: false,
       };
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        // Ensure video plays
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.log('Video autoplay prevented, user interaction may be needed');
-        }
-      }
-
-      // Start recording - check for supported mimeType
-      let mimeType = 'video/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/mp4';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = '';
-        }
-      }
-
-      const options = mimeType ? { mimeType } : undefined;
-      const mediaRecorder = new MediaRecorder(mediaStream, options);
-      mediaRecorderRef.current = mediaRecorder;
-      recordedChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.start(1000);
       
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = mediaStream;
+        await previewVideoRef.current.play();
+      }
+    } catch (error) {
+      console.log('Camera preview not available:', error);
       toast({
-        title: "Camera ready",
-        description: "Your camera is now active.",
-      });
-    } catch (error: any) {
-      console.error('Camera access error:', error);
-      
-      let errorMessage = "Please allow camera and microphone access to go live.";
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage = "Camera/microphone access was denied. Please check your browser permissions.";
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = "No camera or microphone found on this device.";
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = "Camera is in use by another application. Please close other apps using the camera.";
-      } else if (error.name === 'OverconstrainedError') {
-        errorMessage = "Camera constraints could not be satisfied. Trying with default settings.";
-        // Retry with minimal constraints
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          setStream(fallbackStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = fallbackStream;
-          }
-          return;
-        } catch {
-          // Fallback also failed
-        }
-      }
-      
-      toast({
-        title: "Camera access denied",
-        description: errorMessage,
+        title: "Camera access needed",
+        description: "Please allow camera access to preview yourself.",
         variant: "destructive",
       });
     }
   };
+
+  // Start camera preview when setup step is shown
+  useEffect(() => {
+    if (step === 'setup' && isOpen && !stream) {
+      startPreviewCamera();
+    }
+  }, [step, isOpen]);
 
   const handleGoLive = async () => {
     if (!liveTitle.trim()) {
@@ -372,12 +288,16 @@ const checkCameraPermissions = async (): Promise<boolean> => {
       return;
     }
 
-    // START CAMERA FIRST - before anything else
-    // This ensures camera is working before we create the live stream
     try {
+      // Stop preview stream first
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      // Start full camera with audio for live
       const constraints: MediaStreamConstraints = {
         video: { 
-          facingMode: { ideal: 'user' },
+          facingMode: { ideal: currentFacingMode },
           width: { ideal: 1280 }, 
           height: { ideal: 720 } 
         },
@@ -389,7 +309,6 @@ const checkCameraPermissions = async (): Promise<boolean> => {
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
-      setCurrentFacingMode('user');
 
       // Start recording
       let mimeType = 'video/webm';
@@ -431,7 +350,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
         description: errorMessage,
         variant: "destructive",
       });
-      return; // Don't proceed if camera fails
+      return;
     }
 
     // Check for existing active live streams from this user and end them
@@ -473,7 +392,6 @@ const checkCameraPermissions = async (): Promise<boolean> => {
       return;
     }
 
-    // Move to live step - video will attach in useEffect
     setStep('live');
     setIsLive(true);
     setLiveStartTime(new Date());
@@ -518,15 +436,21 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     setStep('ended');
   };
 
-  // No longer save lives - just close when ending
   const handleClose = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
     recordedChunksRef.current = [];
     reachedMilestones.current.clear();
+    setStep('setup');
+    setLiveTitle('');
+    setComments([]);
+    setViewers(new Map());
+    setLikeCount(0);
+    setLiveDuration(0);
     onClose();
   };
-
-  // Emojis for quick reactions - clickable for viewers (not broadcaster)
-  const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', '🙌'];
 
   const toggleMute = () => {
     if (stream) {
@@ -550,6 +474,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
+    
     try {
       const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
       const newStream = await navigator.mediaDevices.getUserMedia({
@@ -558,13 +483,21 @@ const checkCameraPermissions = async (): Promise<boolean> => {
           width: { ideal: 1080 }, 
           height: { ideal: 1920 } 
         },
-        audio: true,
+        audio: step === 'live',
       });
       setStream(newStream);
       setCurrentFacingMode(newFacingMode);
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
+      
+      if (step === 'live' && liveVideoRef.current) {
+        liveVideoRef.current.srcObject = newStream;
+      } else if (step === 'setup' && previewVideoRef.current) {
+        previewVideoRef.current.srcObject = newStream;
       }
+      
+      toast({
+        title: "Camera switched",
+        description: newFacingMode === 'user' ? "Front camera" : "Back camera",
+      });
     } catch (error) {
       console.error('Error flipping camera:', error);
       toast({
@@ -601,52 +534,21 @@ const checkCameraPermissions = async (): Promise<boolean> => {
         avatarUrl: currentUser.avatarUrl,
       };
       
-      // Broadcast comment to all viewers
       channelRef.current.send({
         type: 'broadcast',
         event: 'comment',
         payload: comment,
       });
       
-      // Add to local comments
       setComments(prev => [...prev.slice(-20), comment]);
       setNewComment('');
     }
   };
 
-  // Start camera preview for setup screen
-  const startPreviewCamera = async () => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: { 
-          facingMode: { ideal: 'user' },
-          width: { ideal: 720 }, 
-          height: { ideal: 1280 } 
-        },
-        audio: false, // No audio needed for preview
-      };
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
-      }
-    } catch (error) {
-      console.log('Camera preview not available:', error);
-    }
-  };
-
-  // Start camera preview when setup step is shown
-  useEffect(() => {
-    if (step === 'setup' && isOpen && !stream) {
-      startPreviewCamera();
-    }
-  }, [step, isOpen]);
-
+  // SETUP SCREEN
   if (step === 'setup') {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="w-[90vw] max-w-[320px] sm:max-w-[360px] rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold">Go Live</h2>
@@ -664,12 +566,12 @@ const checkCameraPermissions = async (): Promise<boolean> => {
             <div className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative">
               {stream ? (
                 <video
-                  ref={videoRef}
+                  ref={previewVideoRef}
                   autoPlay
                   playsInline
                   muted
                   className="w-full h-full object-cover"
-                  style={{ transform: 'scaleX(-1)' }}
+                  style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -689,12 +591,22 @@ const checkCameraPermissions = async (): Promise<boolean> => {
                 </div>
               )}
               
-              {/* Live indicator overlay */}
+              {/* Preview indicator + flip camera */}
               {stream && (
-                <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
-                  <Radio className="w-3 h-3 text-pink-500" />
-                  <span className="text-white text-xs font-medium">Preview</span>
-                </div>
+                <>
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                    <Radio className="w-3 h-3 text-pink-500" />
+                    <span className="text-white text-xs font-medium">Preview</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
+                    onClick={flipCamera}
+                  >
+                    <SwitchCamera className="w-4 h-4" />
+                  </Button>
+                </>
               )}
             </div>
 
@@ -710,7 +622,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
             <Button 
               variant="outline"
               className="w-full rounded-xl h-9"
-              onClick={onClose}
+              onClick={handleClose}
             >
               Cancel
             </Button>
@@ -720,12 +632,12 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     );
   }
 
+  // ENDED SCREEN
   if (step === 'ended') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent className="w-[90vw] max-w-[360px] rounded-2xl bg-gradient-to-br from-background via-background to-pink-500/5 border-pink-500/20 p-4">
           <div className="relative">
-            {/* Decorative elements */}
             <div className="absolute -top-2 -right-2 w-16 h-16 bg-pink-500/20 rounded-full blur-2xl" />
             <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-purple-500/20 rounded-full blur-xl" />
             
@@ -776,13 +688,11 @@ const checkCameraPermissions = async (): Promise<boolean> => {
                   </div>
                 </div>
 
-                {/* Title recap */}
                 <div className="bg-muted/50 rounded-xl p-2 text-center">
                   <p className="text-xs text-muted-foreground">Stream title</p>
                   <p className="font-medium text-sm truncate">{liveTitle}</p>
                 </div>
 
-                {/* Action buttons */}
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 h-10"
@@ -800,7 +710,6 @@ const checkCameraPermissions = async (): Promise<boolean> => {
                   </Button>
                 </div>
 
-                {/* Delete confirmation */}
                 {showDeleteConfirm && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 space-y-2">
                     <p className="text-sm text-center">Delete this live stream permanently?</p>
@@ -829,16 +738,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
     );
   }
 
-  // Attach stream to video element when step becomes 'live'
-  useEffect(() => {
-    if (step === 'live' && stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch((err) => {
-        console.log('Video play error (expected on some devices):', err);
-      });
-    }
-  }, [step, stream]);
-
+  // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
@@ -848,7 +748,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
 
           {/* Video Preview - camera feed */}
           <video
-            ref={videoRef}
+            ref={liveVideoRef}
             autoPlay
             playsInline
             muted={false}
@@ -884,23 +784,13 @@ const checkCameraPermissions = async (): Promise<boolean> => {
               </div>
               
               <div className="flex items-center gap-2">
+                {/* END LIVE BUTTON - Prominent */}
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-red-500/80 backdrop-blur-md text-white hover:bg-red-600 rounded-full w-10 h-10 border border-white/10"
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-full px-4 h-10 flex items-center gap-2 font-semibold"
                   onClick={handleEndLive}
-                  title="End Live"
                 >
-                  <Power className="w-5 h-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-white/10 backdrop-blur-md text-white hover:bg-white/20 rounded-full w-10 h-10 border border-white/10"
-                  onClick={onClose}
-                  title="Close"
-                >
-                  <X className="w-5 h-5" />
+                  <Power className="w-4 h-4" />
+                  End Live
                 </Button>
               </div>
             </div>
@@ -975,7 +865,7 @@ const checkCameraPermissions = async (): Promise<boolean> => {
           {/* Floating Hearts Animation */}
           <FloatingHearts trigger={likeTrigger} />
 
-          {/* Bottom Controls with glass morphism - Broadcaster view (no emoji reactions, no like button) */}
+          {/* Bottom Controls with glass morphism */}
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
             {/* Comment Input with modern styling */}
             <div className="flex items-center gap-2 mb-4">
@@ -1020,8 +910,9 @@ const checkCameraPermissions = async (): Promise<boolean> => {
                 size="lg"
                 className="rounded-full w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
                 onClick={flipCamera}
+                title="Switch Camera"
               >
-                <RotateCcw className="w-6 h-6 text-white" />
+                <SwitchCamera className="w-6 h-6 text-white" />
               </Button>
             </div>
           </div>

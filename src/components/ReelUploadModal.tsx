@@ -244,35 +244,20 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'edit' && (
           <div className="space-y-4 py-4">
-            {/* Video Preview - Clickable to play/pause */}
+            {/* Video Preview - Auto-plays */}
             <div 
-              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64 cursor-pointer"
+              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64"
               style={{ filter: FILTERS[selectedFilter].class }}
-              onClick={() => {
-                const video = videoRef.current;
-                if (!video) return;
-                if (video.paused) {
-                  video.play().catch(() => {});
-                } else {
-                  video.pause();
-                }
-              }}
             >
               <video
                 ref={videoRef}
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
-                playsInline
+                autoPlay
                 loop
+                muted
+                playsInline
               />
-              {/* Play button overlay when paused */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-14 h-14 bg-black/40 rounded-full flex items-center justify-center backdrop-blur-sm opacity-80">
-                  <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </div>
-              </div>
             </div>
 
             {/* Edit Options */}
