@@ -757,6 +757,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
             src={reel.thumbnailUrl}
             alt={reel.title}
             className="absolute inset-0 w-full h-full object-cover"
+            style={{ 
+              opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
+              transition: 'opacity 0.2s ease-in-out'
+            }}
             draggable={false}
           />
         )}
@@ -764,8 +768,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
         <video
           ref={videoRef}
           data-reel-video="true"
-          className="absolute inset-0 w-full h-full object-contain sm:object-cover transition-opacity duration-150"
-          style={{ opacity: isActive && (isVideoReady || isPlaying) ? 1 : 0 }}
+          className="absolute inset-0 w-full h-full object-contain sm:object-cover"
+          style={{ 
+            opacity: isActive ? 1 : 0,
+            transition: 'opacity 0.15s ease-in-out',
+            visibility: isActive ? 'visible' : 'hidden'
+          }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'metadata'}
           loop={!autoAdvance}
@@ -797,6 +805,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onStalled={() => setIsBuffering(true)}
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => {
+            setIsPlaying(true);
             setIsVideoReady(true);
             setIsBuffering(false);
           }}

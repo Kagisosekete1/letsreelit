@@ -219,24 +219,72 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-const startCamera = async () => {
+const checkCameraPermissions = async (): Promise<boolean> => {
     try {
-      // Use front-facing camera (selfie) for mobile devices
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      // Check if permissions API is available
+      if (navigator.permissions) {
+        const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        
+        if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
+          toast({
+            title: "Permission Required",
+            description: "Please enable camera and microphone access in your browser settings to go live.",
+            variant: "destructive",
+          });
+          return false;
+        }
+      }
+      return true;
+    } catch {
+      // Permissions API not fully supported, proceed with getUserMedia
+      return true;
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      // First check permissions
+      const hasPermission = await checkCameraPermissions();
+      if (!hasPermission) return;
+
+      // Request camera and microphone with explicit constraints
+      const constraints: MediaStreamConstraints = {
         video: { 
-          facingMode: { ideal: 'user' }, // Front camera for selfie
+          facingMode: { ideal: 'user' },
           width: { ideal: 1080 }, 
           height: { ideal: 1920 } 
         },
-        audio: true,
-      });
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        // Ensure video plays
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.log('Video autoplay prevented, user interaction may be needed');
+        }
       }
 
-      // Start recording
-      const mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm' });
+      // Start recording - check for supported mimeType
+      let mimeType = 'video/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = '';
+        }
+      }
+
+      const options = mimeType ? { mimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(mediaStream, options);
       mediaRecorderRef.current = mediaRecorder;
       recordedChunksRef.current = [];
 
@@ -247,10 +295,40 @@ const startCamera = async () => {
       };
 
       mediaRecorder.start(1000);
-    } catch (error) {
+      
+      toast({
+        title: "Camera ready",
+        description: "Your camera is now active.",
+      });
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      
+      let errorMessage = "Please allow camera and microphone access to go live.";
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = "Camera/microphone access was denied. Please check your browser permissions.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "No camera or microphone found on this device.";
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = "Camera is in use by another application. Please close other apps using the camera.";
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = "Camera constraints could not be satisfied. Trying with default settings.";
+        // Retry with minimal constraints
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          setStream(fallbackStream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream;
+          }
+          return;
+        } catch {
+          // Fallback also failed
+        }
+      }
+      
       toast({
         title: "Camera access denied",
-        description: "Please allow camera and microphone access to go live.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -273,6 +351,22 @@ const startCamera = async () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Check for existing active live streams from this user and end them
+    const { data: existingLives } = await supabase
+      .from('live_streams')
+      .select('id, session_id')
+      .eq('user_id', authUser.id)
+      .eq('is_active', true);
+
+    if (existingLives && existingLives.length > 0) {
+      // End all existing active streams
+      await supabase
+        .from('live_streams')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('user_id', authUser.id)
+        .eq('is_active', true);
     }
 
     // Generate unique session ID for this live stream
