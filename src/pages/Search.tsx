@@ -173,14 +173,19 @@ const Search = () => {
         .limit(10);
 
       if (reelsData && reelsData.length > 0) {
-        const userIds = [...new Set(reelsData.map(r => r.user_id))];
+        // Deduplicate reels by id
+        const uniqueReels = Array.from(
+          new Map(reelsData.map(r => [r.id, r])).values()
+        );
+
+        const userIds = [...new Set(uniqueReels.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-        const reelsWithProfiles = reelsData.map(r => ({
+        const reelsWithProfiles = uniqueReels.map(r => ({
           ...r,
           profile: profileMap.get(r.user_id)
         }));
@@ -209,14 +214,19 @@ const Search = () => {
         .order('created_at', { ascending: false });
 
       if (reelsData && reelsData.length > 0) {
-        const userIds = [...new Set(reelsData.map(r => r.user_id))];
+        // Deduplicate reels by id
+        const uniqueReels = Array.from(
+          new Map(reelsData.map(r => [r.id, r])).values()
+        );
+
+        const userIds = [...new Set(uniqueReels.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, user_id, username, display_name, avatar_url, verified')
           .in('user_id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-        const reelsWithProfiles = reelsData.map(r => ({
+        const reelsWithProfiles = uniqueReels.map(r => ({
           ...r,
           profile: profileMap.get(r.user_id)
         }));
