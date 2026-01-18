@@ -168,13 +168,13 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-foreground">Suggested Accounts</h2>
+            <h2 className="font-semibold text-foreground">Suggested Muva'z</h2>
           </div>
           <Button 
             variant="ghost" 
             size="sm" 
             className="text-primary text-sm"
-            onClick={() => navigate('/search')}
+            onClick={() => navigate('/suggested-muvaz')}
           >
             See All
             <ChevronRight className="w-4 h-4 ml-1" />

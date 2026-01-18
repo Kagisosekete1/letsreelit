@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X, Users } from 'lucide-react';
+import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X, Users, Flame, ChevronRight } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -54,7 +54,10 @@ const Search = () => {
   const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
-  const [selectedReel, setSelectedReel] = useState<ReelData | null>(null);
+  const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
+  const [selectedReelList, setSelectedReelList] = useState<ReelData[]>([]);
+  const [currentViewerIndex, setCurrentViewerIndex] = useState(0);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [trendingHashtags, setTrendingHashtags] = useState<TrendingHashtag[]>([]);
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
@@ -298,12 +301,15 @@ const Search = () => {
     navigate('/live', { state: { from: location.pathname } });
   };
 
-  const handleReelClick = (reel: ReelData) => {
-    setSelectedReel(reel);
+  const handleReelClick = (reelList: ReelData[], index: number) => {
+    setSelectedReelList(reelList);
+    setSelectedReelIndex(index);
+    setCurrentViewerIndex(index);
   };
 
   const closeReelViewer = () => {
-    setSelectedReel(null);
+    setSelectedReelIndex(null);
+    setSelectedReelList([]);
   };
 
   // Hover preview handlers
@@ -320,30 +326,30 @@ const Search = () => {
     }
   };
 
-  // Reel Viewer Modal
-  if (selectedReel) {
-    const formattedReel = {
-      id: selectedReel.id,
-      videoUrl: selectedReel.video_url,
-      thumbnailUrl: selectedReel.thumbnail_url || '',
-      title: selectedReel.title,
-      description: selectedReel.description || '',
-      user: {
-        id: selectedReel.user_id,
-        profileId: selectedReel.profile?.id || selectedReel.user_id,
-        username: selectedReel.profile?.username || 'user',
-        displayName: selectedReel.profile?.display_name || selectedReel.profile?.username || 'User',
-        avatarUrl: selectedReel.profile?.avatar_url || '',
-        verified: selectedReel.profile?.verified || false,
-      },
-      stats: {
-        likes: selectedReel.likes_count || 0,
-        comments: selectedReel.comments_count || 0,
-        shares: selectedReel.shares_count || 0,
-        views: selectedReel.views_count || 0,
-      },
-    };
+  // Handle scroll in reel viewer
+  const handleViewerScroll = useCallback(() => {
+    const container = viewerContainerRef.current;
+    if (!container) return;
 
+    const scrollTop = container.scrollTop;
+    const itemHeight = container.clientHeight;
+    const newIndex = Math.round(scrollTop / itemHeight);
+
+    if (newIndex !== currentViewerIndex && newIndex >= 0 && newIndex < selectedReelList.length) {
+      setCurrentViewerIndex(newIndex);
+    }
+  }, [currentViewerIndex, selectedReelList.length]);
+
+  // Scroll to initial reel when opening viewer
+  useEffect(() => {
+    if (selectedReelIndex !== null && viewerContainerRef.current) {
+      const itemHeight = viewerContainerRef.current.clientHeight;
+      viewerContainerRef.current.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'instant' });
+    }
+  }, [selectedReelIndex]);
+
+  // Reel Viewer Modal with vertical scrolling
+  if (selectedReelIndex !== null && selectedReelList.length > 0) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
         <Button
@@ -354,14 +360,53 @@ const Search = () => {
         >
           <X className="w-5 h-5" />
         </Button>
-        <ReelCard
-          reel={formattedReel}
-          followingIds={followingIds}
-          toggleFollow={toggleFollow}
-          isActive={true}
-          isOwner={authUser?.id === selectedReel.user_id}
-          autoAdvance={false}
-        />
+
+        <div
+          ref={viewerContainerRef}
+          className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+          onScroll={handleViewerScroll}
+        >
+          {selectedReelList.map((reel, index) => {
+            const formattedReel = {
+              id: reel.id,
+              videoUrl: reel.video_url,
+              thumbnailUrl: reel.thumbnail_url || '',
+              title: reel.title,
+              description: reel.description || '',
+              user: {
+                id: reel.user_id,
+                profileId: reel.profile?.id || reel.user_id,
+                username: reel.profile?.username || 'user',
+                displayName: reel.profile?.display_name || reel.profile?.username || 'User',
+                avatarUrl: reel.profile?.avatar_url || '',
+                verified: reel.profile?.verified || false,
+              },
+              stats: {
+                likes: reel.likes_count || 0,
+                comments: reel.comments_count || 0,
+                shares: reel.shares_count || 0,
+                views: reel.views_count || 0,
+              },
+            };
+
+            return (
+              <div
+                key={reel.id}
+                className="h-full w-full snap-start snap-always"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <ReelCard
+                  reel={formattedReel}
+                  followingIds={followingIds}
+                  toggleFollow={toggleFollow}
+                  isActive={index === currentViewerIndex}
+                  isOwner={authUser?.id === reel.user_id}
+                  autoAdvance={false}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -416,11 +461,11 @@ const Search = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 px-4">
-              {searchResults.map((reel) => (
+              {searchResults.map((reel, index) => (
                 <div
                   key={reel.id}
                   className="relative cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  onClick={() => handleReelClick(searchResults, index)}
                   onMouseEnter={() => handleMouseEnter(reel.id, reel.video_url)}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -549,9 +594,21 @@ const Search = () => {
 
         {/* Trending Section */}
         <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Trending Now</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Trending Now</h2>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary text-sm gap-1"
+              onClick={() => navigate('/trending')}
+            >
+              <Flame className="w-4 h-4" />
+              See All
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
           
           {loadingTrending ? (
@@ -566,7 +623,7 @@ const Search = () => {
                 <div 
                   key={reel.id} 
                   className="flex-shrink-0 w-32 relative cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  onClick={() => handleReelClick(trendingReels, index)}
                 >
                   {/* Ranking Badge */}
                   <div className="absolute -top-1 -left-1 z-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -599,14 +656,14 @@ const Search = () => {
           )}
         </div>
 
-        {/* Tutorials Section */}
+        {/* Tutorial Muv'z Section */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4">Tutorials</h2>
+          <h2 className="text-lg font-semibold mb-4">Tutorial Muv'z</h2>
           
           {loadingTutorials ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-[9/16] bg-secondary rounded-xl animate-pulse" />
+                <div key={i} className="flex-shrink-0 w-32 h-48 bg-secondary rounded-xl animate-pulse" />
               ))}
             </div>
           ) : tutorialReels.length === 0 ? (
@@ -624,12 +681,12 @@ const Search = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {tutorialReels.map((reel) => (
+            <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+              {tutorialReels.map((reel, index) => (
                 <div 
                   key={reel.id} 
-                  className="relative cursor-pointer group"
-                  onClick={() => handleReelClick(reel)}
+                  className="flex-shrink-0 w-32 relative cursor-pointer group"
+                  onClick={() => handleReelClick(tutorialReels, index)}
                 >
                   <VideoThumbnail
                     videoUrl={reel.video_url}
