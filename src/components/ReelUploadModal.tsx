@@ -251,6 +251,13 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 className="w-full h-full object-contain"
                 controls
                 playsInline
+                autoPlay
+                loop
+                muted
+                onCanPlay={() => {
+                  // Best-effort autoplay for preview (keeps it from "stopping" in Edit Muv)
+                  void videoRef.current?.play().catch(() => {});
+                }}
               />
             </div>
 
@@ -392,7 +399,11 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 playsInline
                 autoPlay
                 loop
-                muted={false}
+                muted
+                onCanPlay={(e) => {
+                  // Autoplay muted for reliability; user can unmute via video controls.
+                  void (e.currentTarget as HTMLVideoElement).play().catch(() => {});
+                }}
               />
             </div>
 
