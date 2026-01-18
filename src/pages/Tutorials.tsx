@@ -66,10 +66,11 @@ export default function Tutorials() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Reel viewer state
-  const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
+  // Muv viewer state
+  const [selectedMuvIndex, setSelectedMuvIndex] = useState<number | null>(null);
   const [currentViewerIndex, setCurrentViewerIndex] = useState(0);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToInitial = useRef(false);
 
   // Bottom navigation
   const counts = useNotificationCounts();
@@ -207,13 +208,15 @@ export default function Tutorials() {
     return num.toString();
   };
 
-  const openReelViewer = (index: number) => {
-    setSelectedReelIndex(index);
+  const openMuvViewer = (index: number) => {
+    hasScrolledToInitial.current = false;
+    setSelectedMuvIndex(index);
     setCurrentViewerIndex(index);
   };
 
-  const closeReelViewer = () => {
-    setSelectedReelIndex(null);
+  const closeMuvViewer = () => {
+    setSelectedMuvIndex(null);
+    hasScrolledToInitial.current = false;
   };
 
   const handleViewerScroll = () => {
@@ -228,15 +231,15 @@ export default function Tutorials() {
   };
 
   useEffect(() => {
-    if (selectedReelIndex === null || !viewerContainerRef.current) return;
-    setCurrentViewerIndex(selectedReelIndex);
-    requestAnimationFrame(() => {
-      if (viewerContainerRef.current) {
-        const itemHeight = viewerContainerRef.current.clientHeight;
-        viewerContainerRef.current.scrollTo({ top: selectedReelIndex * itemHeight, behavior: 'auto' });
-      }
-    });
-  }, [selectedReelIndex]);
+    if (selectedMuvIndex !== null && viewerContainerRef.current && !hasScrolledToInitial.current) {
+      hasScrolledToInitial.current = true;
+      const container = viewerContainerRef.current;
+      const itemHeight = container.clientHeight;
+      requestAnimationFrame(() => {
+        container.scrollTo({ top: selectedMuvIndex * itemHeight, behavior: 'auto' });
+      });
+    }
+  }, [selectedMuvIndex]);
 
   const handleTabChange = (tab: string) => {
     if (tab === 'home') {
@@ -252,15 +255,15 @@ export default function Tutorials() {
     }
   };
 
-  // Reel Viewer Modal
-  if (selectedReelIndex !== null) {
+  // Muv Viewer Modal
+  if (selectedMuvIndex !== null) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
         <Button
           variant="ghost"
           size="icon"
           className="absolute top-4 left-4 z-50 text-white bg-black/40 hover:bg-black/60 rounded-full"
-          onClick={closeReelViewer}
+          onClick={closeMuvViewer}
         >
           <X className="w-6 h-6" />
         </Button>
@@ -271,7 +274,7 @@ export default function Tutorials() {
           onScroll={handleViewerScroll}
         >
           {displayedTutorials.map((tutorial, index) => {
-            const reelData = {
+            const muvData = {
               id: tutorial.id,
               videoUrl: tutorial.video_url,
               thumbnailUrl: tutorial.thumbnail_url || undefined,
@@ -291,7 +294,6 @@ export default function Tutorials() {
                 shares: tutorial.shares_count || 0,
                 views: tutorial.views_count || 0,
               },
-              createdAt: tutorial.created_at,
             };
 
             return (
@@ -300,7 +302,7 @@ export default function Tutorials() {
                 className="h-[100dvh] w-full snap-start snap-always overflow-hidden"
               >
                 <ReelCard
-                  reel={reelData}
+                  reel={muvData}
                   isActive={index === currentViewerIndex}
                   followingIds={followingIds}
                   toggleFollow={toggleFollow}
@@ -426,7 +428,7 @@ export default function Tutorials() {
               <div
                 key={tutorial.id}
                 className="relative rounded-xl overflow-hidden bg-muted aspect-[9/16] cursor-pointer group"
-                onClick={() => openReelViewer(index)}
+                onClick={() => openMuvViewer(index)}
               >
                 {/* Thumbnail */}
                 {tutorial.thumbnail_url ? (
