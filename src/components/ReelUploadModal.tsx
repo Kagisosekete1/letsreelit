@@ -19,14 +19,18 @@ interface ReelUploadModalProps {
 }
 
 const FILTERS = [
-  { name: 'None', class: '', preview: 'N' },
-  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: 'W' },
-  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: 'C' },
-  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: 'V' },
-  { name: 'B&W', class: 'grayscale(100%)', preview: 'BW' },
-  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: 'Vi' },
-  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: 'F' },
-  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: 'D' },
+  { name: 'None', class: '', preview: '✨' },
+  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: '🌅' },
+  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: '❄️' },
+  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: '📷' },
+  { name: 'B&W', class: 'grayscale(100%)', preview: '🖤' },
+  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: '🌈' },
+  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: '🌫️' },
+  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: '🎭' },
+  { name: 'Glow', class: 'brightness(115%) saturate(120%)', preview: '💫' },
+  { name: 'Noir', class: 'grayscale(80%) contrast(120%)', preview: '🎬' },
+  { name: 'Sunset', class: 'sepia(20%) hue-rotate(-10deg) saturate(130%)', preview: '🌇' },
+  { name: 'Neon', class: 'saturate(180%) brightness(105%) hue-rotate(10deg)', preview: '💜' },
 ];
 
 const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, videoFile }) => {
@@ -228,9 +232,9 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <DialogTitle className="flex-1 text-center">
-              {step === 'edit' && 'Edit Muv'}
-              {step === 'crop' && 'Crop Muv'}
+          <DialogTitle className="flex-1 text-center">
+              {step === 'edit' && 'Crop Muv'}
+              {step === 'crop' && 'Crop & Trim'}
               {step === 'filters' && 'Filters & Effects'}
               {step === 'details' && 'Muv Details'}
               {step === 'uploading' && 'Uploading...'}
@@ -240,26 +244,35 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'edit' && (
           <div className="space-y-4 py-4">
-            {/* Video Preview */}
+            {/* Video Preview - Clickable to play/pause */}
             <div 
-              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64"
+              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64 cursor-pointer"
               style={{ filter: FILTERS[selectedFilter].class }}
+              onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                if (video.paused) {
+                  video.play().catch(() => {});
+                } else {
+                  video.pause();
+                }
+              }}
             >
               <video
                 ref={videoRef}
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
-                controls
                 playsInline
-                onClick={(e) => {
-                  const video = e.currentTarget;
-                  if (video.paused) {
-                    video.play().catch(() => {});
-                  } else {
-                    video.pause();
-                  }
-                }}
+                loop
               />
+              {/* Play button overlay when paused */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-14 h-14 bg-black/40 rounded-full flex items-center justify-center backdrop-blur-sm opacity-80">
+                  <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+              </div>
             </div>
 
             {/* Edit Options */}
@@ -273,8 +286,8 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                   <Scissors className="w-5 h-5 text-accent-foreground" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold">Crop Reel</p>
-                  <p className="text-sm text-muted-foreground">Crop & trim your video</p>
+                  <p className="font-semibold">Crop Muv</p>
+                  <p className="text-sm text-muted-foreground">Crop & Trim your Muv</p>
                 </div>
               </Button>
 
