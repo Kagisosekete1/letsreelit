@@ -74,19 +74,25 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) return;
 
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
+    // Use a ref check to avoid triggering re-renders
+    return () => {
+      // Cleanup only on unmount or when isOpen changes to false
+    };
+  }, [isOpen]);
 
-    if (videoRef.current) {
-      try {
-        videoRef.current.srcObject = null;
-      } catch {
-        // ignore
+  // Separate effect to handle stream cleanup when modal closes
+  useEffect(() => {
+    if (!isOpen && stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      if (videoRef.current) {
+        try {
+          videoRef.current.srcObject = null;
+        } catch {
+          // ignore
+        }
       }
     }
-  }, [isOpen, stream]);
+  }, [isOpen]); // Note: we intentionally omit stream to avoid re-render loop
 
   // Check for viewer milestones
   useEffect(() => {
@@ -211,7 +217,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [isLive, liveSessionId, authUser?.id, currentUser?.username]);
+  }, [isLive, liveSessionId, authUser?.id]); // Removed currentUser?.username to prevent re-subscribe on profile changes
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
