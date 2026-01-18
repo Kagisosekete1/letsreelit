@@ -378,9 +378,11 @@ export type Database = {
       }
       reels: {
         Row: {
+          category: string | null
           comments_count: number | null
           created_at: string | null
           description: string | null
+          difficulty_level: string | null
           id: string
           is_portrait: boolean | null
           is_tutorial: boolean | null
@@ -393,9 +395,11 @@ export type Database = {
           views_count: number | null
         }
         Insert: {
+          category?: string | null
           comments_count?: number | null
           created_at?: string | null
           description?: string | null
+          difficulty_level?: string | null
           id?: string
           is_portrait?: boolean | null
           is_tutorial?: boolean | null
@@ -408,9 +412,11 @@ export type Database = {
           views_count?: number | null
         }
         Update: {
+          category?: string | null
           comments_count?: number | null
           created_at?: string | null
           description?: string | null
+          difficulty_level?: string | null
           id?: string
           is_portrait?: boolean | null
           is_tutorial?: boolean | null
