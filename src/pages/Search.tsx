@@ -15,6 +15,7 @@ import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
 import SuggestedAccounts from '@/components/SuggestedAccounts';
 import AddFriendsFromContacts from '@/components/AddFriendsFromContacts';
 import { useContinueWatching } from '@/hooks/useContinueWatching';
+import NewTodaySection from '@/components/NewTodaySection';
 
 interface ReelData {
   id: string;
@@ -580,15 +581,26 @@ const Search = () => {
           <SuggestedAccounts limit={5} compact />
         </div>
 
-        {/* Add Friends Button */}
+        {/* Add Muva'z from Contacts Button */}
         <Button 
           variant="outline" 
           className="w-full mb-6 rounded-xl gap-2"
           onClick={() => setShowAddFriends(true)}
         >
           <Users className="w-4 h-4" />
-          Add Friends from Contacts
+          Add Muva'z from Contacts
         </Button>
+
+        {/* New Today Section */}
+        <NewTodaySection 
+          onReelClick={(reelId) => {
+            const allReels = [...trendingReels, ...tutorialReels];
+            const index = allReels.findIndex(r => r.id === reelId);
+            if (index >= 0) {
+              handleReelClick(allReels, index);
+            }
+          }}
+        />
 
         {/* Trending Hashtags */}
         {trendingHashtags.length > 0 && (

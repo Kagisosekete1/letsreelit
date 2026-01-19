@@ -235,6 +235,9 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
                     {account.display_name}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">@{account.username}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {account.followers_count || 0} followers
+                  </p>
                 </div>
                 <Button
                   size="sm"
@@ -287,7 +290,9 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground truncate">@{account.username}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  @{account.username} · {account.followers_count || 0} followers
+                </p>
                 {account.bio && (
                   <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{account.bio}</p>
                 )}
