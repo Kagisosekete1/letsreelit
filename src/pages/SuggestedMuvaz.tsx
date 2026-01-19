@@ -111,11 +111,6 @@ const SuggestedMuvaz = () => {
           following_id: userId,
         });
 
-        await supabase.from('notifications').insert({
-          user_id: userId,
-          from_user_id: authUser.id,
-          type: 'follow',
-        });
         sendFollowNotification(userId, authUser.id);
       }
     } catch (error) {

@@ -357,12 +357,16 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               style={{ filter: FILTERS[selectedFilter].class }}
             >
               <video
+                ref={videoRef}
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
                 autoPlay
                 loop
                 muted
                 playsInline
+                onCanPlay={() => {
+                  videoRef.current?.play().catch(() => {});
+                }}
               />
             </div>
 
@@ -397,12 +401,16 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               style={{ filter: FILTERS[selectedFilter].class }}
             >
               <video
+                ref={videoRef}
                 src={videoPreviewUrl}
                 className="w-full h-full object-contain"
                 autoPlay
                 loop
                 muted
                 playsInline
+                onCanPlay={() => {
+                  videoRef.current?.play().catch(() => {});
+                }}
               />
             </div>
 
