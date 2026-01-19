@@ -26,7 +26,7 @@ interface SuggestedAccountsProps {
 }
 
 const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({ 
-  limit = 5, 
+  limit = 10, 
   showTitle = true,
   compact = false 
 }) => {
@@ -60,12 +60,12 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
     setLoading(true);
 
     try {
-      // Get accounts the user is NOT following, ordered by followers count
+      // Get accounts ordered by followers count (trending/famous), fetch extra to filter
       let query = supabase
         .from('profiles')
         .select('*')
         .order('followers_count', { ascending: false })
-        .limit(limit + 10); // Fetch extra to filter
+        .limit(Math.max(limit, 10) + 20); // Always fetch at least 10, plus buffer
 
       if (authUser) {
         // Exclude self
@@ -76,8 +76,10 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
 
       if (data) {
         // Filter out accounts the user is already following
-        const filtered = data.filter(p => !followingIds.has(p.user_id)).slice(0, limit);
-        setAccounts(filtered);
+        const filtered = data.filter(p => !followingIds.has(p.user_id));
+        // Ensure minimum of 10 or limit, whichever is larger
+        const minCount = Math.max(limit, 10);
+        setAccounts(filtered.slice(0, minCount));
       }
     } catch (error) {
       console.error('Error fetching suggested accounts:', error);
