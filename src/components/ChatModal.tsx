@@ -7,6 +7,7 @@ import { ArrowLeft, Send, CheckCheck, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import SwipeableMessage from './SwipeableMessage';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -238,38 +239,43 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
               };
 
               return (
-                <div
+                <SwipeableMessage
                   key={message.id}
-                  className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}
+                  canDelete={true}
+                  onDelete={handleDeleteMessage}
                 >
-                  <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div
-                      className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                        isMe
-                          ? 'bg-primary text-primary-foreground rounded-br-sm'
-                          : 'bg-secondary text-foreground rounded-bl-sm'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                      <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
-                        {isMe && message.is_read && (
-                          <CheckCheck className="w-3 h-3 opacity-70" />
-                        )}
-                      </div>
-                    </div>
-                    {isMe && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={handleDeleteMessage}
+                  <div
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}
+                  >
+                    <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div
+                        className={`max-w-[75%] px-4 py-2 rounded-2xl ${
+                          isMe
+                            ? 'bg-primary text-primary-foreground rounded-br-sm'
+                            : 'bg-secondary text-foreground rounded-bl-sm'
+                        }`}
                       >
-                        <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                      </Button>
-                    )}
+                        <p className="text-sm">{message.content}</p>
+                        <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
+                          {isMe && message.is_read && (
+                            <CheckCheck className="w-3 h-3 opacity-70" />
+                          )}
+                        </div>
+                      </div>
+                      {isMe && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={handleDeleteMessage}
+                        >
+                          <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </SwipeableMessage>
               );
             })
           )}

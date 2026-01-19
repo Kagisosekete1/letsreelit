@@ -71,7 +71,7 @@ const AddFriendsFromContacts: React.FC<AddFriendsFromContactsProps> = ({ isOpen,
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[400px] rounded-3xl">
         <DialogHeader className="pb-4">
-          <DialogTitle className="text-xl font-semibold text-center">Find Friends</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-center">Add Muva'z from Contacts</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
