@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, Send, CheckCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +74,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
     };
     markAsRead();
 
-    // Subscribe to new messages
+    // Subscribe to new messages and read status updates
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -94,6 +94,23 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
               .update({ is_read: true })
               .eq('id', payload.new.id);
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          // Update read status in real-time
+          setMessages(prev => prev.map(msg => 
+            msg.id === payload.new.id 
+              ? { ...msg, is_read: (payload.new as Message).is_read }
+              : msg
+          ));
         }
       )
       .subscribe();
@@ -258,8 +275,12 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
                         <p className="text-sm">{message.content}</p>
                         <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
-                          {isMe && message.is_read && (
-                            <CheckCheck className="w-3 h-3 opacity-70" />
+                          {isMe && (
+                            message.is_read ? (
+                              <CheckCheck className="w-3 h-3 text-blue-400" />
+                            ) : (
+                              <Check className="w-3 h-3 opacity-70" />
+                            )
                           )}
                         </div>
                       </div>

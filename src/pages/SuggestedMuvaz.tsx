@@ -32,8 +32,13 @@ const SuggestedMuvaz = () => {
   const [activeTab, setActiveTab] = useState('tutorials');
 
   useEffect(() => {
-    fetchSuggestedAccounts();
-    if (authUser) fetchFollowing();
+    const init = async () => {
+      if (authUser) {
+        await fetchFollowing();
+      }
+      await fetchSuggestedAccounts();
+    };
+    init();
   }, [authUser]);
 
   const fetchFollowing = async () => {
@@ -53,6 +58,19 @@ const SuggestedMuvaz = () => {
     setLoading(true);
 
     try {
+      // Get current following list first
+      let currentFollowing = new Set<string>();
+      if (authUser) {
+        const { data: followData } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', authUser.id);
+        if (followData) {
+          currentFollowing = new Set(followData.map(f => f.following_id));
+          setFollowingIds(currentFollowing);
+        }
+      }
+
       let query = supabase
         .from('profiles')
         .select('*')
@@ -66,7 +84,8 @@ const SuggestedMuvaz = () => {
       const { data } = await query;
 
       if (data) {
-        const filtered = data.filter(p => !followingIds.has(p.user_id));
+        // Filter out already followed users
+        const filtered = data.filter(p => !currentFollowing.has(p.user_id));
         setAccounts(filtered);
       }
     } catch (error) {
