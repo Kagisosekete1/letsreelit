@@ -42,6 +42,22 @@ const BEAUTY_FILTERS = [
   { name: 'Dreamy', class: 'brightness(105%) blur(0.3px) saturate(85%)', icon: '🌙' },
 ];
 
+// AR Face Effects - overlay emojis/stickers on the face area
+const AR_EFFECTS = [
+  { name: 'None', emoji: '❌', overlay: null },
+  { name: 'Bunny', emoji: '🐰', overlay: '🐰' },
+  { name: 'Cat', emoji: '🐱', overlay: '😺' },
+  { name: 'Dog', emoji: '🐶', overlay: '🐕' },
+  { name: 'Crown', emoji: '👑', overlay: '👑' },
+  { name: 'Hearts', emoji: '💕', overlay: '💕' },
+  { name: 'Stars', emoji: '⭐', overlay: '✨' },
+  { name: 'Glasses', emoji: '🕶️', overlay: '🕶️' },
+  { name: 'Angel', emoji: '😇', overlay: '😇' },
+  { name: 'Devil', emoji: '😈', overlay: '😈' },
+  { name: 'Fire', emoji: '🔥', overlay: '🔥' },
+  { name: 'Sparkle', emoji: '✨', overlay: '💫' },
+];
+
 // Viewer milestones for confetti
 const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
 
@@ -72,6 +88,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedAREffect, setSelectedAREffect] = useState(0);
+  const [showAREffects, setShowAREffects] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const [allComments, setAllComments] = useState<Comment[]>([]); // Store ALL comments for scroll history
+  const commentsContainerRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -196,7 +217,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       })
       .on('broadcast', { event: 'comment' }, ({ payload }) => {
         const comment = payload as Comment;
+        // Store in BOTH - allComments for scroll history, comments for display
+        setAllComments(prev => [...prev, comment]);
         setComments(prev => [...prev.slice(-20), comment]);
+        // Auto-scroll to latest comment
+        setTimeout(() => {
+          if (commentsContainerRef.current) {
+            commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
+          }
+        }, 100);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -243,6 +272,51 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Check and request permissions
+  const checkPermissions = async () => {
+    try {
+      // Check camera permission
+      const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      
+      if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
+        setPermissionStatus('granted');
+      } else if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
+        setPermissionStatus('denied');
+      } else {
+        setPermissionStatus('prompt');
+      }
+    } catch {
+      // Permissions API not supported, try direct access
+      setPermissionStatus('prompt');
+    }
+  };
+
+  // Request all permissions
+  const requestAllPermissions = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      mediaStream.getTracks().forEach(track => track.stop());
+      setPermissionStatus('granted');
+      toast({
+        title: "Permissions granted",
+        description: "Camera and microphone access enabled!",
+      });
+      // Now start the preview camera
+      startPreviewCamera();
+    } catch (error) {
+      setPermissionStatus('denied');
+      toast({
+        title: "Permission denied",
+        description: "Please enable camera and microphone in your browser settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Start camera for preview
   const startPreviewCamera = async () => {
     try {
@@ -262,13 +336,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
+      setPermissionStatus('granted');
       
       if (previewVideoRef.current) {
         previewVideoRef.current.srcObject = mediaStream;
         await previewVideoRef.current.play();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('Camera preview not available:', error);
+      if (error.name === 'NotAllowedError') {
+        setPermissionStatus('denied');
+      }
       toast({
         title: "Camera access needed",
         description: "Please allow camera access to preview yourself.",
@@ -277,8 +355,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // Start camera preview when setup step is shown
+  // Check permissions on mount and start camera preview when setup step is shown
   useEffect(() => {
+    if (isOpen) {
+      checkPermissions();
+    }
     if ((step === 'setup' || step === 'countdown') && isOpen && !stream) {
       startPreviewCamera();
     }
@@ -468,9 +549,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setStep('setup');
     setLiveTitle('');
     setComments([]);
+    setAllComments([]); // Reset all comments history
     setViewers(new Map());
     setLikeCount(0);
     setLiveDuration(0);
+    setSelectedAREffect(0); // Reset AR effect
+    setSelectedFilter(0); // Reset filter
     onClose();
   };
 
@@ -562,8 +646,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         payload: comment,
       });
       
+      // Store in both arrays for history scrolling
+      setAllComments(prev => [...prev, comment]);
       setComments(prev => [...prev.slice(-20), comment]);
       setNewComment('');
+      
+      // Auto-scroll to latest
+      setTimeout(() => {
+        if (commentsContainerRef.current) {
+          commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
+        }
+      }, 100);
     }
   };
 
@@ -584,33 +677,63 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="rounded-xl text-sm"
             />
 
-            {/* Camera Preview with Beauty Filter */}
+            {/* Camera Preview with Beauty Filter and AR Effects */}
             <div 
               className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
               {stream ? (
-                <video
-                  ref={previewVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                  style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-muted">
+                <>
+                  <video
+                    ref={previewVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                  />
+                  {/* AR Effect Overlay */}
+                  {AR_EFFECTS[selectedAREffect].overlay && (
+                    <div className="absolute inset-0 flex items-start justify-center pt-8 pointer-events-none">
+                      <span className="text-6xl animate-bounce drop-shadow-lg">
+                        {AR_EFFECTS[selectedAREffect].overlay}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : permissionStatus === 'denied' ? (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/20 to-red-950/30">
                   <div className="text-center px-4">
-                    <Camera className="w-10 h-10 text-pink-500 mx-auto mb-2" />
-                    <p className="text-base font-semibold mb-1">Camera Preview</p>
-                    <p className="text-muted-foreground text-xs">Allow camera access to see yourself</p>
+                    <Camera className="w-10 h-10 text-red-400 mx-auto mb-2" />
+                    <p className="text-base font-semibold mb-1 text-red-400">Permission Denied</p>
+                    <p className="text-muted-foreground text-xs mb-2">Camera access was blocked</p>
+                    <p className="text-xs text-muted-foreground">Please enable it in your browser settings:</p>
+                    <p className="text-xs text-pink-400 mt-1">Settings → Privacy → Camera & Microphone</p>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="mt-2"
-                      onClick={startPreviewCamera}
+                      className="mt-3"
+                      onClick={requestAllPermissions}
                     >
-                      Enable Camera
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-900/10 to-purple-900/10">
+                  <div className="text-center px-4">
+                    <div className="relative">
+                      <Camera className="w-12 h-12 text-pink-500 mx-auto mb-3" />
+                      <Mic className="w-6 h-6 text-purple-500 absolute -right-1 -bottom-1" />
+                    </div>
+                    <p className="text-base font-semibold mb-1">Enable Camera & Mic</p>
+                    <p className="text-muted-foreground text-xs mb-3">Allow access to go live with your followers</p>
+                    <Button 
+                      className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                      onClick={requestAllPermissions}
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Allow Permissions
                     </Button>
                   </div>
                 </div>
@@ -624,11 +747,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     <span className="text-white text-xs font-medium">Preview</span>
                   </div>
                   <div className="absolute top-2 right-2 flex items-center gap-1">
+                    {/* AR Effects Button */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
-                      onClick={() => setShowFilters(!showFilters)}
+                      className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showAREffects ? 'ring-2 ring-pink-400' : ''}`}
+                      onClick={() => { setShowAREffects(!showAREffects); setShowFilters(false); }}
+                    >
+                      <span className="text-sm">🎭</span>
+                    </Button>
+                    {/* Beauty Filters Button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showFilters ? 'ring-2 ring-pink-400' : ''}`}
+                      onClick={() => { setShowFilters(!showFilters); setShowAREffects(false); }}
                     >
                       <Sparkles className="w-4 h-4" />
                     </Button>
@@ -642,10 +775,33 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     </Button>
                   </div>
                   
+                  {/* AR Effects Panel */}
+                  {showAREffects && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                      <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
+                      <div className="flex gap-1 overflow-x-auto pb-1">
+                        {AR_EFFECTS.map((effect, index) => (
+                          <button
+                            key={effect.name}
+                            onClick={() => setSelectedAREffect(index)}
+                            className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                              selectedAREffect === index 
+                                ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                                : 'bg-white/10 hover:bg-white/20'
+                            }`}
+                          >
+                            <span className="text-lg">{effect.emoji}</span>
+                            <span className="text-[10px] text-white/80">{effect.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Beauty Filters Panel */}
                   {showFilters && (
                     <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                      <p className="text-white text-xs font-medium mb-2 text-center">Beauty Filters</p>
+                      <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
                       <div className="flex gap-1 overflow-x-auto pb-1">
                         {BEAUTY_FILTERS.map((filter, index) => (
                           <button
@@ -864,9 +1020,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
-          {/* Video Preview - camera feed with beauty filter */}
+          {/* Video Preview - camera feed with beauty filter and AR effects */}
           <div 
-            className="w-full h-full"
+            className="w-full h-full relative"
             style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
           >
             <video
@@ -877,6 +1033,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="w-full h-full object-cover"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
+            {/* AR Effect Overlay during live */}
+            {AR_EFFECTS[selectedAREffect].overlay && (
+              <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
+                <span className="text-7xl animate-bounce drop-shadow-lg">
+                  {AR_EFFECTS[selectedAREffect].overlay}
+                </span>
+              </div>
+            )}
           </div>
           
           {/* Gradient overlays for modern look */}
@@ -948,19 +1112,36 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Comments Section with modern bubbles */}
-          <div className="absolute bottom-44 left-0 right-20 max-h-60 overflow-hidden px-4">
-            {comments.length === 0 ? (
+          {/* Comments Section with scrollable history - like TikTok/Instagram */}
+          <div 
+            ref={commentsContainerRef}
+            className="absolute bottom-44 left-0 right-20 max-h-60 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {allComments.length === 0 ? (
               <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
                 <span className="text-white/70 text-sm">✨ Waiting for viewers to join...</span>
               </div>
             ) : (
               <div className="space-y-2">
-                {comments.slice(-6).map((comment, idx) => (
+                {/* Scroll hint at top */}
+                {allComments.length > 6 && (
+                  <button 
+                    className="w-full text-center text-white/50 text-xs py-1 hover:text-white/80 transition-colors"
+                    onClick={() => {
+                      if (commentsContainerRef.current) {
+                        commentsContainerRef.current.scrollTop = 0;
+                      }
+                    }}
+                  >
+                    ↑ Scroll up to see {allComments.length - 6} older comments
+                  </button>
+                )}
+                {allComments.map((comment, idx) => (
                   <div 
                     key={comment.id} 
                     className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/5 flex items-start gap-2 animate-in slide-in-from-left duration-300"
-                    style={{ animationDelay: `${idx * 50}ms` }}
+                    style={{ animationDelay: `${Math.min(idx, 6) * 50}ms` }}
                   >
                     {comment.avatarUrl ? (
                       <ProfileLink username={comment.username}>
@@ -1037,7 +1218,73 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               >
                 <SwitchCamera className="w-6 h-6 text-white" />
               </Button>
+              {/* AR Effects Button during live */}
+              <Button
+                variant="ghost"
+                size="lg"
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${showAREffects ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
+                onClick={() => { setShowAREffects(!showAREffects); setShowFilters(false); }}
+                title="AR Effects"
+              >
+                <span className="text-2xl">🎭</span>
+              </Button>
+              {/* Beauty Filters Button during live */}
+              <Button
+                variant="ghost"
+                size="lg"
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${showFilters ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
+                onClick={() => { setShowFilters(!showFilters); setShowAREffects(false); }}
+                title="Beauty Filters"
+              >
+                <Sparkles className="w-6 h-6 text-white" />
+              </Button>
             </div>
+            
+            {/* AR Effects Panel during live */}
+            {showAREffects && (
+              <div className="mt-3 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {AR_EFFECTS.map((effect, index) => (
+                    <button
+                      key={effect.name}
+                      onClick={() => setSelectedAREffect(index)}
+                      className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                        selectedAREffect === index 
+                          ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                          : 'bg-white/10 hover:bg-white/20'
+                      }`}
+                    >
+                      <span className="text-lg">{effect.emoji}</span>
+                      <span className="text-[10px] text-white/80">{effect.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Beauty Filters Panel during live */}
+            {showFilters && (
+              <div className="mt-3 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {BEAUTY_FILTERS.map((filter, index) => (
+                    <button
+                      key={filter.name}
+                      onClick={() => setSelectedFilter(index)}
+                      className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                        selectedFilter === index 
+                          ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                          : 'bg-white/10 hover:bg-white/20'
+                      }`}
+                    >
+                      <span className="text-lg">{filter.icon}</span>
+                      <span className="text-[10px] text-white/80">{filter.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

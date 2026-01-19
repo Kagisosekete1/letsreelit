@@ -845,9 +845,12 @@ const ReelCard: React.FC<ReelCardProps> = ({
       onMouseLeave={handleTouchEnd}
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
-      <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center">
-        {/* Thumbnail always shown as background - prevents black screen during transitions */}
-        {reel.thumbnailUrl && (
+      <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center bg-black">
+        {/* Black background fallback - prevents white flash when no thumbnail */}
+        <div className="absolute inset-0 bg-black" />
+        
+        {/* Thumbnail shown as background when available - prevents flashes during transitions */}
+        {reel.thumbnailUrl ? (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
@@ -857,6 +860,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
               transition: 'opacity 0.2s ease-in-out'
             }}
             draggable={false}
+          />
+        ) : (
+          /* Black placeholder when no thumbnail - smoother than white flash */
+          <div 
+            className="absolute inset-0 bg-black"
+            style={{ 
+              opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
+              transition: 'opacity 0.2s ease-in-out'
+            }}
           />
         )}
 
