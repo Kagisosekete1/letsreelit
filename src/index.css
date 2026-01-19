@@ -39,6 +39,9 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Video surfaces (reels/live) */
+    --video-background: 0 0% 0%;
+
     /* Brand colors - Facebook/Shazam inspired */
     --brand-blue: 214 89% 52%;
     --brand-light-blue: 211 100% 50%;

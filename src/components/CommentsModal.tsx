@@ -135,17 +135,10 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         .update({ comments_count: (reel?.comments_count || 0) + 1 })
         .eq('id', reelId);
 
-      // Create notification and send push if not own reel
+      // Send in-app + push via backend (prevents duplicates)
       const ownerId = reelOwnerId || reel?.user_id;
       if (ownerId && ownerId !== authUser.id) {
-        await supabase.from('notifications').insert({
-          user_id: ownerId,
-          from_user_id: authUser.id,
-          type: 'comment',
-          reel_id: reelId,
-          message: commentText.slice(0, 50),
-        });
-        sendCommentNotification(ownerId, authUser.id, reelId, commentText);
+        void sendCommentNotification(ownerId, authUser.id, reelId, commentText);
       }
       
       setTimeout(() => {

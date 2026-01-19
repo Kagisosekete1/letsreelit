@@ -326,10 +326,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       }
 
       const constraints: MediaStreamConstraints = {
-        video: { 
+        video: {
           facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 }, 
-          height: { ideal: 1280 } 
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          frameRate: { ideal: 30, max: 30 },
         },
         audio: false,
       };
@@ -385,16 +386,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         stream.getTracks().forEach(track => track.stop());
       }
 
-      // Start full camera with audio for live
+      // Start full camera with audio for live (mobile-friendly portrait constraints)
       const constraints: MediaStreamConstraints = {
-        video: { 
+        video: {
           facingMode: { ideal: currentFacingMode },
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 } 
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          frameRate: { ideal: 30, max: 30 },
         },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
+          autoGainControl: true,
         },
       };
 
@@ -427,7 +430,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         }
       };
 
-      mediaRecorder.start(1000);
+      // Larger timeslice reduces jank on mobile
+      mediaRecorder.start(3000);
 
       // Create live stream record in database
       const sessionId = `live_${authUser!.id}_${Date.now()}`;

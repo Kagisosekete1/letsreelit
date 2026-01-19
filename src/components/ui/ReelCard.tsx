@@ -672,18 +672,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
       await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
       await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
       
-      // Create notification for reel owner (if not self)
-      if (reel.user.id !== authUser.id) {
-        await supabase.from('notifications').insert({
-          user_id: reel.user.id,
-          from_user_id: authUser.id,
-          type: 'like',
-          reel_id: reel.id
-        });
-        
-        // Send push notification
-        sendLikeNotification(reel.user.id, authUser.id, reel.id);
-      }
+        // Send push + create in-app notification via backend (prevents duplicates)
+        void sendLikeNotification(reel.user.id, authUser.id, reel.id);
     } else {
       await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
       await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
@@ -845,41 +835,48 @@ const ReelCard: React.FC<ReelCardProps> = ({
       onMouseLeave={handleTouchEnd}
     >
       {/* Video container - ensures portrait video fills correctly on all devices */}
-      <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center bg-black">
-        {/* Black background fallback - prevents white flash when no thumbnail */}
-        <div className="absolute inset-0 bg-black" />
-        
-        {/* Thumbnail shown as background when available - prevents flashes during transitions */}
+      <div className="relative w-full h-full max-w-[56.25vh] mx-auto flex items-center justify-center bg-video">
+        {/* Solid video surface fallback */}
+        <div className="absolute inset-0 bg-video" />
+
+        {/* Thumbnail/placeholder crossfade layer */}
         {reel.thumbnailUrl ? (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ 
+            style={{
               opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
-              transition: 'opacity 0.2s ease-in-out'
+              transition: 'opacity 0.25s ease-in-out',
             }}
             draggable={false}
+            loading="lazy"
           />
         ) : (
-          /* Black placeholder when no thumbnail - smoother than white flash */
-          <div 
-            className="absolute inset-0 bg-black"
-            style={{ 
+          <div
+            className="absolute inset-0 bg-video"
+            style={{
               opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
-              transition: 'opacity 0.2s ease-in-out'
+              transition: 'opacity 0.25s ease-in-out',
             }}
           />
+        )}
+
+        {/* Buffering overlay (mobile white-flash killer) */}
+        {isActive && (isBuffering || !isVideoReady) && (
+          <div className="absolute inset-0 z-[1] flex items-center justify-center bg-video">
+            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
         )}
 
         <video
           ref={videoRef}
           data-reel-video="true"
           className="absolute inset-0 w-full h-full object-contain sm:object-cover"
-          style={{ 
+          style={{
             opacity: isActive ? 1 : 0,
-            transition: 'opacity 0.15s ease-in-out',
-            visibility: isActive ? 'visible' : 'hidden'
+            transition: 'opacity 0.2s ease-in-out',
+            visibility: isActive ? 'visible' : 'hidden',
           }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'metadata'}
@@ -896,7 +893,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
             setIsBuffering(false);
           }}
           onLoadedMetadata={() => {
-            // Preload first frame
             if (videoRef.current && videoRef.current.readyState >= 1) {
               setIsBuffering(false);
             }
@@ -904,7 +900,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onError={(e) => {
             console.error('Video load error:', e);
             setIsBuffering(false);
-            // Try to reload the video source
             if (videoRef.current && reel.videoUrl) {
               videoRef.current.load();
             }

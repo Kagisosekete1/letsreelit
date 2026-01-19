@@ -145,15 +145,25 @@ export const sendNewReelNotification = async (
     if (!followers || followers.length === 0) return;
 
     // Send notification to each follower (limited to first 100 for performance)
-    const notificationPromises = followers.slice(0, 100).map((follower) =>
-      sendPushNotification({
+    const notificationPromises = followers.slice(0, 100).map(async (follower) => {
+      // Avoid duplicates for the same "new_reel" within a short window
+      const exists = await checkNotificationExists(
+        follower.follower_id,
+        creatorId,
+        'new_reel',
+        reelId,
+        60000
+      );
+      if (exists) return;
+
+      await sendPushNotification({
         userId: follower.follower_id,
         fromUserId: creatorId,
         type: 'new_reel',
         reelId,
         message: reelTitle,
-      })
-    );
+      });
+    });
 
     await Promise.allSettled(notificationPromises);
   } catch (err) {

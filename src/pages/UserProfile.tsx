@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
+import { sendFollowNotification } from '@/services/notificationService';
 
 interface UserProfileData {
   id: string;
@@ -262,13 +263,9 @@ const UserProfile = () => {
           follower_id: authUser.id,
           following_id: user.user_id,
         });
-      
-      // Create notification for followed user
-      await supabase.from('notifications').insert({
-        user_id: user.user_id,
-        from_user_id: authUser.id,
-        type: 'follow'
-      });
+
+      // Send in-app + push via backend (prevents duplicates)
+      void sendFollowNotification(user.user_id, authUser.id);
     }
 
     toast({ title: 'Following', description: `You are now following @${user.username}` });

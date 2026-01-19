@@ -141,6 +141,45 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleDeleteConversation = async () => {
+    if (!authUser) return;
+
+    const confirmed = window.confirm('Delete this entire chat? This will remove all messages.');
+    if (!confirmed) return;
+
+    // Best-effort: delete messages first, then the conversation
+    const { error: msgError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conversationId);
+
+    if (msgError) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete messages',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const { error: convError } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (convError) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete chat',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setMessages([]);
+    onClose();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md h-[80vh] flex flex-col p-0">
@@ -156,6 +195,14 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
             <DialogTitle className="text-base font-semibold">{otherUser.display_name}</DialogTitle>
             <p className="text-xs text-muted-foreground">@{otherUser.username}</p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDeleteConversation}
+            title="Delete chat"
+          >
+            <Trash2 className="w-5 h-5 text-muted-foreground" />
+          </Button>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">

@@ -122,12 +122,6 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
           following_id: userId,
         });
 
-        // Create notification and send push
-        await supabase.from('notifications').insert({
-          user_id: userId,
-          from_user_id: authUser.id,
-          type: 'follow',
-        });
         sendFollowNotification(userId, authUser.id);
       }
     } catch (error) {
