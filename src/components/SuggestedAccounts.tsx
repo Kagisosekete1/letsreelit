@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { UserPlus, UserCheck, ChevronRight, Users, Loader2 } from 'lucide-react';
+import { UserPlus, UserCheck, ChevronRight, Users, Loader2, Flame, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ interface SuggestedProfile {
   verified: boolean;
   followers_count: number;
   bio: string | null;
+  isTrending?: boolean; // Has high engagement in last 24h
 }
 
 interface SuggestedAccountsProps {
@@ -65,19 +66,42 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
         .from('profiles')
         .select('*')
         .order('followers_count', { ascending: false })
-        .limit(Math.max(limit, 10) + 20); // Always fetch at least 10, plus buffer
+        .limit(Math.max(limit, 10) + 20);
 
       if (authUser) {
-        // Exclude self
         query = query.neq('user_id', authUser.id);
       }
 
       const { data } = await query;
 
+      // Fetch trending users (those with high engagement in last 24h)
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentReels } = await supabase
+        .from('reels')
+        .select('user_id, likes_count, comments_count, shares_count')
+        .gte('created_at', twentyFourHoursAgo);
+
+      // Calculate engagement per user in last 24h
+      const userEngagement: Record<string, number> = {};
+      recentReels?.forEach(reel => {
+        const engagement = (reel.likes_count || 0) + (reel.comments_count || 0) * 2 + (reel.shares_count || 0) * 3;
+        userEngagement[reel.user_id] = (userEngagement[reel.user_id] || 0) + engagement;
+      });
+
+      // Mark users with engagement > 5 as trending
+      const trendingUserIds = new Set(
+        Object.entries(userEngagement)
+          .filter(([_, eng]) => eng >= 5)
+          .map(([userId]) => userId)
+      );
+
       if (data) {
-        // Filter out accounts the user is already following
-        const filtered = data.filter(p => !followingIds.has(p.user_id));
-        // Ensure minimum of 10 or limit, whichever is larger
+        const filtered = data
+          .filter(p => !followingIds.has(p.user_id))
+          .map(p => ({
+            ...p,
+            isTrending: trendingUserIds.has(p.user_id)
+          }));
         const minCount = Math.max(limit, 10);
         setAccounts(filtered.slice(0, minCount));
       }
@@ -188,8 +212,14 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
             return (
               <div
                 key={account.id}
-                className="flex-shrink-0 w-28 bg-secondary/50 rounded-2xl p-3 flex flex-col items-center gap-2"
+                className="flex-shrink-0 w-28 bg-secondary/50 rounded-2xl p-3 flex flex-col items-center gap-2 relative"
               >
+                {/* Trending badge */}
+                {account.isTrending && (
+                  <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 shadow-sm">
+                    <Flame className="w-3 h-3 text-white" />
+                  </div>
+                )}
                 <Avatar 
                   className="w-14 h-14 cursor-pointer"
                   onClick={() => handleProfileClick(account.username)}
@@ -229,8 +259,15 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
           return (
             <div
               key={account.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors relative"
             >
+              {/* Trending badge for full layout */}
+              {account.isTrending && (
+                <div className="absolute -top-1 right-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Flame className="w-3 h-3" />
+                  Hot
+                </div>
+              )}
               <Avatar 
                 className="w-12 h-12 cursor-pointer"
                 onClick={() => handleProfileClick(account.username)}

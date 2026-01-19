@@ -97,14 +97,27 @@ const Trending = () => {
   const fetchTrendingReels = async () => {
     setLoading(true);
     try {
-      const { data: reelsData } = await supabase
+      // Prioritize reels from the last 24 hours for freshness
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      let { data: reelsData } = await supabase
         .from('reels')
         .select('*')
+        .gte('created_at', twentyFourHoursAgo)
         .order('created_at', { ascending: false })
         .limit(50);
 
+      // Fallback to recent reels if no 24h content
+      if (!reelsData || reelsData.length < 5) {
+        const { data: fallbackData } = await supabase
+          .from('reels')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        reelsData = fallbackData;
+      }
+
       if (reelsData && reelsData.length > 0) {
-        // Deduplicate reels by id
         const uniqueReels = Array.from(
           new Map(reelsData.map(r => [r.id, r])).values()
         );
@@ -117,15 +130,12 @@ const Trending = () => {
 
         const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-        // Calculate engagement score for each reel
         const reelsWithScore = uniqueReels.map(reel => {
           const views = reel.views_count || 0;
           const likes = reel.likes_count || 0;
           const comments = reel.comments_count || 0;
           const shares = reel.shares_count || 0;
 
-          // Engagement rate = (likes + comments*2 + shares*3) / views * 100
-          // Higher weight for shares and comments as they indicate deeper engagement
           const engagementScore = views > 0
             ? ((likes + comments * 2 + shares * 3) / views) * 100 + (views / 100)
             : likes + comments * 2 + shares * 3;
@@ -137,9 +147,7 @@ const Trending = () => {
           };
         });
 
-        // Sort by engagement score
         reelsWithScore.sort((a, b) => b.engagement_score - a.engagement_score);
-
         setTrendingReels(reelsWithScore);
       }
     } catch (error) {
