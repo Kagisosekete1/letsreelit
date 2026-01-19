@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import ChatModal from '@/components/ChatModal';
@@ -294,6 +294,22 @@ const Inbox = () => {
     navigate('/search');
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (!authUser) return;
+    
+    const confirmed = window.confirm('Delete this entire chat? All messages will be removed.');
+    if (!confirmed) return;
+
+    try {
+      await supabase.from('messages').delete().eq('conversation_id', conversationId);
+      await supabase.from('conversations').delete().eq('id', conversationId);
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      toast({ title: 'Chat deleted', description: 'The conversation has been removed.' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete chat', variant: 'destructive' });
+    }
+  };
+
   const handleBackToList = () => {
     setViewState({ type: 'list' });
   };
@@ -389,31 +405,54 @@ const Inbox = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {conversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => handleConversationClick(conv)}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary cursor-pointer transition-colors"
-                  >
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={conv.other_user?.avatar_url || ''} />
-                      <AvatarFallback>{conv.other_user?.display_name?.[0] || '?'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold truncate">{conv.other_user?.display_name}</p>
-                        <span className="text-xs text-muted-foreground">{formatTime(conv.last_message_at)}</span>
+            <div className="space-y-2">
+                {conversations.map((conv) => {
+                  let pressTimer: NodeJS.Timeout | null = null;
+                  
+                  const handleLongPressStart = () => {
+                    pressTimer = setTimeout(() => {
+                      handleDeleteConversation(conv.id);
+                    }, 600);
+                  };
+                  
+                  const handleLongPressEnd = () => {
+                    if (pressTimer) {
+                      clearTimeout(pressTimer);
+                      pressTimer = null;
+                    }
+                  };
+                  
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleConversationClick(conv)}
+                      onTouchStart={handleLongPressStart}
+                      onTouchEnd={handleLongPressEnd}
+                      onTouchCancel={handleLongPressEnd}
+                      onMouseDown={handleLongPressStart}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary cursor-pointer transition-colors select-none"
+                    >
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={conv.other_user?.avatar_url || ''} />
+                        <AvatarFallback>{conv.other_user?.display_name?.[0] || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold truncate">{conv.other_user?.display_name}</p>
+                          <span className="text-xs text-muted-foreground">{formatTime(conv.last_message_at)}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">{conv.last_message || 'No messages'}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{conv.last_message || 'No messages'}</p>
+                      {(conv.unread_count ?? 0) > 0 && (
+                        <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                          <span className="text-xs text-primary-foreground font-bold">{conv.unread_count}</span>
+                        </div>
+                      )}
                     </div>
-                    {(conv.unread_count ?? 0) > 0 && (
-                      <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-xs text-primary-foreground font-bold">{conv.unread_count}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : (

@@ -28,23 +28,24 @@ const TrendingHashtags: React.FC<TrendingHashtagsProps> = ({
   }, []);
 
   const fetchTrendingHashtags = async () => {
-    // Extract hashtags from reels descriptions - count unique occurrences per reel
+    // Only fetch hashtags from reels created in the last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
     const { data: reels } = await supabase
       .from('reels')
-      .select('id, description, title')
+      .select('id, description, title, created_at')
       .not('description', 'is', null)
+      .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
       .limit(500);
 
-    if (reels) {
+    if (reels && reels.length > 0) {
       const hashtagCounts: Record<string, number> = {};
       
       reels.forEach(reel => {
-        // Combine title and description
         const text = `${reel.title || ''} ${reel.description || ''}`;
         const matches = text.match(/#\w+/g) || [];
         
-        // Use Set to count unique hashtags per reel (no duplicates from same reel)
         const uniqueTagsInReel = new Set(matches.map(tag => tag.slice(1).toLowerCase()));
         
         uniqueTagsInReel.forEach(cleanTag => {
@@ -58,6 +59,31 @@ const TrendingHashtags: React.FC<TrendingHashtagsProps> = ({
         .slice(0, limit);
 
       setHashtags(sortedTags);
+    } else {
+      // Fallback to all-time if no recent hashtags
+      const { data: allReels } = await supabase
+        .from('reels')
+        .select('id, description, title')
+        .not('description', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (allReels) {
+        const hashtagCounts: Record<string, number> = {};
+        allReels.forEach(reel => {
+          const text = `${reel.title || ''} ${reel.description || ''}`;
+          const matches = text.match(/#\w+/g) || [];
+          const uniqueTagsInReel = new Set(matches.map(tag => tag.slice(1).toLowerCase()));
+          uniqueTagsInReel.forEach(cleanTag => {
+            hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+          });
+        });
+        const sortedTags = Object.entries(hashtagCounts)
+          .map(([hashtag, usage_count]) => ({ hashtag, usage_count }))
+          .sort((a, b) => b.usage_count - a.usage_count)
+          .slice(0, limit);
+        setHashtags(sortedTags);
+      }
     }
     setLoading(false);
   };

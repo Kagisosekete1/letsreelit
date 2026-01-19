@@ -249,7 +249,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'edit' && (
           <div className="space-y-4 py-4">
-            {/* Video Preview - Auto-plays */}
+            {/* Video Preview - Auto-plays with sound */}
             <div 
               className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-64"
               style={{ filter: FILTERS[selectedFilter].class }}
@@ -260,8 +260,16 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 className="w-full h-full object-contain"
                 autoPlay
                 loop
-                muted
                 playsInline
+                onCanPlay={(e) => {
+                  const video = e.currentTarget;
+                  video.muted = false;
+                  video.play().catch(() => {
+                    // Fallback to muted if autoplay with sound fails
+                    video.muted = true;
+                    video.play().catch(() => {});
+                  });
+                }}
               />
             </div>
 
@@ -395,7 +403,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
         {step === 'details' && (
           <div className="space-y-4 py-4">
-            {/* Video Preview - Auto-plays */}
+            {/* Video Preview - Auto-plays with original sound */}
             <div 
               className="relative aspect-video bg-black rounded-xl overflow-hidden"
               style={{ filter: FILTERS[selectedFilter].class }}
@@ -406,10 +414,14 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 className="w-full h-full object-contain"
                 autoPlay
                 loop
-                muted
                 playsInline
-                onCanPlay={() => {
-                  videoRef.current?.play().catch(() => {});
+                onCanPlay={(e) => {
+                  const video = e.currentTarget;
+                  video.muted = false;
+                  video.play().catch(() => {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                  });
                 }}
               />
             </div>
