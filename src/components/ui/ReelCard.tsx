@@ -862,10 +862,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
           />
         )}
 
-        {/* Buffering overlay (mobile white-flash killer) */}
-        {isActive && (isBuffering || !isVideoReady) && (
-          <div className="absolute inset-0 z-[1] flex items-center justify-center bg-video">
-            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        {/* Minimal buffering indicator - no overlay, just small spinner */}
+        {isActive && isBuffering && isVideoReady && (
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1]">
+            <div className="w-6 h-6 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
           </div>
         )}
 
@@ -925,20 +925,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         likerUsername={realtimeLiker?.username}
       />
       
-      {/* Big play button overlay for startPaused mode */}
-      {isActive && !userHasPlayed && (
-        <button
-          className="absolute inset-0 flex items-center justify-center z-30 bg-black/20"
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePlay();
-          }}
-        >
-          <div className="w-20 h-20 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/40 transition-colors">
-            <Play className="w-10 h-10 text-white fill-white ml-1" />
-          </div>
-        </button>
-      )}
+      {/* Removed: Big play button overlay - videos now auto-play seamlessly */}
 
       {/* UI Elements - Hidden in clear screen mode */}
       <div 
