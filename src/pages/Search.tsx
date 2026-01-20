@@ -16,7 +16,8 @@ import SuggestedAccounts from '@/components/SuggestedAccounts';
 import AddFriendsFromContacts from '@/components/AddFriendsFromContacts';
 import { useContinueWatching } from '@/hooks/useContinueWatching';
 import NewTodaySection from '@/components/NewTodaySection';
-
+import NearbyMuvaz from '@/components/NearbyMuvaz';
+import MostPopularWeek from '@/components/MostPopularWeek';
 interface ReelData {
   id: string;
   title: string;
@@ -598,6 +599,36 @@ const Search = () => {
             const index = allReels.findIndex(r => r.id === reelId);
             if (index >= 0) {
               handleReelClick(allReels, index);
+            }
+          }}
+        />
+
+        {/* Nearby Muva'z - Location Based */}
+        <div className="mb-6">
+          <NearbyMuvaz maxDistance={50} limit={10} />
+        </div>
+
+        {/* Most Popular This Week */}
+        <MostPopularWeek 
+          limit={10}
+          onReelClick={(reelId, popularReels) => {
+            const formattedReels = popularReels.map(r => ({
+              id: r.id,
+              title: r.title,
+              video_url: r.video_url,
+              thumbnail_url: r.thumbnail_url,
+              views_count: r.views_count,
+              likes_count: r.likes_count,
+              user_id: r.user_id,
+              profile: r.profile ? {
+                username: r.profile.username,
+                display_name: r.profile.display_name,
+                avatar_url: r.profile.avatar_url
+              } : undefined
+            }));
+            const index = formattedReels.findIndex(r => r.id === reelId);
+            if (index >= 0) {
+              handleReelClick(formattedReels, index);
             }
           }}
         />
