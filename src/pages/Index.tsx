@@ -4,6 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import HomeScreen from '@/components/HomeScreen';
 import SplashScreen from '@/components/SplashScreen';
 import CreateReelModal from '@/components/CreateReelModal';
+import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
 import { Screen } from '@/types';
 
 const SPLASH_SHOWN_KEY = 'splashShown';
@@ -68,6 +69,8 @@ const Index = () => {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
+      <NotificationPermissionPrompt enabled={!isCreateReelOpen} />
+
       <div className="pb-16 h-full">
         {currentScreen === 'home' && (
           <HomeScreen setScreen={setScreen} currentScreen={currentScreen} />

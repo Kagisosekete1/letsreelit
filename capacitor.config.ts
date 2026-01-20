@@ -16,14 +16,11 @@ const config: CapacitorConfig = {
       presentationOptions: ['badge', 'sound', 'alert']
     },
     SplashScreen: {
-      // Hide native splash immediately - React SplashScreen handles the animation
-      launchShowDuration: 0,
+      launchShowDuration: 2000,
       launchAutoHide: true,
       backgroundColor: '#000000',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
-      splashFullScreen: false,
-      splashImmersive: false,
     }
   },
   android: {
@@ -31,17 +28,14 @@ const config: CapacitorConfig = {
     icon: 'public/icons/android/icon-512x512.png',
     adaptiveIcon: {
       foreground: 'public/icons/android/icon-512x512.png',
-      backgroundColor: '#000000'
+      backgroundColor: '#FF6B6B'
     },
     // FCM Configuration - place google-services.json in android/app/
-    googleServicesFile: 'google-services.json',
-    // Start with black background to match React splash
-    backgroundColor: '#000000'
+    googleServicesFile: 'google-services.json'
   },
   ios: {
     // Use the generated icons from public/icons/ios/
     icon: 'public/icons/ios/icon-1024x1024.png',
-    backgroundColor: '#000000',
     // FCM Configuration - place GoogleService-Info.plist in ios/App/App/
     // Enable push notification capability in Xcode
   }
