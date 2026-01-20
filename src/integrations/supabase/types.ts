@@ -340,6 +340,9 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           id: string
+          latitude: number | null
+          location_updated_at: string | null
+          longitude: number | null
           reels_count: number | null
           updated_at: string | null
           user_id: string | null
@@ -354,6 +357,9 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          latitude?: number | null
+          location_updated_at?: string | null
+          longitude?: number | null
           reels_count?: number | null
           updated_at?: string | null
           user_id?: string | null
@@ -368,6 +374,9 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          latitude?: number | null
+          location_updated_at?: string | null
+          longitude?: number | null
           reels_count?: number | null
           updated_at?: string | null
           user_id?: string | null
