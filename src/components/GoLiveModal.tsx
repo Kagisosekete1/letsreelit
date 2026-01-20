@@ -256,13 +256,32 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   }, [step, stream]);
 
-  // Attach stream to preview video
+  // Attach stream to preview video - ensure it works on mobile
   useEffect(() => {
-    if (step === 'setup' && stream && previewVideoRef.current) {
-      previewVideoRef.current.srcObject = stream;
-      previewVideoRef.current.play().catch((err) => {
-        console.log('Preview video play error:', err);
-      });
+    if ((step === 'setup' || step === 'countdown') && stream && previewVideoRef.current) {
+      const video = previewVideoRef.current;
+      video.srcObject = stream;
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true;
+      
+      const playVideo = async () => {
+        try {
+          await video.play();
+        } catch (err) {
+          console.log('Preview video play error:', err);
+          // Retry after a short delay (mobile browsers sometimes need this)
+          setTimeout(async () => {
+            try {
+              await video.play();
+            } catch (retryErr) {
+              console.log('Preview video retry error:', retryErr);
+            }
+          }, 100);
+        }
+      };
+      
+      playVideo();
     }
   }, [step, stream]);
 
@@ -383,7 +402,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // Start camera for preview with better error handling
+  // Start camera for preview with better error handling for mobile
   const startPreviewCamera = async () => {
     try {
       // Check if mediaDevices is available
@@ -400,25 +419,58 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       // Stop existing stream first
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        setStream(null);
       }
 
-      const constraints: MediaStreamConstraints = {
+      // Mobile-optimized constraints - start simple, then upgrade
+      const mobileConstraints: MediaStreamConstraints = {
         video: {
-          facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          frameRate: { ideal: 30, max: 30 },
+          facingMode: currentFacingMode,
+          width: { ideal: 720, max: 1280 },
+          height: { ideal: 1280, max: 1920 },
         },
         audio: false,
       };
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      let mediaStream: MediaStream;
+      
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(mobileConstraints);
+      } catch (constraintError) {
+        // Fallback to simplest possible constraints
+        console.log('Trying simpler constraints...');
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: currentFacingMode },
+          audio: false 
+        });
+      }
+      
       setStream(mediaStream);
       setPermissionStatus('granted');
       
+      // Ensure video element is ready for mobile
       if (previewVideoRef.current) {
-        previewVideoRef.current.srcObject = mediaStream;
-        await previewVideoRef.current.play();
+        const video = previewVideoRef.current;
+        video.srcObject = mediaStream;
+        video.muted = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        
+        // Wait for loadedmetadata before playing
+        video.onloadedmetadata = async () => {
+          try {
+            await video.play();
+          } catch (playError) {
+            console.log('Play error on loadedmetadata:', playError);
+          }
+        };
+        
+        // Also try immediate play
+        try {
+          await video.play();
+        } catch (playErr) {
+          console.log('Immediate play error (will retry on loadedmetadata):', playErr);
+        }
       }
     } catch (error: any) {
       console.error('Camera preview error:', error);
@@ -430,20 +482,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           description: "Please allow camera access in your browser settings, then refresh the page.",
           variant: "destructive",
         });
-      } else if (error.name === 'OverconstrainedError') {
-        // Try with simpler constraints
-        try {
-          const simpleStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          setStream(simpleStream);
-          setPermissionStatus('granted');
-          if (previewVideoRef.current) {
-            previewVideoRef.current.srcObject = simpleStream;
-            await previewVideoRef.current.play();
-          }
-          return;
-        } catch {
-          setPermissionStatus('denied');
-        }
+      } else if (error.name === 'NotFoundError') {
+        setPermissionStatus('denied');
+        toast({
+          title: "No camera found",
+          description: "Could not detect a camera on this device.",
+          variant: "destructive",
+        });
+      } else if (error.name === 'NotReadableError') {
+        toast({
+          title: "Camera in use",
+          description: "Your camera may be in use by another app. Please close other apps and try again.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Camera error",
@@ -779,9 +830,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="rounded-xl text-sm"
             />
 
-            {/* Camera Preview with Beauty Filter and AR Effects */}
+            {/* Camera Preview with Beauty Filter and AR Effects - Full screen preview like pro apps */}
             <div 
-              className="aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden relative"
+              className="aspect-[9/16] max-h-[50vh] bg-black rounded-xl overflow-hidden relative"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
               {stream ? (
@@ -791,8 +842,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     autoPlay
                     playsInline
                     muted
+                    webkit-playsinline="true"
                     className="w-full h-full object-cover"
-                    style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                    style={{ 
+                      transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
+                      WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
+                    }}
                   />
                   {/* AR Effect Overlay */}
                   {AR_EFFECTS[selectedAREffect].overlay && (
