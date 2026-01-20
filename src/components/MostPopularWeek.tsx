@@ -107,7 +107,7 @@ const MostPopularWeek: React.FC<MostPopularWeekProps> = ({ limit = 10, onReelCli
   }
 
   return (
-    <div className="bg-card rounded-xl p-4 mb-6">
+    <div className="mb-6">
       <div className="flex items-center gap-2 mb-4">
         <Flame className="w-5 h-5 text-primary" />
         <h3 className="font-bold text-foreground">Most Popular This Week</h3>
@@ -116,100 +116,64 @@ const MostPopularWeek: React.FC<MostPopularWeekProps> = ({ limit = 10, onReelCli
         </Badge>
       </div>
 
-      {/* Top 3 Featured */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {reels.slice(0, 3).map((reel, index) => (
+      {/* Horizontal scroll layout matching Trending/Tutorial Muv'z */}
+      <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+        {reels.map((reel, index) => (
           <div
             key={reel.id}
-            className="relative aspect-[9/16] rounded-lg overflow-hidden cursor-pointer group"
+            className="flex-shrink-0 w-32 relative cursor-pointer group"
             onClick={() => handleReelClick(reel.id)}
           >
-            {reel.thumbnail_url ? (
-              <img
-                src={reel.thumbnail_url}
-                alt={reel.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-            ) : (
-              <div className="w-full h-full bg-muted flex items-center justify-center">
-                <Play className="w-6 h-6 text-muted-foreground" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            
             {/* Rank Badge */}
-            <div className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+            <div className={`absolute -top-1 -left-1 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
               index === 0 ? 'bg-primary text-primary-foreground' :
               index === 1 ? 'bg-secondary text-secondary-foreground' :
-              'bg-accent text-accent-foreground'
+              index === 2 ? 'bg-accent text-accent-foreground' :
+              'bg-muted text-muted-foreground'
             }`}>
-              {index + 1}
-            </div>
-
-            <div className="absolute bottom-2 left-2 right-2">
-              <div className="flex items-center gap-1 mb-1">
-                <Heart className="w-3 h-3 text-destructive fill-destructive" />
-                <span className="text-xs text-white font-semibold">
-                  {formatNumber(reel.likes_count)}
-                </span>
-              </div>
-              <p className="text-xs text-white/80 truncate">
-                @{reel.profile?.username}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Rest of the list */}
-      <div className="space-y-2">
-        {reels.slice(3).map((reel, index) => (
-          <div
-            key={reel.id}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-            onClick={() => handleReelClick(reel.id)}
-          >
-            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-              {index + 4}
+              #{index + 1}
             </div>
             
-            <div className="w-12 h-16 rounded-md overflow-hidden flex-shrink-0">
+            {/* Thumbnail - same size as Trending/Tutorial Muv'z */}
+            <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-secondary">
               {reel.thumbnail_url ? (
                 <img
                   src={reel.thumbnail_url}
                   alt={reel.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
-                  <Play className="w-4 h-4 text-muted-foreground" />
+                  <Play className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+              
+              {/* Stats overlay */}
+              <div className="absolute bottom-2 left-2 right-2">
+                <div className="flex items-center gap-1">
+                  <Heart className="w-3 h-3 text-destructive fill-destructive" />
+                  <span className="text-xs text-white font-semibold">
+                    {formatNumber(reel.likes_count)}
+                  </span>
+                </div>
+              </div>
             </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {reel.title}
-              </p>
-              <div className="flex items-center gap-2 mt-0.5">
+            
+            {/* Creator Info - matching other sections */}
+            {reel.profile && (
+              <div className="flex items-center space-x-1 mt-2">
                 <Avatar className="w-4 h-4">
-                  <AvatarImage src={reel.profile?.avatar_url} />
+                  <AvatarImage src={reel.profile.avatar_url} />
                   <AvatarFallback className="text-[8px]">
-                    {reel.profile?.display_name?.[0]}
+                    {reel.profile.display_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-xs text-muted-foreground truncate">
-                  @{reel.profile?.username}
+                  @{reel.profile.username}
                 </span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Heart className="w-4 h-4 text-destructive fill-destructive" />
-              <span className="text-sm font-medium">
-                {formatNumber(reel.likes_count)}
-              </span>
-            </div>
+            )}
           </div>
         ))}
       </div>

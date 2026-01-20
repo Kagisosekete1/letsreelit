@@ -275,26 +275,59 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // Check and request permissions
   const checkPermissions = async () => {
     try {
-      // Check camera permission
-      const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-      
-      if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
-        setPermissionStatus('granted');
-      } else if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
+      // Check if we're on HTTPS (required for camera access on mobile)
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+      if (!isSecure) {
         setPermissionStatus('denied');
-      } else {
+        toast({
+          title: "Secure connection required",
+          description: "Camera access requires HTTPS. Please use a secure connection.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if mediaDevices API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setPermissionStatus('denied');
+        toast({
+          title: "Camera not supported",
+          description: "Your browser doesn't support camera access. Try using Chrome or Safari.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Try to check permission status via Permissions API (not all browsers support this)
+      try {
+        const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        
+        if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
+          setPermissionStatus('granted');
+        } else if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
+          setPermissionStatus('denied');
+        } else {
+          setPermissionStatus('prompt');
+        }
+      } catch {
+        // Permissions API not supported, we'll try direct access
         setPermissionStatus('prompt');
       }
-    } catch {
-      // Permissions API not supported, try direct access
+    } catch (error) {
+      console.error('Permission check error:', error);
       setPermissionStatus('prompt');
     }
   };
 
-  // Request all permissions
+  // Request all permissions with better error handling for mobile
   const requestAllPermissions = async () => {
     try {
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not available');
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
@@ -307,19 +340,63 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       });
       // Now start the preview camera
       startPreviewCamera();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Permission request error:', error);
       setPermissionStatus('denied');
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = "Please enable camera and microphone access.";
+      let errorTitle = "Permission denied";
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorTitle = "Camera access blocked";
+        errorMessage = "Camera permission was denied. To fix this:\n1. Tap the lock/info icon in your browser's address bar\n2. Find 'Camera' and 'Microphone' settings\n3. Change them to 'Allow'\n4. Refresh the page and try again";
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorTitle = "No camera found";
+        errorMessage = "No camera or microphone detected on your device.";
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorTitle = "Camera in use";
+        errorMessage = "Your camera might be in use by another app. Close other apps using the camera and try again.";
+      } else if (error.name === 'OverconstrainedError') {
+        errorTitle = "Camera error";
+        errorMessage = "Could not access camera with the requested settings. Trying with default settings...";
+        // Try with minimal constraints
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          fallbackStream.getTracks().forEach(track => track.stop());
+          setPermissionStatus('granted');
+          startPreviewCamera();
+          return;
+        } catch {
+          errorMessage = "Camera access failed. Please check your camera settings.";
+        }
+      } else if (error.name === 'SecurityError') {
+        errorTitle = "Security error";
+        errorMessage = "Camera access is not allowed on insecure connections. Make sure you're using HTTPS.";
+      }
+      
       toast({
-        title: "Permission denied",
-        description: "Please enable camera and microphone in your browser settings.",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
-  // Start camera for preview
+  // Start camera for preview with better error handling
   const startPreviewCamera = async () => {
     try {
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setPermissionStatus('denied');
+        toast({
+          title: "Camera not available",
+          description: "Your browser doesn't support camera access.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Stop existing stream first
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -344,15 +421,36 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         await previewVideoRef.current.play();
       }
     } catch (error: any) {
-      console.log('Camera preview not available:', error);
-      if (error.name === 'NotAllowedError') {
+      console.error('Camera preview error:', error);
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setPermissionStatus('denied');
+        toast({
+          title: "Camera access blocked",
+          description: "Please allow camera access in your browser settings, then refresh the page.",
+          variant: "destructive",
+        });
+      } else if (error.name === 'OverconstrainedError') {
+        // Try with simpler constraints
+        try {
+          const simpleStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setStream(simpleStream);
+          setPermissionStatus('granted');
+          if (previewVideoRef.current) {
+            previewVideoRef.current.srcObject = simpleStream;
+            await previewVideoRef.current.play();
+          }
+          return;
+        } catch {
+          setPermissionStatus('denied');
+        }
+      } else {
+        toast({
+          title: "Camera error",
+          description: "Could not access camera. Please check your device settings.",
+          variant: "destructive",
+        });
       }
-      toast({
-        title: "Camera access needed",
-        description: "Please allow camera access to preview yourself.",
-        variant: "destructive",
-      });
     }
   };
 
