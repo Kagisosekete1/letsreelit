@@ -483,11 +483,11 @@ const Search = () => {
               <p className="text-sm">No videos with #{hashtag} yet</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 px-4">
+            <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
               {searchResults.map((reel, index) => (
                 <div
                   key={reel.id}
-                  className="relative cursor-pointer group"
+                  className="relative flex-shrink-0 w-32 cursor-pointer group"
                   onClick={() => handleReelClick(searchResults, index)}
                   onMouseEnter={() => handleMouseEnter(reel.id, reel.video_url)}
                   onMouseLeave={handleMouseLeave}
@@ -508,29 +508,28 @@ const Search = () => {
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
-                      </div>
-                    </div>
                     <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-white text-sm font-medium line-clamp-2 mb-1">{reel.title}</p>
-                      <div className="flex items-center space-x-2 text-white/80">
+                      <p className="text-white text-[10px] font-medium line-clamp-2">{reel.title}</p>
+                      <div className="flex items-center space-x-2 text-white/80 mt-0.5">
                         <div className="flex items-center space-x-1">
-                          <Eye className="w-3 h-3" />
-                          <span className="text-xs">{formatCount(reel.views_count || 0)}</span>
+                          <Eye className="w-2.5 h-2.5" />
+                          <span className="text-[9px]">{formatCount(reel.views_count || 0)}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Heart className="w-2.5 h-2.5" />
+                          <span className="text-[9px]">{formatCount(reel.likes_count || 0)}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   {reel.profile && (
-                    <div className="flex items-center space-x-1 mt-2">
+                    <div className="flex items-center space-x-1 mt-1.5">
                       <img
                         src={reel.profile.avatar_url || ''}
                         alt={reel.profile.username}
-                        className="w-5 h-5 rounded-full"
+                        className="w-4 h-4 rounded-full"
                       />
-                      <span className="text-xs text-muted-foreground truncate">@{reel.profile.username}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">@{reel.profile.username}</span>
                     </div>
                   )}
                 </div>
