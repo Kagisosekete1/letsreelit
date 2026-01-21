@@ -14,6 +14,7 @@ import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
 import MilestoneBadges from '@/components/MilestoneBadges';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
+import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -104,21 +105,24 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="relative h-screen overflow-hidden bg-background">
-        <div className="pt-4 pb-20 h-full overflow-y-auto px-4">
-          <div className="flex items-center justify-between mb-4"><div className="w-10 h-10" /><div className="h-6 w-24 bg-muted rounded animate-pulse" /><div className="w-10 h-10" /></div>
-          <ProfileHeaderSkeleton />
-          <div className="border-t border-border mt-6 pt-4"><ProfileGridSkeleton count={6} /></div>
+      <MobileViewWrapper>
+        <div className="relative h-full overflow-hidden bg-background">
+          <div className="pt-4 pb-20 h-full overflow-y-auto px-4">
+            <div className="flex items-center justify-between mb-4"><div className="w-10 h-10" /><div className="h-6 w-24 bg-muted rounded animate-pulse" /><div className="w-10 h-10" /></div>
+            <ProfileHeaderSkeleton />
+            <div className="border-t border-border mt-6 pt-4"><ProfileGridSkeleton count={6} /></div>
+          </div>
         </div>
-      </div>
+      </MobileViewWrapper>
     );
   }
 
   if (!currentUser) { navigate('/auth'); return null; }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pt-4 pb-20 h-full overflow-y-auto">
+    <MobileViewWrapper>
+      <div className="relative h-full overflow-hidden bg-background">
+        <div className="pt-4 pb-20 h-full overflow-y-auto">
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
@@ -177,11 +181,11 @@ const Profile = () => {
         {contentTab === 'saved' && (savedReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved Muv'z</p><p className="text-sm">Your saved Muv'z will appear here</p></div></div>
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{savedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} viewsCount={reel.views_count || 0} onClick={() => handleReelClick(savedReels, index)} />)}</div>)}
-      </div>
+        </div>
 
-      {selectedReelIndex !== null && currentUser && <ProfileReelViewer reels={viewingReelsList} initialIndex={selectedReelIndex} onClose={() => setSelectedReelIndex(null)} userId={authUser?.id || ''} username={currentUser.username} displayName={currentUser.displayName} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} />}
-      
-      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+        {selectedReelIndex !== null && currentUser && <ProfileReelViewer reels={viewingReelsList} initialIndex={selectedReelIndex} onClose={() => setSelectedReelIndex(null)} userId={authUser?.id || ''} username={currentUser.username} displayName={currentUser.displayName} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} />}
+        
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       
       <EditProfileModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -191,13 +195,14 @@ const Profile = () => {
       <FollowersModal isOpen={followingModal} onClose={() => setFollowingModal(false)} userId={authUser?.id || ''} type="following" count={currentUser.stats?.following ?? 0} />
       <ReelsModal isOpen={reelsModal} onClose={() => setReelsModal(false)} userId={authUser?.id || ''} count={currentUser.stats?.reels ?? 0} isOwnProfile={true} />
       <MilestoneBadges isOpen={badgesModal} onClose={() => setBadgesModal(false)} userId={authUser?.id} />
-      <VideoAnalyticsModal 
-        isOpen={analyticsReel !== null} 
-        onClose={() => setAnalyticsReel(null)} 
-        reelId={analyticsReel?.id || ''} 
-        reelTitle={analyticsReel?.title || ''} 
-      />
-    </div>
+        <VideoAnalyticsModal 
+          isOpen={analyticsReel !== null} 
+          onClose={() => setAnalyticsReel(null)} 
+          reelId={analyticsReel?.id || ''} 
+          reelTitle={analyticsReel?.title || ''} 
+        />
+      </div>
+    </MobileViewWrapper>
   );
 };
 

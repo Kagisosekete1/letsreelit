@@ -978,6 +978,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
         <div className="absolute bottom-16 left-3 right-16 sm:right-20 md:right-24 z-10 max-w-[calc(100%-5rem)] sm:max-w-md pointer-events-auto">
           <div className="space-y-1.5 sm:space-y-2">
             <div className="flex items-center gap-2">
+              {/* User Avatar */}
+              <ProfileLink username={reel.user.username}>
+                <img
+                  src={reel.user.avatarUrl || '/placeholder.svg'}
+                  alt={reel.user.username}
+                  className="w-8 h-8 rounded-full border border-white/50 object-cover flex-shrink-0"
+                />
+              </ProfileLink>
               <ProfileLink username={reel.user.username} className="flex items-center gap-2 min-w-0 shrink">
                 <span className="text-white font-bold text-sm sm:text-base drop-shadow-lg truncate">
                   @{reel.user.username}

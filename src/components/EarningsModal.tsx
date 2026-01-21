@@ -15,12 +15,17 @@ import {
   Globe,
   AlertCircle,
   CheckCircle2,
-  ArrowDownToLine
+  ArrowDownToLine,
+  CreditCard,
+  Plus
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { useToast } from '@/hooks/use-toast';
+import PaymentMethodsModal from '@/components/PaymentMethodsModal';
+import CountrySelector from '@/components/CountrySelector';
 
 interface EarningsModalProps {
   isOpen: boolean;
@@ -47,8 +52,13 @@ const WATCH_HOURS_GOAL = 2000000;
 
 const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
   const { authUser, currentUser } = useUser();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [showCountrySelector, setShowCountrySelector] = useState(false);
+  const [payoutHistory, setPayoutHistory] = useState<any[]>([]);
+  const [requestingPayout, setRequestingPayout] = useState(false);
   const [data, setData] = useState<EarningsData>({
     totalEarnings: 0,
     pendingEarnings: 0,
@@ -67,8 +77,58 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen && authUser) {
       fetchEarningsData();
+      fetchPayoutHistory();
     }
   }, [isOpen, authUser]);
+
+  const fetchPayoutHistory = async () => {
+    if (!authUser) return;
+    const { data } = await supabase
+      .from('creator_payouts')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .order('requested_at', { ascending: false })
+      .limit(10);
+    
+    if (data) setPayoutHistory(data);
+  };
+
+  const handleRequestPayout = async () => {
+    if (!authUser || data.pendingEarnings < 50) return;
+
+    // Check if user has payment method set up
+    const storedMethods = localStorage.getItem(`payment_methods_${authUser.id}`);
+    if (!storedMethods || JSON.parse(storedMethods).length === 0) {
+      toast({ 
+        title: 'Payment Method Required', 
+        description: 'Please add a payment method first',
+        variant: 'destructive'
+      });
+      setShowPaymentMethods(true);
+      return;
+    }
+
+    setRequestingPayout(true);
+    try {
+      const { error } = await supabase.from('creator_payouts').insert({
+        user_id: authUser.id,
+        amount: data.pendingEarnings,
+        vat_deducted: data.pendingEarnings * (data.vatRate / 100),
+        currency: data.currency,
+        country_code: data.countryCode,
+        payout_method: JSON.parse(storedMethods)[0]?.type || 'unknown',
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Payout Requested', description: 'Your payout request has been submitted' });
+      fetchPayoutHistory();
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to request payout', variant: 'destructive' });
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
 
   const fetchEarningsData = async () => {
     if (!authUser) return;
@@ -244,16 +304,22 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* Country & VAT Info */}
-            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+            <button
+              onClick={() => setShowCountrySelector(true)}
+              className="w-full flex items-center justify-between p-3 bg-secondary/30 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-muted-foreground" />
-                <div>
+                <div className="text-left">
                   <p className="text-sm font-medium">{data.countryName}</p>
                   <p className="text-xs text-muted-foreground">VAT Rate: {data.vatRate}%</p>
                 </div>
               </div>
-              <span className="text-sm font-medium">{data.currency}</span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{data.currency}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </button>
 
             {/* Earnings Summary */}
             <div className="grid grid-cols-3 gap-3">
@@ -365,30 +431,97 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
               </TabsContent>
 
               <TabsContent value="payouts" className="space-y-4 mt-4">
+                {/* Payment Methods */}
                 <div className="p-4 bg-secondary/30 rounded-xl">
-                  <h3 className="text-sm font-semibold mb-3">Payout Settings</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold">Payment Method</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPaymentMethods(true)}
+                      className="h-8"
+                    >
+                      <CreditCard className="w-4 h-4 mr-1" />
+                      Manage
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl"
+                    onClick={() => setShowPaymentMethods(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Payment Method
+                  </Button>
+                </div>
+
+                <div className="p-4 bg-secondary/30 rounded-xl">
+                  <h3 className="text-sm font-semibold mb-3">Request Payout</h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     Minimum payout: {formatCurrency(50)}. Payouts are processed weekly.
                   </p>
 
-                  <Button className="w-full" disabled={data.pendingEarnings < 50}>
-                    {data.pendingEarnings >= 50 
-                      ? `Request Payout (${formatCurrency(data.pendingEarnings)})`
-                      : `${formatCurrency(50 - data.pendingEarnings)} more to withdraw`}
+                  <Button 
+                    className="w-full rounded-xl" 
+                    disabled={data.pendingEarnings < 50 || requestingPayout}
+                    onClick={handleRequestPayout}
+                  >
+                    {requestingPayout ? 'Requesting...' : 
+                      data.pendingEarnings >= 50 
+                        ? `Request Payout (${formatCurrency(data.pendingEarnings)})`
+                        : `${formatCurrency(50 - data.pendingEarnings)} more to withdraw`}
                   </Button>
                 </div>
 
                 <div className="p-4 bg-secondary/30 rounded-xl">
                   <h3 className="text-sm font-semibold mb-3">Payout History</h3>
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No payouts yet
-                  </p>
+                  {payoutHistory.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No payouts yet
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {payoutHistory.map((payout) => (
+                        <div key={payout.id} className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
+                          <div>
+                            <p className="text-sm font-medium">{formatCurrency(payout.amount)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(payout.requested_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            payout.status === 'paid' ? 'bg-green-500/20 text-green-600' :
+                            payout.status === 'pending' ? 'bg-amber-500/20 text-amber-600' :
+                            payout.status === 'approved' ? 'bg-blue-500/20 text-blue-600' :
+                            'bg-red-500/20 text-red-600'
+                          }`}>
+                            {payout.status.charAt(0).toUpperCase() + payout.status.slice(1)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         )}
       </DialogContent>
+
+      {/* Payment Methods Modal */}
+      <PaymentMethodsModal
+        isOpen={showPaymentMethods}
+        onClose={() => setShowPaymentMethods(false)}
+      />
+
+      {/* Country Selector Modal */}
+      <CountrySelector
+        isOpen={showCountrySelector}
+        onClose={() => {
+          setShowCountrySelector(false);
+          fetchEarningsData(); // Refresh to get updated country
+        }}
+      />
     </Dialog>
   );
 };
