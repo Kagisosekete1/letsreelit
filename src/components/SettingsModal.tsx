@@ -13,7 +13,8 @@ import {
   Globe,
   LogOut,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  Wifi
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import AccountInfoModal from './settings/AccountInfoModal';
@@ -22,6 +23,7 @@ import NotificationsModal from './settings/NotificationsModal';
 import LanguageModal from './settings/LanguageModal';
 import HelpCenterModal from './settings/HelpCenterModal';
 import CreatorDashboardModal from './CreatorDashboardModal';
+import VideoQualityModal from './settings/VideoQualityModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -64,6 +66,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       title: 'Preferences',
       items: [
         { icon: Moon, label: 'Dark Mode', toggle: true, value: darkMode, onChange: toggleDarkMode },
+        { icon: Wifi, label: 'Video Quality', action: () => setOpenModal('video-quality') },
         { icon: Globe, label: 'Language', action: () => setOpenModal('language') },
       ],
     },
@@ -132,6 +135,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       <PrivacySecurityModal isOpen={openModal === 'privacy'} onClose={() => setOpenModal(null)} />
       <NotificationsModal isOpen={openModal === 'notifications'} onClose={() => setOpenModal(null)} />
       <LanguageModal isOpen={openModal === 'language'} onClose={() => setOpenModal(null)} />
+      <VideoQualityModal isOpen={openModal === 'video-quality'} onClose={() => setOpenModal(null)} />
       <HelpCenterModal isOpen={openModal === 'help'} onClose={() => setOpenModal(null)} />
       <CreatorDashboardModal isOpen={openModal === 'creator'} onClose={() => setOpenModal(null)} />
     </>

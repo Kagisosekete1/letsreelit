@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Play, Edit2, Maximize } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
+import { useVideoQuality } from '@/contexts/VideoQualityContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
 import DuetModal from '@/components/DuetModal';
@@ -105,6 +106,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const { toast } = useToast();
   const { authUser } = useUser();
   const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
+  const { getPreloadStrategy } = useVideoQuality();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
@@ -888,7 +890,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
             visibility: isActive && (isPlaying || isBuffering) ? 'visible' : 'hidden',
           }}
           src={videoSrc}
-          preload={isActive ? 'auto' : 'metadata'}
+          preload={isActive ? getPreloadStrategy() : 'metadata'}
           loop={!autoAdvance}
           muted={isMuted}
           playsInline

@@ -3,14 +3,15 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
-import { Radio, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useReelPreloader } from '@/hooks/useReelPreloader';
+import { useFirstReelPreloader } from '@/hooks/useFirstReelPreloader';
 import AppRatingPrompt from './AppRatingPrompt';
 
 const PAGE_SIZE = 10;
 
 interface HomeScreenProps {
-  setScreen: (screen: Screen | 'following' | 'live', payload?: any) => void;
+  setScreen: (screen: Screen | 'following', payload?: any) => void;
   currentScreen: Screen;
 }
 
@@ -45,7 +46,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const [hasMore, setHasMore] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [activeLiveCount, setActiveLiveCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedReels = useRef<Set<string>>(new Set());
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
@@ -59,18 +59,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
 
   // Prefetch next reels for instant scrolling
   useReelPreloader(reels, activeReelIndex, 2);
-
-  // Fetch live count
-  useEffect(() => {
-    const fetchLiveCount = async () => {
-      const { count } = await supabase
-        .from('live_streams')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-      setActiveLiveCount(count || 0);
-    };
-    fetchLiveCount();
-  }, []);
+  
+  // Warm the first reel immediately for instant playback
+  useFirstReelPreloader(reels);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -344,7 +335,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
             {/* Logo on left */}
             <span className="text-white font-bold text-lg opacity-80 drop-shadow-md">Muv'it</span>
             
-          {/* For You / Following Tabs + Live */}
+          {/* For You / Following Tabs */}
             <div className="flex items-center gap-2">
               <div className="flex bg-black/30 rounded-full p-0.5 backdrop-blur-sm">
                 <button
@@ -353,19 +344,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   For You
                 </button>
                 <button
-                  onClick={() => setScreen('following' as any)}
+                  onClick={() => setScreen('following')}
                   className="px-3 py-1.5 text-xs text-white/70 font-medium rounded-full hover:text-white transition-colors"
                 >
                   Following
                 </button>
               </div>
-              <button
-                onClick={() => setScreen('live' as any)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-pink-500/80 rounded-full backdrop-blur-sm font-medium"
-              >
-                <Radio className="w-3 h-3" />
-                Live{activeLiveCount > 0 && ` (${activeLiveCount})`}
-              </button>
+              {/* Live button hidden - coming soon */}
             </div>
           </div>
 
