@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, Radio, X, Users, Flame, ChevronRight, Clock } from 'lucide-react';
+import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, X, Users, Flame, ChevronRight, Clock } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -311,9 +311,6 @@ const Search = () => {
     }
   };
 
-  const handleLiveDiscovery = () => {
-    navigate('/live', { state: { from: location.pathname } });
-  };
 
   const handleReelClick = (reelList: ReelData[], index: number) => {
     setSelectedReelList(reelList);
@@ -554,15 +551,6 @@ const Search = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Search</h1>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="rounded-xl gap-2"
-            onClick={handleLiveDiscovery}
-          >
-            <Radio className="w-4 h-4 text-pink-500" />
-            Live
-          </Button>
         </div>
 
         {/* Search Bar */}
