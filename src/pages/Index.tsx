@@ -56,13 +56,9 @@ const Index = () => {
     }
   };
 
-  const setScreen = (screen: Screen | 'following' | 'live', payload?: any) => {
+  const setScreen = (screen: Screen | 'following', payload?: any) => {
     if (screen === 'following') {
       navigate('/following');
-      return;
-    }
-    if (screen === 'live') {
-      navigate('/live');
       return;
     }
     setCurrentScreen(screen);
