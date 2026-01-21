@@ -100,6 +100,146 @@ export type Database = {
         }
         Relationships: []
       }
+      country_vat_rates: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          currency: string
+          id: string
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: []
+      }
+      creator_earnings: {
+        Row: {
+          country_code: string
+          created_at: string
+          currency: string
+          earning_type: string
+          gross_earnings: number
+          id: string
+          is_paid: boolean
+          net_earnings: number
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          reel_id: string | null
+          updated_at: string
+          user_id: string
+          vat_amount: number
+          watch_hours: number
+        }
+        Insert: {
+          country_code?: string
+          created_at?: string
+          currency?: string
+          earning_type?: string
+          gross_earnings?: number
+          id?: string
+          is_paid?: boolean
+          net_earnings?: number
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          reel_id?: string | null
+          updated_at?: string
+          user_id: string
+          vat_amount?: number
+          watch_hours?: number
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          currency?: string
+          earning_type?: string
+          gross_earnings?: number
+          id?: string
+          is_paid?: boolean
+          net_earnings?: number
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          reel_id?: string | null
+          updated_at?: string
+          user_id?: string
+          vat_amount?: number
+          watch_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_earnings_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payouts: {
+        Row: {
+          amount: number
+          country_code: string
+          created_at: string
+          currency: string
+          id: string
+          payout_method: string | null
+          payout_reference: string | null
+          processed_at: string | null
+          requested_at: string
+          status: string
+          user_id: string
+          vat_deducted: number
+        }
+        Insert: {
+          amount: number
+          country_code: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payout_method?: string | null
+          payout_reference?: string | null
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          user_id: string
+          vat_deducted?: number
+        }
+        Update: {
+          amount?: number
+          country_code?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payout_method?: string | null
+          payout_reference?: string | null
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          user_id?: string
+          vat_deducted?: number
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string | null
@@ -335,15 +475,20 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          country_code: string | null
           created_at: string | null
           display_name: string
           followers_count: number | null
           following_count: number | null
           id: string
+          is_monetized: boolean | null
           latitude: number | null
+          lifetime_earnings: number | null
           location_updated_at: string | null
           longitude: number | null
+          monetization_date: string | null
           reels_count: number | null
+          total_watch_hours: number | null
           updated_at: string | null
           user_id: string | null
           username: string
@@ -352,15 +497,20 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string | null
           display_name?: string
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          is_monetized?: boolean | null
           latitude?: number | null
+          lifetime_earnings?: number | null
           location_updated_at?: string | null
           longitude?: number | null
+          monetization_date?: string | null
           reels_count?: number | null
+          total_watch_hours?: number | null
           updated_at?: string | null
           user_id?: string | null
           username: string
@@ -369,15 +519,20 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string | null
           display_name?: string
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          is_monetized?: boolean | null
           latitude?: number | null
+          lifetime_earnings?: number | null
           location_updated_at?: string | null
           longitude?: number | null
+          monetization_date?: string | null
           reels_count?: number | null
+          total_watch_hours?: number | null
           updated_at?: string | null
           user_id?: string | null
           username?: string

@@ -17,6 +17,7 @@ import AddFriendsFromContacts from '@/components/AddFriendsFromContacts';
 import { useContinueWatching } from '@/hooks/useContinueWatching';
 import NewTodaySection from '@/components/NewTodaySection';
 import NearbyMuvaz from '@/components/NearbyMuvaz';
+import DiscoverByCategory from '@/components/DiscoverByCategory';
 import MostPopularWeek from '@/components/MostPopularWeek';
 interface ReelData {
   id: string;
@@ -589,6 +590,9 @@ const Search = () => {
             }
           }}
         />
+
+        {/* Discover by Category */}
+        <DiscoverByCategory />
 
         {/* Nearby Muva'z - Location Based */}
         <div className="mb-6">

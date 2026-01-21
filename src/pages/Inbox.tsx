@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import CreateReelModal from '@/components/CreateReelModal';
 import ChatModal from '@/components/ChatModal';
 import NotificationReelModal from '@/components/NotificationReelModal';
 import NotificationProfileView from '@/components/NotificationProfileView';
+import InboxSearch from '@/components/InboxSearch';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -59,6 +60,8 @@ const Inbox = () => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
@@ -290,9 +293,34 @@ const Inbox = () => {
     }
   };
 
-  const handleSearch = () => {
-    navigate('/search');
+  const handleSearchClick = () => {
+    setIsSearchOpen(!isSearchOpen);
   };
+
+  const handleSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  // Filter conversations and notifications based on search
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(c => 
+      c.other_user?.display_name?.toLowerCase().includes(q) ||
+      c.other_user?.username?.toLowerCase().includes(q) ||
+      c.last_message?.toLowerCase().includes(q)
+    );
+  }, [conversations, searchQuery]);
+
+  const filteredNotifications = useMemo(() => {
+    if (!searchQuery.trim()) return notifications;
+    const q = searchQuery.toLowerCase();
+    return notifications.filter(n => 
+      n.from_user?.display_name?.toLowerCase().includes(q) ||
+      n.from_user?.username?.toLowerCase().includes(q) ||
+      n.type.toLowerCase().includes(q)
+    );
+  }, [notifications, searchQuery]);
 
   const handleDeleteConversation = async (conversationId: string) => {
     if (!authUser) return;
@@ -340,12 +368,24 @@ const Inbox = () => {
         className="pt-8 pb-20 h-full overflow-y-auto"
         {...handlers}
       >
-        <div className="flex items-center justify-between px-4 mb-6">
-          <h1 className="text-xl font-bold text-foreground">Inbox</h1>
-          <Button variant="ghost" size="sm" onClick={handleSearch}>
-            <Search className="w-5 h-5 text-foreground" />
-          </Button>
-        </div>
+        {isSearchOpen ? (
+          <InboxSearch
+            isOpen={isSearchOpen}
+            onClose={() => {
+              setIsSearchOpen(false);
+              setSearchQuery('');
+            }}
+            searchType={inboxTab as 'messages' | 'notifications'}
+            onSearch={handleSearchQuery}
+          />
+        ) : (
+          <div className="flex items-center justify-between px-4 mb-6">
+            <h1 className="text-xl font-bold text-foreground">Inbox</h1>
+            <Button variant="ghost" size="sm" onClick={handleSearchClick}>
+              <Search className="w-5 h-5 text-foreground" />
+            </Button>
+          </div>
+        )}
 
         <div className="flex px-4 mb-6">
           <div className="flex space-x-1 bg-secondary rounded-xl p-1 w-full">
@@ -406,7 +446,7 @@ const Inbox = () => {
               </div>
             ) : (
             <div className="space-y-2">
-                {conversations.map((conv) => {
+                {filteredConversations.map((conv) => {
                   let pressTimer: NodeJS.Timeout | null = null;
                   
                   const handleLongPressStart = () => {
@@ -468,7 +508,7 @@ const Inbox = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {notifications.map((notif) => (
+                {filteredNotifications.map((notif) => (
                   <div
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
