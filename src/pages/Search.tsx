@@ -542,11 +542,12 @@ const Search = () => {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
+  <MobileViewWrapper>
+    <div className="relative h-full overflow-hidden bg-background flex flex-col">
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
       <div 
         ref={containerRef}
-        className="pt-8 pb-20 px-4 h-full overflow-y-auto"
+        className="pt-4 pb-20 px-4 flex-1 overflow-y-auto"
         {...handlers}
       >
         {/* Header */}
@@ -834,6 +835,7 @@ const Search = () => {
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
       <AddFriendsFromContacts isOpen={showAddFriends} onClose={() => setShowAddFriends(false)} />
     </div>
+  </MobileViewWrapper>
   );
 };
 
