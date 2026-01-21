@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import EditReelModal from '@/components/EditReelModal';
 import ProfileLink from '@/components/ui/ProfileLink';
 import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
 import { sendLikeNotification } from '@/services/notificationService';
+import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -107,6 +108,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const { authUser } = useUser();
   const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
   const { getPreloadStrategy } = useVideoQuality();
+  const { cacheVideo, isVideoCached, isOnline } = useOfflineVideoCache();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
@@ -883,11 +885,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
           data-reel-video="true"
           className="absolute inset-0 w-full h-full object-contain sm:object-cover"
           style={{
-            // Hide the <video> element until it's actually playing/buffering.
-            // This prevents the large grey native play overlay from appearing on mobile.
-            opacity: isActive && (isPlaying || isBuffering) ? 1 : 0,
+            // Always show the video when active (whether playing, paused, or buffering)
+            opacity: isActive && isVideoReady ? 1 : 0,
             transition: 'opacity 0.2s ease-in-out',
-            visibility: isActive && (isPlaying || isBuffering) ? 'visible' : 'hidden',
+            visibility: isActive && isVideoReady ? 'visible' : 'hidden',
           }}
           src={videoSrc}
           preload={isActive ? getPreloadStrategy() : 'metadata'}
@@ -921,6 +922,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
             setIsPlaying(true);
             setIsVideoReady(true);
             setIsBuffering(false);
+            // Cache video for offline playback when it starts playing
+            if (isOnline && !isVideoCached(reel.id)) {
+              cacheVideo(reel.id, reel.videoUrl);
+            }
           }}
         />
       </div>
@@ -936,6 +941,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
       />
       
       {/* Removed: Big play button overlay - videos now auto-play seamlessly */}
+
+      {/* Pause/Play Button - Shows when paused, hides when playing */}
+      {isActive && isVideoReady && !isPlaying && !isBuffering && userHasPlayed && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+        >
+          <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <Play className="w-8 h-8 text-white ml-1" fill="white" />
+          </div>
+        </div>
+      )}
 
       {/* UI Elements - Hidden in clear screen mode */}
       <div 
