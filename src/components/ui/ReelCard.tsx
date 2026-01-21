@@ -839,6 +839,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
         {/* Solid video surface fallback */}
         <div className="absolute inset-0 bg-video" />
 
+        {/*
+          Tap-catcher layer:
+          Some mobile WebViews show a big native play overlay when a <video> is paused.
+          We keep taps working even when the video element is visually hidden.
+        */}
+        <div className="absolute inset-0 z-[1]" onClick={handleVideoTap} />
+
         {/* Thumbnail/placeholder crossfade layer */}
         {reel.thumbnailUrl ? (
           <img
@@ -874,9 +881,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
           data-reel-video="true"
           className="absolute inset-0 w-full h-full object-contain sm:object-cover"
           style={{
-            opacity: isActive ? 1 : 0,
+            // Hide the <video> element until it's actually playing/buffering.
+            // This prevents the large grey native play overlay from appearing on mobile.
+            opacity: isActive && (isPlaying || isBuffering) ? 1 : 0,
             transition: 'opacity 0.2s ease-in-out',
-            visibility: isActive ? 'visible' : 'hidden',
+            visibility: isActive && (isPlaying || isBuffering) ? 'visible' : 'hidden',
           }}
           src={videoSrc}
           preload={isActive ? 'auto' : 'metadata'}
@@ -911,7 +920,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
             setIsVideoReady(true);
             setIsBuffering(false);
           }}
-          onClick={handleVideoTap}
         />
       </div>
       

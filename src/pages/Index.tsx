@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import HomeScreen from '@/components/HomeScreen';
@@ -10,9 +11,12 @@ import { Screen } from '@/types';
 const SPLASH_SHOWN_KEY = 'splashShown';
 
 const Index = () => {
+  const isNative = Capacitor.isNativePlatform();
   const [activeTab, setActiveTab] = useState('home');
   const [showSplash, setShowSplash] = useState(() => {
-    // Only show splash once per session
+    // On native builds, rely ONLY on the native launch screen (avoid double splash).
+    if (isNative) return false;
+    // Only show splash once per session (web)
     return !sessionStorage.getItem(SPLASH_SHOWN_KEY);
   });
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -20,6 +24,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (isNative) return;
     if (showSplash) {
       const timer = setTimeout(() => {
         setShowSplash(false);
@@ -27,7 +32,7 @@ const Index = () => {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [showSplash]);
+  }, [showSplash, isNative]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
