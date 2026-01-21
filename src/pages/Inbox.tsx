@@ -362,13 +362,14 @@ const Inbox = () => {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
-      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-      <div 
-        ref={containerRef}
-        className="pt-8 pb-20 h-full overflow-y-auto"
-        {...handlers}
-      >
+    <MobileViewWrapper>
+      <div className="relative h-full overflow-hidden bg-background flex flex-col">
+        <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+        <div 
+          ref={containerRef}
+          className="pt-8 pb-20 flex-1 overflow-y-auto"
+          {...handlers}
+        >
         {isSearchOpen ? (
           <InboxSearch
             isOpen={isSearchOpen}
@@ -571,6 +572,7 @@ const Inbox = () => {
         />
       )}
     </div>
+    </MobileViewWrapper>
   );
 };
 
