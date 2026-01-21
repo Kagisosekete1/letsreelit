@@ -22,6 +22,7 @@ import SuggestedMuvaz from "./pages/SuggestedMuvaz";
 import Trending from "./pages/Trending";
 import NotificationPreferencesPage from "./components/settings/NotificationPreferencesPage";
 import NotFound from "./pages/NotFound";
+import AdminPayouts from "./pages/AdminPayouts";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,11 @@ const App = () => {
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/about" element={<About />} />
+                    <Route path="/admin/payouts" element={
+                      <ProtectedRoute>
+                        <AdminPayouts />
+                      </ProtectedRoute>
+                    } />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>

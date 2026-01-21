@@ -10,6 +10,7 @@ import ChatModal from '@/components/ChatModal';
 import NotificationReelModal from '@/components/NotificationReelModal';
 import NotificationProfileView from '@/components/NotificationProfileView';
 import InboxSearch from '@/components/InboxSearch';
+import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
