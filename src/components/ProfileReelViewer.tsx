@@ -45,9 +45,8 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasScrolledToInitial = useRef(false);
-
-  const currentReel = reels[currentIndex];
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (authUser) {
@@ -60,21 +59,17 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     silenceAll();
   }, [silenceAll]);
 
-  // Scroll to the initial reel on mount (fixes clicking wrong reel issue)
+  // Scroll to the initial reel on mount
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || hasScrolledToInitial.current) return;
+    if (!container) return;
 
-    // Wait for container to render
+    // Use requestAnimationFrame to ensure layout is ready
     requestAnimationFrame(() => {
       const itemHeight = container.clientHeight;
-      if (itemHeight > 0 && initialIndex > 0) {
-        container.scrollTo({
-          top: initialIndex * itemHeight,
-          behavior: 'instant'
-        });
+      if (itemHeight > 0) {
+        container.scrollTop = initialIndex * itemHeight;
       }
-      hasScrolledToInitial.current = true;
     });
   }, [initialIndex]);
 
@@ -118,10 +113,24 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
       onClose();
     } else if (e.key === 'ArrowDown' && currentIndex < reels.length - 1) {
       e.preventDefault();
-      setCurrentIndex(prev => prev + 1);
+      const container = containerRef.current;
+      if (container) {
+        const itemHeight = container.clientHeight;
+        container.scrollTo({
+          top: (currentIndex + 1) * itemHeight,
+          behavior: 'smooth'
+        });
+      }
     } else if (e.key === 'ArrowUp' && currentIndex > 0) {
       e.preventDefault();
-      setCurrentIndex(prev => prev - 1);
+      const container = containerRef.current;
+      if (container) {
+        const itemHeight = container.clientHeight;
+        container.scrollTo({
+          top: (currentIndex - 1) * itemHeight,
+          behavior: 'smooth'
+        });
+      }
     }
   }, [onClose, currentIndex, reels.length]);
 
@@ -130,31 +139,39 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Handle scroll/swipe navigation
+  // Handle scroll/swipe navigation - debounced to prevent jank
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const scrollTop = container.scrollTop;
-    const itemHeight = container.clientHeight;
-    const newIndex = Math.round(scrollTop / itemHeight);
-    
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < reels.length) {
-      setCurrentIndex(newIndex);
+    // Clear any pending timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
-  }, [currentIndex, reels.length]);
 
-  // Scroll to current index when it changes
+    isScrollingRef.current = true;
+
+    // Debounce the index update
+    scrollTimeoutRef.current = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      const itemHeight = container.clientHeight;
+      const newIndex = Math.round(scrollTop / itemHeight);
+      
+      if (newIndex >= 0 && newIndex < reels.length && newIndex !== currentIndex) {
+        setCurrentIndex(newIndex);
+      }
+      isScrollingRef.current = false;
+    }, 50);
+  }, [reels.length, currentIndex]);
+
+  // Cleanup timeout on unmount
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const itemHeight = container.clientHeight;
-    container.scrollTo({
-      top: currentIndex * itemHeight,
-      behavior: 'smooth'
-    });
-  }, [currentIndex]);
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const formattedReel = (reel: ReelData) => ({
     id: reel.id,
@@ -182,7 +199,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Close Button - matches Home header position */}
+      {/* Close Button */}
       <Button
         variant="ghost"
         size="sm"
@@ -195,15 +212,13 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
       {/* Scrollable Reel Container */}
       <div 
         ref={containerRef}
-        className="flex-1 h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
-        style={{ scrollSnapStop: 'always' }}
+        className="flex-1 w-full overflow-y-auto snap-y snap-mandatory scrollbar-hide overscroll-none"
         onScroll={handleScroll}
       >
         {reels.map((reel, index) => (
           <div
             key={reel.id}
-            className="relative h-full w-full snap-start snap-always"
-            style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+            className="h-[100dvh] w-full snap-start snap-always flex-shrink-0"
           >
             <ReelCard
               reel={formattedReel(reel)}
