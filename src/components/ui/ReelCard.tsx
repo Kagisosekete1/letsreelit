@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -850,8 +850,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
         */}
         <div className="absolute inset-0 z-[1]" onClick={handleVideoTap} />
 
-        {/* Thumbnail/placeholder crossfade layer */}
-        {reel.thumbnailUrl ? (
+        {/* Thumbnail/placeholder crossfade layer - black screen while loading */}
+        {reel.thumbnailUrl && isVideoReady ? (
           <img
             src={reel.thumbnailUrl}
             alt={reel.title}
@@ -865,7 +865,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           />
         ) : (
           <div
-            className="absolute inset-0 bg-video"
+            className="absolute inset-0 bg-black"
             style={{
               opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
               transition: 'opacity 0.25s ease-in-out',
@@ -998,10 +998,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
               )}
             </div>
 
-            {/* ONE caption only: prefer description+hashtags, otherwise title */}
+            {/* Description under username */}
+            {displayTitle && (
+              <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-2 drop-shadow-lg break-words">
+                {displayTitle.replace(/#\w+/g, '').trim()}
+              </p>
+            )}
+
+            {/* Hashtags below description */}
             {(displayDescription || displayTitle) && (
-              <p className="text-white text-sm sm:text-base font-medium leading-snug line-clamp-3 drop-shadow-lg break-words">
-                {renderTextWithHashtags(displayDescription || displayTitle, navigate)}
+              <p className="text-white/90 text-sm leading-snug line-clamp-2 drop-shadow-lg break-words">
+                {renderTextWithHashtags(
+                  ((displayDescription || displayTitle).match(/#\w+/g) || []).join(' '),
+                  navigate
+                )}
               </p>
             )}
           </div>
@@ -1095,6 +1105,25 @@ const ReelCard: React.FC<ReelCardProps> = ({
               <Share className={`${iconSize} text-white`} />
             </div>
             <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
+          </button>
+
+          {/* Download for offline */}
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isVideoCached(reel.id)) {
+                toast({ title: 'Already saved', description: "This Muv is already available offline" });
+                return;
+              }
+              cacheVideo(reel.id, reel.videoUrl);
+              toast({ title: 'Saving for offline', description: "This Muv will be available offline" });
+            }}
+          >
+            <div className={`${buttonSize} rounded-full flex items-center justify-center ${isVideoCached(reel.id) ? 'bg-green-500/30' : 'bg-black/20'}`}>
+              <Download className={`${iconSize} ${isVideoCached(reel.id) ? 'text-green-500' : 'text-white'}`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{isVideoCached(reel.id) ? 'Saved' : 'Save'}</span>
           </button>
 
           {/* Duet */}

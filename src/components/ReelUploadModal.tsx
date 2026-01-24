@@ -52,6 +52,9 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   const [postAs, setPostAs] = useState<'reel' | 'tutorial'>('reel');
   const [showMusicLibrary, setShowMusicLibrary] = useState(false);
   const [selectedSong, setSelectedSong] = useState<PlaceholderSong | null>(null);
+  const [thumbnailOptions, setThumbnailOptions] = useState<string[]>([]);
+  const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
+  const [customThumbnailTime, setCustomThumbnailTime] = useState(1);
 
   useEffect(() => {
     if (videoFile) {
@@ -61,7 +64,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     }
   }, [videoFile]);
 
-  // Auto-play video when preview URL is set
+  // Auto-play video when preview URL is set and generate thumbnail options
   useEffect(() => {
     if (videoPreviewUrl && videoRef.current) {
       videoRef.current.src = videoPreviewUrl;
@@ -69,10 +72,43 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
       videoRef.current.play().catch(console.log);
       
       videoRef.current.onloadedmetadata = () => {
-        setVideoDuration(videoRef.current?.duration || 0);
+        const duration = videoRef.current?.duration || 0;
+        setVideoDuration(duration);
+        
+        // Generate thumbnail options at different points in the video
+        generateThumbnailOptions(duration);
       };
     }
   }, [videoPreviewUrl]);
+
+  const generateThumbnailOptions = async (duration: number) => {
+    if (!videoFile || duration === 0) return;
+    
+    const times = [
+      1, // Start
+      duration * 0.25, // 25%
+      duration * 0.5, // 50% (middle)
+      duration * 0.75, // 75%
+      Math.max(duration - 1, 1), // End
+    ].filter(t => t <= duration && t >= 0);
+    
+    const thumbnails: string[] = [];
+    
+    for (const time of times) {
+      try {
+        const { generateThumbnailDataUrl } = await import('@/lib/thumbnailGenerator');
+        const thumbnail = await generateThumbnailDataUrl(videoFile, time);
+        thumbnails.push(thumbnail);
+      } catch (e) {
+        console.warn('Failed to generate thumbnail at time:', time, e);
+      }
+    }
+    
+    if (thumbnails.length > 0) {
+      setThumbnailOptions(thumbnails);
+      setSelectedThumbnailIndex(2); // Default to middle frame
+    }
+  };
 
   const handleCropReel = () => {
     setStep('crop');
@@ -132,12 +168,16 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
     setUploadProgress(0);
 
     try {
-      // Step 1: Generate thumbnail from video
+      // Step 1: Generate thumbnail from selected frame or custom time
       setUploadProgress(10);
       let thumbnailUrl: string | null = null;
       
       try {
-        const thumbnailBlob = await generateThumbnail(videoFile, 1);
+        // Use selected thumbnail time based on user selection
+        const times = [1, videoDuration * 0.25, videoDuration * 0.5, videoDuration * 0.75, Math.max(videoDuration - 1, 1)];
+        const selectedTime = times[selectedThumbnailIndex] || customThumbnailTime;
+        
+        const thumbnailBlob = await generateThumbnail(videoFile, selectedTime);
         const thumbnailFileName = `${authUser.id}/${Date.now()}_thumb.jpg`;
         
         setUploadProgress(20);
@@ -425,6 +465,32 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
                 }}
               />
             </div>
+
+            {/* Thumbnail Selection */}
+            {thumbnailOptions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Choose Cover</p>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {thumbnailOptions.map((thumb, index) => (
+                    <button
+                      key={index}
+                      className={`flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedThumbnailIndex === index
+                          ? 'border-primary ring-2 ring-primary/30'
+                          : 'border-transparent hover:border-muted-foreground/50'
+                      }`}
+                      onClick={() => setSelectedThumbnailIndex(index)}
+                    >
+                      <img
+                        src={thumb}
+                        alt={`Thumbnail option ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               {/* Music (placeholder UI for future platform integration) */}

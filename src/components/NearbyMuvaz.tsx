@@ -51,6 +51,32 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
 
   const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
+      // Check if we're on mobile/PWA and can use the Capacitor Geolocation
+      if (typeof window !== 'undefined' && 'Capacitor' in window) {
+        // Try Capacitor Geolocation for native app
+        import('@capacitor/core').then(({ Capacitor }) => {
+          if (Capacitor.isNativePlatform()) {
+            // On native platform, use Capacitor Geolocation
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve({
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                });
+              },
+              (error) => {
+                reject(new Error('Location permission denied. Please enable location in your device settings.'));
+              },
+              { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
+            );
+            return;
+          }
+        }).catch(() => {
+          // Fall through to web geolocation
+        });
+      }
+
+      // Web browser geolocation
       if (!navigator.geolocation) {
         reject(new Error('Geolocation is not supported by your browser'));
         return;
@@ -66,19 +92,19 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
         (error) => {
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              reject(new Error('Location permission denied'));
+              reject(new Error('Location permission denied. Please allow location access to see nearby Muva\'z.'));
               break;
             case error.POSITION_UNAVAILABLE:
-              reject(new Error('Location unavailable'));
+              reject(new Error('Location unavailable. Please check your device settings.'));
               break;
             case error.TIMEOUT:
-              reject(new Error('Location request timed out'));
+              reject(new Error('Location request timed out. Please try again.'));
               break;
             default:
               reject(new Error('Unable to get location'));
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
       );
     });
   };
