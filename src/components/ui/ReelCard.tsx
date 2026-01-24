@@ -23,6 +23,7 @@ import { sendLikeNotification } from '@/services/notificationService';
 import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
+import VideoDebugOverlay from '@/components/ui/VideoDebugOverlay';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -873,6 +874,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
             <div className="w-7 h-7 rounded-full border-2 border-foreground/60 border-t-transparent animate-spin" />
           </div>
         )}
+
+        {/* Dev-only debug overlay for video state inspection */}
+        <VideoDebugOverlay
+          videoRef={videoRef}
+          reelId={reel.id}
+          isActive={isActive}
+        />
 
         <video
           ref={videoRef}
