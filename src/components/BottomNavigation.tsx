@@ -21,8 +21,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
-      <div className="flex items-center justify-around px-2 py-2">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full lg:w-[740px] lg:bottom-4">
+      <div className="bg-card border-t border-border lg:border lg:rounded-full lg:mx-4 lg:shadow-xl flex items-center justify-around px-2 py-2">
         {tabs.map((tab) => (
           <Button
             key={tab.id}

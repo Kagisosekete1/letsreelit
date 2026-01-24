@@ -6,9 +6,9 @@ interface MobileViewWrapperProps {
 }
 
 /**
- * Wraps content in a mobile-phone-sized container when on desktop.
+ * Wraps content in a tablet-sized container when on desktop.
  * Creates a TikTok-like experience with black sidebars on larger screens.
- * Content fits perfectly edge-to-edge like the home screen.
+ * Desktop uses tablet sizing (wider) with rounded corners.
  */
 const MobileViewWrapper: React.FC<MobileViewWrapperProps> = ({ 
   children, 
@@ -20,8 +20,8 @@ const MobileViewWrapper: React.FC<MobileViewWrapperProps> = ({
 
   return (
     <div className="min-h-[100dvh] bg-black flex items-center justify-center">
-      {/* Mobile container - simulates phone screen on desktop, full height fit */}
-      <div className="w-full h-[100dvh] lg:w-[420px] lg:h-[100dvh] relative bg-background flex flex-col overflow-hidden">
+      {/* Container - full width on mobile, tablet-like on desktop with rounded corners */}
+      <div className="w-full h-[100dvh] lg:w-[768px] lg:h-[95vh] lg:max-h-[920px] lg:my-auto lg:rounded-[2.5rem] lg:border lg:border-border/30 relative bg-background flex flex-col overflow-hidden">
         {children}
       </div>
     </div>
