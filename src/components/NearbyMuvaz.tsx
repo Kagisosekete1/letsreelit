@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation, type Position } from '@capacitor/geolocation';
 
 interface NearbyProfile {
   id: string;
@@ -49,34 +51,41 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
     return R * c;
   };
 
-  const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
-    return new Promise((resolve, reject) => {
-      // Check if we're on mobile/PWA and can use the Capacitor Geolocation
-      if (typeof window !== 'undefined' && 'Capacitor' in window) {
-        // Try Capacitor Geolocation for native app
-        import('@capacitor/core').then(({ Capacitor }) => {
-          if (Capacitor.isNativePlatform()) {
-            // On native platform, use Capacitor Geolocation
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                resolve({
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude
-                });
-              },
-              (error) => {
-                reject(new Error('Location permission denied. Please enable location in your device settings.'));
-              },
-              { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
-            );
-            return;
-          }
-        }).catch(() => {
-          // Fall through to web geolocation
+  const getUserLocation = async (): Promise<{ lat: number; lng: number }> => {
+    // Check if we're on native platform - use Capacitor Geolocation
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // First check/request permissions
+        let permStatus = await Geolocation.checkPermissions();
+        
+        if (permStatus.location === 'prompt' || permStatus.location === 'prompt-with-rationale') {
+          // Request permission
+          permStatus = await Geolocation.requestPermissions();
+        }
+        
+        if (permStatus.location !== 'granted') {
+          throw new Error('Location permission denied. Please enable location in your device Settings > Apps > Muv\'it > Permissions.');
+        }
+        
+        // Get current position
+        const position: Position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 300000,
         });
+        
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+      } catch (error: any) {
+        console.error('Capacitor Geolocation error:', error);
+        throw new Error(error.message || 'Location permission denied. Please enable location in your device settings.');
       }
+    }
 
-      // Web browser geolocation
+    // Web browser geolocation fallback
+    return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation is not supported by your browser'));
         return;
@@ -92,7 +101,7 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
         (error) => {
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              reject(new Error('Location permission denied. Please allow location access to see nearby Muva\'z.'));
+              reject(new Error('Location permission denied. Please allow location access in your browser settings.'));
               break;
             case error.POSITION_UNAVAILABLE:
               reject(new Error('Location unavailable. Please check your device settings.'));

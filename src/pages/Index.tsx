@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -22,6 +22,9 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Ref to pause videos when opening upload modal
+  const pauseVideosRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (isNative) return;
@@ -45,6 +48,8 @@ const Index = () => {
         navigate('/tutorials'); 
         break;
       case 'create': 
+        // Pause any playing video before opening upload modal
+        pauseVideosRef.current?.();
         setIsCreateReelOpen(true);
         break;
       case 'inbox': 
@@ -63,6 +68,11 @@ const Index = () => {
     }
     setCurrentScreen(screen);
   };
+  
+  // Register pause callback from HomeScreen
+  const registerPauseCallback = (pauseFn: () => void) => {
+    pauseVideosRef.current = pauseFn;
+  };
 
   if (showSplash) {
     return <div className="h-screen w-full"><SplashScreen /></div>;
@@ -74,7 +84,11 @@ const Index = () => {
 
       <div className="pb-16 h-full">
         {currentScreen === 'home' && (
-          <HomeScreen setScreen={setScreen} currentScreen={currentScreen} />
+          <HomeScreen 
+            setScreen={setScreen} 
+            currentScreen={currentScreen}
+            onRegisterPause={registerPauseCallback}
+          />
         )}
       </div>
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />

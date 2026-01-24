@@ -156,59 +156,107 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
         .select('*', { count: 'exact', head: true })
         .eq('following_id', authUser.id);
 
-      // Fetch reels for watch hours calculation
+      // Fetch reels with engagement data
       const { data: reels } = await supabase
         .from('reels')
-        .select('id, title, views_count, likes_count')
+        .select('id, title, views_count, likes_count, comments_count, shares_count, created_at')
         .eq('user_id', authUser.id);
 
-      // Calculate watch hours (estimate: 30 seconds avg per view = 0.00833 hours)
+      // Fetch likes on user's reels for bonus calculation
+      const { count: totalLikesCount } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .in('reel_id', reels?.map(r => r.id) || []);
+
+      // Revenue calculation algorithm:
+      // Base rate: $0.001 per view (CPM = $1.00)
+      // Engagement bonus: $0.002 per like
+      // Share bonus: $0.003 per share
+      // Comment bonus: $0.001 per comment
+      // Watch time multiplier: 1.5x for high engagement content (>5% engagement rate)
+      
+      const BASE_VIEW_RATE = 0.001; // $1 CPM
+      const LIKE_BONUS = 0.002;
+      const SHARE_BONUS = 0.003;
+      const COMMENT_BONUS = 0.001;
+      
       const totalViews = reels?.reduce((sum, r) => sum + (r.views_count || 0), 0) || 0;
+      const totalLikes = reels?.reduce((sum, r) => sum + (r.likes_count || 0), 0) || 0;
+      const totalShares = reels?.reduce((sum, r) => sum + (r.shares_count || 0), 0) || 0;
+      const totalComments = reels?.reduce((sum, r) => sum + (r.comments_count || 0), 0) || 0;
+      
+      // Calculate engagement rate for bonus multiplier
+      const engagementRate = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
+      const watchTimeMultiplier = engagementRate > 5 ? 1.5 : 1.0;
+      
+      // Calculate gross earnings
+      const viewEarnings = totalViews * BASE_VIEW_RATE * watchTimeMultiplier;
+      const likeEarnings = totalLikes * LIKE_BONUS;
+      const shareEarnings = totalShares * SHARE_BONUS;
+      const commentEarnings = totalComments * COMMENT_BONUS;
+      
+      const grossEarnings = viewEarnings + likeEarnings + shareEarnings + commentEarnings;
+      const vatRate = Number(vatData?.vat_rate) || 0;
+      const vatDeduction = grossEarnings * (vatRate / 100);
+      const netEarnings = grossEarnings - vatDeduction;
+
+      // Calculate watch hours (estimate: 30 seconds avg per view = 0.00833 hours)
       const estimatedWatchHours = totalViews * 0.00833;
 
-      // Fetch earnings
-      const { data: earnings } = await supabase
-        .from('creator_earnings')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      const totalEarnings = earnings?.reduce((sum, e) => sum + Number(e.net_earnings), 0) || 0;
-      const pendingEarnings = earnings?.filter(e => !e.is_paid).reduce((sum, e) => sum + Number(e.net_earnings), 0) || 0;
-      const paidEarnings = earnings?.filter(e => e.is_paid).reduce((sum, e) => sum + Number(e.net_earnings), 0) || 0;
-
-      // Generate weekly earnings chart data
+      // Generate weekly earnings chart data from actual reel performance
       const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const today = new Date();
       const weeklyEarnings = weekDays.map((day, idx) => {
-        const dayEarnings = earnings?.filter(e => {
-          const d = new Date(e.created_at);
-          return d.getDay() === (idx + 1) % 7;
+        const targetDay = new Date(today);
+        targetDay.setDate(today.getDate() - (6 - idx));
+        
+        const dayReels = reels?.filter(r => {
+          const reelDate = new Date(r.created_at);
+          return reelDate.toDateString() === targetDay.toDateString();
         }) || [];
-        const gross = dayEarnings.reduce((s, e) => s + Number(e.gross_earnings), 0);
-        const net = dayEarnings.reduce((s, e) => s + Number(e.net_earnings), 0);
-        return { day, gross, net };
+        
+        const dayViews = dayReels.reduce((s, r) => s + (r.views_count || 0), 0);
+        const dayLikes = dayReels.reduce((s, r) => s + (r.likes_count || 0), 0);
+        const dayShares = dayReels.reduce((s, r) => s + (r.shares_count || 0), 0);
+        const dayComments = dayReels.reduce((s, r) => s + (r.comments_count || 0), 0);
+        
+        const gross = (dayViews * BASE_VIEW_RATE) + (dayLikes * LIKE_BONUS) + (dayShares * SHARE_BONUS) + (dayComments * COMMENT_BONUS);
+        const net = gross * (1 - vatRate / 100);
+        
+        return { day, gross: Number(gross.toFixed(4)), net: Number(net.toFixed(4)) };
       });
 
-      // Top performing reels by earnings
-      const reelEarnings = reels?.map(r => ({
-        title: r.title?.slice(0, 20) + (r.title && r.title.length > 20 ? '...' : ''),
-        gross: (r.views_count || 0) * 0.001, // $0.001 per view estimate
-        views: r.views_count || 0,
-      })).sort((a, b) => b.gross - a.gross).slice(0, 5) || [];
+      // Top performing reels by calculated earnings
+      const reelEarnings = reels?.map(r => {
+        const views = r.views_count || 0;
+        const likes = r.likes_count || 0;
+        const shares = r.shares_count || 0;
+        const comments = r.comments_count || 0;
+        const engagement = views > 0 ? ((likes + comments + shares) / views) * 100 : 0;
+        const multiplier = engagement > 5 ? 1.5 : 1.0;
+        
+        const gross = (views * BASE_VIEW_RATE * multiplier) + (likes * LIKE_BONUS) + (shares * SHARE_BONUS) + (comments * COMMENT_BONUS);
+        
+        return {
+          title: r.title?.slice(0, 20) + (r.title && r.title.length > 20 ? '...' : ''),
+          gross,
+          views,
+        };
+      }).sort((a, b) => b.gross - a.gross).slice(0, 5) || [];
 
       const followers = followersCount || 0;
       const isEligible = followers >= FOLLOWER_GOAL && estimatedWatchHours >= WATCH_HOURS_GOAL;
 
       setData({
-        totalEarnings,
-        pendingEarnings,
-        paidEarnings,
+        totalEarnings: netEarnings,
+        pendingEarnings: netEarnings, // All unpaid earnings are pending
+        paidEarnings: 0, // Track from creator_earnings when paid
         watchHours: estimatedWatchHours,
         followers,
         isEligible,
         countryCode,
         countryName: vatData?.country_name || 'United States',
-        vatRate: Number(vatData?.vat_rate) || 0,
+        vatRate,
         currency: vatData?.currency || 'USD',
         weeklyEarnings,
         reelEarnings,
