@@ -879,18 +879,31 @@ const ReelCard: React.FC<ReelCardProps> = ({
           data-reel-video="true"
           className="absolute inset-0 w-full h-full object-contain sm:object-cover"
           style={{
-            // Always show the video when active (whether playing, paused, or buffering)
+            // Completely hide inactive videos to prevent native controls from appearing
+            // Use pointer-events: none to ensure no interaction with hidden video
             opacity: isActive && isVideoReady ? 1 : 0,
-            transition: 'opacity 0.2s ease-in-out',
-            visibility: isActive && isVideoReady ? 'visible' : 'hidden',
+            visibility: isActive ? 'visible' : 'hidden',
+            pointerEvents: isActive && isVideoReady ? 'auto' : 'none',
+            // Force hardware acceleration for smoother transitions
+            transform: 'translateZ(0)',
+            willChange: isActive ? 'opacity' : 'auto',
           }}
-          src={videoSrc}
-          preload={isActive ? getPreloadStrategy() : 'metadata'}
+          src={isActive ? videoSrc : undefined}
+          preload={isActive ? getPreloadStrategy() : 'none'}
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
+          // Disable native controls completely
+          controls={false}
+          // Disable context menu (right-click)
+          onContextMenu={(e) => e.preventDefault()}
+          // These attributes help suppress native UI on mobile
+          disablePictureInPicture
+          disableRemotePlayback
+          // @ts-ignore - webkit-specific
+          webkit-playsinline="true"
           // IMPORTANT: avoid native poster UI (which can show a big gray play button on mobile)
-          poster={undefined}
+          poster=""
           onLoadedData={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
