@@ -227,60 +227,33 @@ All colors MUST be HSL.
   }
 }
 
-/* Suppress native video controls and play button overlays on all platforms */
+/* Suppress native video controls and overlay play buttons (Capacitor/iOS/Android) */
 video[data-reel-video="true"] {
-  /* Hide all native controls */
-  &::-webkit-media-controls {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  &::-webkit-media-controls-panel {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  &::-webkit-media-controls-play-button {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  &::-webkit-media-controls-start-playback-button {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  &::-webkit-media-controls-enclosure {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  &::-webkit-media-controls-overlay-play-button {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-  
-  /* Firefox */
-  &::-moz-media-controls {
-    display: none !important;
-  }
-  
-  /* IE/Edge */
-  &::-ms-media-controls {
-    display: none !important;
-  }
-  
-  /* Prevent iOS native controls */
-  -webkit-media-controls-panel: none !important;
-  
-  /* Ensure no pointer events when hidden */
-  &[style*="visibility: hidden"] {
-    pointer-events: none !important;
-  }
+  -webkit-tap-highlight-color: transparent;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls,
+video[data-reel-video="true"]::-webkit-media-controls-panel,
+video[data-reel-video="true"]::-webkit-media-controls-enclosure,
+video[data-reel-video="true"]::-webkit-media-controls-play-button,
+video[data-reel-video="true"]::-webkit-media-controls-start-playback-button,
+video[data-reel-video="true"]::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Older iOS Safari hook */
+video[data-reel-video="true"]::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+
+/* Firefox (best-effort; often ignored) */
+video[data-reel-video="true"]::-moz-media-controls {
+  display: none !important;
+}
+
+/* Legacy Edge/IE (best-effort; often ignored) */
+video[data-reel-video="true"]::-ms-media-controls {
+  display: none !important;
 }
