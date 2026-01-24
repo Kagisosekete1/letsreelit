@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -14,6 +14,7 @@ import ReelsModal from '@/components/ReelsModal';
 import ProfileReelViewer from '@/components/ProfileReelViewer';
 import MilestoneBadges from '@/components/MilestoneBadges';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
+import CreatorOnboardingModal from '@/components/CreatorOnboardingModal';
 import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
@@ -47,6 +48,8 @@ const Profile = () => {
   const [followingModal, setFollowingModal] = useState(false);
   const [reelsModal, setReelsModal] = useState(false);
   const [badgesModal, setBadgesModal] = useState(false);
+  const [creatorOnboardingOpen, setCreatorOnboardingOpen] = useState(false);
+  const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
@@ -59,8 +62,22 @@ const Profile = () => {
       fetchUserReels();
       fetchSavedReels();
       fetchTutorialReels();
+      checkOnboardingStatus();
     }
   }, [authUser]);
+
+  const checkOnboardingStatus = async () => {
+    if (!authUser) return;
+    
+    const { data } = await supabase
+      .from('creator_onboarding')
+      .select('is_completed')
+      .eq('user_id', authUser.id)
+      .maybeSingle();
+    
+    // Show onboarding button if not completed
+    setShowOnboardingButton(!data?.is_completed);
+  };
 
   const fetchUserReels = async () => {
     if (!authUser) return;
@@ -156,9 +173,21 @@ const Profile = () => {
               <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsEditModalOpen(true)}>Edit Profile</Button>
               <Button className="flex-1 rounded-xl" onClick={() => setIsShareOpen(true)}>Share Profile</Button>
               <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setBadgesModal(true)}>
-                <Trophy className="w-5 h-5 text-yellow-500" />
+                <Trophy className="w-5 h-5 text-primary" />
               </Button>
             </div>
+            
+            {/* Creator Onboarding Button */}
+            {showOnboardingButton && (
+              <Button 
+                variant="outline" 
+                className="w-full mt-3 rounded-xl border-primary/50 text-primary hover:bg-primary/10"
+                onClick={() => setCreatorOnboardingOpen(true)}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Start Creator Journey
+              </Button>
+            )}
           </div>
         </div>
 
@@ -200,6 +229,13 @@ const Profile = () => {
           onClose={() => setAnalyticsReel(null)} 
           reelId={analyticsReel?.id || ''} 
           reelTitle={analyticsReel?.title || ''} 
+        />
+        <CreatorOnboardingModal 
+          isOpen={creatorOnboardingOpen} 
+          onClose={() => {
+            setCreatorOnboardingOpen(false);
+            checkOnboardingStatus();
+          }} 
         />
       </div>
     </MobileViewWrapper>

@@ -6,70 +6,106 @@ interface ReelData {
 }
 
 /**
- * Lightweight reel preloader - prefetches next reel's video + thumbnail
- * to make scrolling feel instant on mobile/tablet/laptop
+ * Optimized reel preloader - prefetches next reel's video + thumbnail
+ * using lightweight link prefetch to prevent DOM pressure and playback jamming.
+ * 
+ * Key optimizations:
+ * - Uses link prefetch instead of video elements
+ * - Debounces prefetch requests to prevent rapid state changes
+ * - Limits concurrent prefetches
+ * - Cleans up old links to prevent memory leaks
  */
 export const useReelPreloader = (
   reels: ReelData[],
   activeIndex: number,
-  prefetchCount: number = 2
+  prefetchCount: number = 1 // Reduced from 2 to 1 for better performance
 ) => {
   const preloadedUrls = useRef<Set<string>>(new Set());
-  const linkElements = useRef<HTMLLinkElement[]>([]);
+  const linkElements = useRef<Map<string, HTMLLinkElement>>(new Map());
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Clean up old preload links
-    linkElements.current.forEach((link) => {
-      try {
-        document.head.removeChild(link);
-      } catch {
-        // ignore if already removed
-      }
-    });
-    linkElements.current = [];
-
-    // Determine which reels to prefetch (next N reels)
-    const toPrefetch: ReelData[] = [];
-    for (let i = 1; i <= prefetchCount; i++) {
-      const nextIndex = activeIndex + i;
-      if (nextIndex < reels.length) {
-        toPrefetch.push(reels[nextIndex]);
-      }
+    // Debounce prefetch to prevent rapid changes during scroll
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
 
-    // Also prefetch previous reel for smooth back-scrolling
-    if (activeIndex > 0) {
-      toPrefetch.push(reels[activeIndex - 1]);
-    }
-
-    toPrefetch.forEach((reel) => {
-      // Prefetch video using link preload
-      if (reel.video_url && !preloadedUrls.current.has(reel.video_url)) {
-        preloadedUrls.current.add(reel.video_url);
-        
-        const videoLink = document.createElement('link');
-        videoLink.rel = 'prefetch';
-        videoLink.as = 'video';
-        videoLink.href = reel.video_url;
-        document.head.appendChild(videoLink);
-        linkElements.current.push(videoLink);
+    debounceTimer.current = setTimeout(() => {
+      // Determine which reels to prefetch (next N reels only)
+      const urlsToPrefetch: Set<string> = new Set();
+      
+      for (let i = 1; i <= prefetchCount; i++) {
+        const nextIndex = activeIndex + i;
+        if (nextIndex < reels.length) {
+          const reel = reels[nextIndex];
+          if (reel.video_url && !preloadedUrls.current.has(reel.video_url)) {
+            urlsToPrefetch.add(reel.video_url);
+          }
+          if (reel.thumbnail_url && !preloadedUrls.current.has(reel.thumbnail_url)) {
+            urlsToPrefetch.add(reel.thumbnail_url);
+          }
+        }
       }
 
-      // Prefetch thumbnail using link preload
-      if (reel.thumbnail_url && !preloadedUrls.current.has(reel.thumbnail_url)) {
-        preloadedUrls.current.add(reel.thumbnail_url);
-        
-        const imgLink = document.createElement('link');
-        imgLink.rel = 'prefetch';
-        imgLink.as = 'image';
-        imgLink.href = reel.thumbnail_url;
-        document.head.appendChild(imgLink);
-        linkElements.current.push(imgLink);
+      // Prefetch previous reel for smooth back-scrolling (only if not already cached)
+      if (activeIndex > 0) {
+        const prevReel = reels[activeIndex - 1];
+        if (prevReel.video_url && !preloadedUrls.current.has(prevReel.video_url)) {
+          urlsToPrefetch.add(prevReel.video_url);
+        }
       }
-    });
+
+      // Create prefetch links for new URLs
+      urlsToPrefetch.forEach((url) => {
+        if (preloadedUrls.current.has(url)) return;
+        
+        preloadedUrls.current.add(url);
+        
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = url.includes('thumbnail') || url.match(/\.(jpg|jpeg|png|webp|gif)/i) ? 'image' : 'video';
+        link.href = url;
+        document.head.appendChild(link);
+        linkElements.current.set(url, link);
+      });
+
+      // Cleanup old links that are far from current position (memory management)
+      const maxCachedUrls = (prefetchCount + 2) * 2; // Allow some buffer
+      if (preloadedUrls.current.size > maxCachedUrls) {
+        const urlsToRemove: string[] = [];
+        let count = 0;
+        
+        preloadedUrls.current.forEach((url) => {
+          if (count >= preloadedUrls.current.size - maxCachedUrls) return;
+          urlsToRemove.push(url);
+          count++;
+        });
+
+        urlsToRemove.forEach((url) => {
+          const link = linkElements.current.get(url);
+          if (link) {
+            try {
+              document.head.removeChild(link);
+            } catch {
+              // ignore
+            }
+            linkElements.current.delete(url);
+          }
+          preloadedUrls.current.delete(url);
+        });
+      }
+    }, 150); // 150ms debounce
 
     return () => {
-      // Cleanup on unmount
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [reels, activeIndex, prefetchCount]);
+
+  // Cleanup all links on unmount
+  useEffect(() => {
+    return () => {
       linkElements.current.forEach((link) => {
         try {
           document.head.removeChild(link);
@@ -77,24 +113,8 @@ export const useReelPreloader = (
           // ignore
         }
       });
+      linkElements.current.clear();
+      preloadedUrls.current.clear();
     };
-  }, [reels, activeIndex, prefetchCount]);
-
-  // Also use Image preloading as a fallback for thumbnails
-  useEffect(() => {
-    const toPrefetch: string[] = [];
-    
-    for (let i = 1; i <= prefetchCount; i++) {
-      const nextIndex = activeIndex + i;
-      if (nextIndex < reels.length && reels[nextIndex].thumbnail_url) {
-        toPrefetch.push(reels[nextIndex].thumbnail_url!);
-      }
-    }
-
-    // Preload images using Image constructor (more reliable for images)
-    toPrefetch.forEach((url) => {
-      const img = new Image();
-      img.src = url;
-    });
-  }, [reels, activeIndex, prefetchCount]);
+  }, []);
 };

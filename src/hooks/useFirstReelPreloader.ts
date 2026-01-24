@@ -7,14 +7,12 @@ interface ReelData {
 
 /**
  * Lightweight preloader that warms the FIRST reel immediately on mount.
- * This ensures instant playback without any pause when the feed loads.
- * 
- * Uses a hidden video element to buffer the first chunk + load metadata,
- * so when the actual ReelCard mounts, the browser cache is already primed.
+ * Uses link prefetch instead of creating video elements to reduce DOM pressure
+ * and prevent playback jamming issues.
  */
 export const useFirstReelPreloader = (reels: ReelData[]) => {
-  const preloaderRef = useRef<HTMLVideoElement | null>(null);
   const hasPreloaded = useRef(false);
+  const linkRef = useRef<HTMLLinkElement | null>(null);
 
   useEffect(() => {
     // Only preload once, and only if we have reels
@@ -25,55 +23,30 @@ export const useFirstReelPreloader = (reels: ReelData[]) => {
 
     hasPreloaded.current = true;
 
-    // Create a hidden video element to warm the cache
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.muted = true;
-    video.playsInline = true;
-    video.style.position = 'absolute';
-    video.style.width = '1px';
-    video.style.height = '1px';
-    video.style.opacity = '0';
-    video.style.pointerEvents = 'none';
-    video.style.left = '-9999px';
-    
-    // Set source and start buffering
-    video.src = firstReel.video_url;
-    
-    // Append to DOM to trigger buffering
-    document.body.appendChild(video);
-    preloaderRef.current = video;
+    // Use link prefetch instead of video element - much lighter on DOM
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'video';
+    link.href = firstReel.video_url;
+    document.head.appendChild(link);
+    linkRef.current = link;
 
-    // Start loading
-    video.load();
-
-    // Also preload thumbnail via Image
+    // Also preload thumbnail via Image (this is lightweight)
     if (firstReel.thumbnail_url) {
       const img = new Image();
       img.src = firstReel.thumbnail_url;
     }
 
-    // Cleanup after a reasonable time or on unmount
-    const cleanup = () => {
-      if (preloaderRef.current) {
+    // Cleanup
+    return () => {
+      if (linkRef.current) {
         try {
-          preloaderRef.current.pause();
-          preloaderRef.current.src = '';
-          preloaderRef.current.load();
-          document.body.removeChild(preloaderRef.current);
+          document.head.removeChild(linkRef.current);
         } catch {
           // ignore
         }
-        preloaderRef.current = null;
+        linkRef.current = null;
       }
-    };
-
-    // Remove preloader after 5 seconds (cache is warm by then)
-    const timer = setTimeout(cleanup, 5000);
-
-    return () => {
-      clearTimeout(timer);
-      cleanup();
     };
   }, [reels]);
 };

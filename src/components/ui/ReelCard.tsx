@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download, BarChart2 } from 'lucide-react';
@@ -22,6 +22,7 @@ import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
 import { sendLikeNotification } from '@/services/notificationService';
 import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
+import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -243,10 +244,63 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setIsSaved(!!saveData);
   };
 
-  // Auto-play/pause using global audio manager
+  // Watch time tracking for monetization
+  useWatchTimeTracker({
+    reelId: reel.id,
+    creatorId: reel.user.id,
+    isActive,
+    videoRef,
+  });
+
+  // Debounced play function to prevent rapid play/pause cycles
+  const playTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPlayingAttemptRef = useRef(false);
+
+  const attemptPlay = useCallback(async (video: HTMLVideoElement) => {
+    if (isPlayingAttemptRef.current) return;
+    isPlayingAttemptRef.current = true;
+
+    try {
+      // Wait for video to have enough data
+      if (video.readyState >= 3) {
+        setIsVideoReady(true);
+        setIsBuffering(false);
+      }
+
+      // Don't reset currentTime if video has already played (scrolling back)
+      if (video.currentTime === 0 || video.ended) {
+        video.currentTime = 0;
+      }
+      
+      await video.play();
+      setIsPlaying(true);
+    } catch {
+      // Browser autoplay policy - if unmuted play fails, try muted
+      if (!video.muted) {
+        video.muted = true;
+        setIsMuted(true);
+        try {
+          await video.play();
+          setIsPlaying(true);
+        } catch {
+          // ignore
+        }
+      }
+    } finally {
+      isPlayingAttemptRef.current = false;
+    }
+  }, [setIsMuted]);
+
+  // Auto-play/pause using global audio manager - optimized to prevent jamming
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    // Clear any pending play attempts
+    if (playTimeoutRef.current) {
+      clearTimeout(playTimeoutRef.current);
+      playTimeoutRef.current = null;
+    }
 
     if (isActive) {
       // Request audio focus from global manager - this silences all other videos
@@ -260,106 +314,44 @@ const ReelCard: React.FC<ReelCardProps> = ({
       // Apply mute state from global context
       video.muted = isMuted;
 
-      // Wait for video to be ready before playing to prevent black screen
-      const handleCanPlay = () => {
-        setIsVideoReady(true);
-        setIsBuffering(false);
-      };
-
-      const handleLoadedData = () => {
-        setIsVideoReady(true);
-        setIsBuffering(false);
-      };
-
-      const handleLoadedMetadata = () => {
-        // Video has metadata, can start showing
-        if (video.readyState >= 1) {
-          setIsBuffering(false);
-        }
-      };
-
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('loadeddata', handleLoadedData);
-      video.addEventListener('loadedmetadata', handleLoadedMetadata);
-
       // If startPaused mode and user has not played yet, do NOT auto-play
       if (!userHasPlayed) {
         // Load video but stay paused - show first frame
         video.currentTime = 0;
         video.load();
-        return () => {
-          video.removeEventListener('canplay', handleCanPlay);
-          video.removeEventListener('loadeddata', handleLoadedData);
-          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        };
+        return;
       }
 
-      const playAttempt = async () => {
-        // Wait for video to have enough data
-        if (video.readyState >= 3) {
-          setIsVideoReady(true);
-          setIsBuffering(false);
-        }
-
-        try {
-          // Don't reset currentTime if video has already played (scrolling back)
-          if (video.currentTime === 0 || video.ended) {
-            video.currentTime = 0;
-          }
-          await video.play();
-          setIsPlaying(true);
-        } catch {
-          // Browser autoplay policy - if unmuted play fails, try muted
-          if (!video.muted) {
-            video.muted = true;
-            setIsMuted(true);
-            try {
-              await video.play();
-              setIsPlaying(true);
-            } catch {
-              // ignore
-            }
-          }
-        }
-      };
-
-      // Small delay to ensure video element is ready
-      const playTimer = setTimeout(() => {
-        void playAttempt();
-      }, 50);
+      // Debounced play to prevent rapid state changes during scroll
+      playTimeoutRef.current = setTimeout(() => {
+        void attemptPlay(video);
+      }, 100);
 
       return () => {
-        clearTimeout(playTimer);
-        video.removeEventListener('canplay', handleCanPlay);
-        video.removeEventListener('loadeddata', handleLoadedData);
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        if (playTimeoutRef.current) {
+          clearTimeout(playTimeoutRef.current);
+          playTimeoutRef.current = null;
+        }
       };
     } else {
       // Release audio focus but keep video state for smooth scroll back
       releaseAudioFocus(reel.id);
       
-      try {
+      // Gentle pause without resetting - preserves position for scroll back
+      if (!video.paused) {
         video.pause();
-        video.muted = true;
-      } catch {
-        // ignore
       }
-
+      video.muted = true;
       setIsPlaying(false);
-      // Don't reset isVideoReady - keep it true so video plays immediately when scrolling back
     }
 
     return () => {
-      // On unmount: release focus and silence
-      releaseAudioFocus(reel.id);
-      try {
-        video.pause();
-        video.muted = true;
-      } catch {
-        // ignore
+      if (playTimeoutRef.current) {
+        clearTimeout(playTimeoutRef.current);
+        playTimeoutRef.current = null;
       }
     };
-  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus, userHasPlayed, isMuted, setIsMuted]);
+  }, [isActive, reel.id, reel.videoUrl, requestAudioFocus, releaseAudioFocus, userHasPlayed, isMuted, setIsMuted, attemptPlay, videoSrc]);
 
   // Sync mute state from global context to video element
   useEffect(() => {
