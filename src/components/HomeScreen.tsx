@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +6,8 @@ import ReelCard from './ui/ReelCard';
 import { Loader2 } from 'lucide-react';
 import { useReelPreloader } from '@/hooks/useReelPreloader';
 import { useFirstReelPreloader } from '@/hooks/useFirstReelPreloader';
+import { useReelTransitionManager } from '@/hooks/useReelTransitionManager';
+import { useVideoQuality } from '@/contexts/VideoQualityContext';
 import AppRatingPrompt from './AppRatingPrompt';
 
 const PAGE_SIZE = 10;
@@ -53,6 +55,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
   const [reelsViewedCount, setReelsViewedCount] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const previousActiveIndex = useRef<number>(0);
 
   // For "start paused until user taps play" - track if user has ever played
   // Changed default to TRUE for autoplay behavior
@@ -60,8 +63,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
 
   const displayedReels = reels;
 
-  // Prefetch next reels for instant scrolling
-  useReelPreloader(reels, activeReelIndex, 2);
+  // Transition manager for smooth black fades between reels
+  const transitionManager = useReelTransitionManager();
+  
+  // Adaptive video quality based on network
+  const { getOptimalPrefetchCount, networkSpeed } = useVideoQuality();
+  const prefetchCount = useMemo(() => getOptimalPrefetchCount(), [getOptimalPrefetchCount]);
+
+  // Prefetch next reels for instant scrolling (adaptive based on network)
+  useReelPreloader(reels, activeReelIndex, prefetchCount);
   
   // Warm the first reel immediately for instant playback
   useFirstReelPreloader(reels);
@@ -287,7 +297,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
         const idx = Number((best.target as HTMLElement).dataset.reelIndex);
         if (!Number.isFinite(idx)) return;
 
-        setActiveReelIndex((prev) => (prev === idx ? prev : idx));
+        setActiveReelIndex((prev) => {
+          if (prev !== idx) {
+            // Trigger transition with black fade
+            transitionManager.startTransition(prev, idx);
+            
+            // Start tracking for the new reel
+            const newReel = displayedReels[idx];
+            if (newReel) {
+              transitionManager.startLoadTracking(newReel.id);
+            }
+            
+            previousActiveIndex.current = prev;
+          }
+          return prev === idx ? prev : idx;
+        });
       },
       {
         root: container,
@@ -298,7 +322,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
     items.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [reels.length]);
+  }, [reels.length, displayedReels, transitionManager]);
 
   const goToReel = useCallback((index: number) => {
     if (containerRef.current && index >= 0 && index < displayedReels.length) {
@@ -350,6 +374,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
         </div>
       ) : (
         <div className="relative flex-1 h-full">
+          {/* Fullscreen transition overlay */}
+          {transitionManager.transitionState.isTransitioning && (
+            <div 
+              className="absolute inset-0 z-[100] bg-black pointer-events-none"
+              style={{ opacity: transitionManager.transitionState.fadeOpacity }}
+            />
+          )}
+          
+          {/* Network quality indicator (dev only - can be removed in production) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="absolute bottom-24 left-4 z-50 text-xs text-white/50 font-mono">
+              Net: {networkSpeed} | Prefetch: {prefetchCount}
+            </div>
+          )}
+          
           {/* Top Header */}
           <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
             {/* Logo on left */}
@@ -419,6 +458,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
                   autoAdvance={false}
                   startPaused={!userTriggeredPlay}
                   onUserTriggeredPlay={() => setUserTriggeredPlay(true)}
+                  transitionManager={transitionManager}
                 />
               </div>
             ))}

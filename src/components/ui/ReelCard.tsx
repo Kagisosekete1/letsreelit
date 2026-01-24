@@ -23,6 +23,7 @@ import { sendLikeNotification } from '@/services/notificationService';
 import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
+import { ReelTransitionManager } from '@/hooks/useReelTransitionManager';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -89,6 +90,8 @@ interface ReelCardProps {
   startPaused?: boolean;
   /** Callback when user manually triggers play for the first time */
   onUserTriggeredPlay?: () => void;
+  /** Optional transition manager for logging buffering metrics */
+  transitionManager?: ReelTransitionManager;
 }
 
 const ReelCard: React.FC<ReelCardProps> = ({ 
@@ -104,12 +107,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
   variant = 'home',
   startPaused = false,
   onUserTriggeredPlay,
+  transitionManager,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
   const { requestAudioFocus, releaseAudioFocus, isMuted, setIsMuted } = useAudio();
-  const { getPreloadStrategy } = useVideoQuality();
+  const { getPreloadStrategy, shouldReduceQuality } = useVideoQuality();
   const { cacheVideo, isVideoCached, isOnline } = useOfflineVideoCache();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -894,10 +898,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onLoadedData={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
+            // Log first frame time to transition manager
+            transitionManager?.markFirstFrame(reel.id);
           }}
           onCanPlay={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
+            // End any buffering tracking
+            transitionManager?.stopBuffering(reel.id);
           }}
           onLoadedMetadata={() => {
             if (videoRef.current && videoRef.current.readyState >= 1) {
@@ -907,16 +915,24 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onError={(e) => {
             console.error('Video load error:', e);
             setIsBuffering(false);
+            transitionManager?.stopBuffering(reel.id);
             if (videoRef.current && reel.videoUrl) {
               videoRef.current.load();
             }
           }}
-          onStalled={() => setIsBuffering(true)}
-          onWaiting={() => setIsBuffering(true)}
+          onStalled={() => {
+            setIsBuffering(true);
+            transitionManager?.startBuffering(reel.id);
+          }}
+          onWaiting={() => {
+            setIsBuffering(true);
+            transitionManager?.startBuffering(reel.id);
+          }}
           onPlaying={() => {
             setIsPlaying(true);
             setIsVideoReady(true);
             setIsBuffering(false);
+            transitionManager?.stopBuffering(reel.id);
             // Cache video for offline playback when it starts playing
             if (isOnline && !isVideoCached(reel.id)) {
               cacheVideo(reel.id, reel.videoUrl);
@@ -1037,8 +1053,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
             )}
             {/* Following indicator */}
             {authUser && !isOwner && followingIds.has(reel.user.id) && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border border-white">
-                <UserCheck className="w-3 h-3 text-white" />
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-primary rounded-full flex items-center justify-center border border-background">
+                <UserCheck className="w-3 h-3 text-primary-foreground" />
               </div>
             )}
           </div>
