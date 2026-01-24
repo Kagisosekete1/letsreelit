@@ -226,3 +226,61 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 }
+
+/* Suppress native video controls and play button overlays on all platforms */
+video[data-reel-video="true"] {
+  /* Hide all native controls */
+  &::-webkit-media-controls {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  &::-webkit-media-controls-panel {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  &::-webkit-media-controls-play-button {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  &::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  &::-webkit-media-controls-enclosure {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  &::-webkit-media-controls-overlay-play-button {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  /* Firefox */
+  &::-moz-media-controls {
+    display: none !important;
+  }
+  
+  /* IE/Edge */
+  &::-ms-media-controls {
+    display: none !important;
+  }
+  
+  /* Prevent iOS native controls */
+  -webkit-media-controls-panel: none !important;
+  
+  /* Ensure no pointer events when hidden */
+  &[style*="visibility: hidden"] {
+    pointer-events: none !important;
+  }
+}
