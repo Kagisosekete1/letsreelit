@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +21,8 @@ import {
   Plus,
   Share2,
   MessageSquare,
-  Info
+  Info,
+  BarChart2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -65,6 +67,7 @@ interface EarningsData {
 }
 
 const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const { authUser, currentUser } = useUser();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -466,6 +469,19 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
                       ))
                     )}
                   </div>
+                  
+                  {/* Link to detailed analytics */}
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => {
+                      onClose();
+                      navigate('/monetization-analytics');
+                    }}
+                  >
+                    <BarChart2 className="w-4 h-4 mr-2" />
+                    View Detailed Analytics
+                  </Button>
                 </div>
               </TabsContent>
 

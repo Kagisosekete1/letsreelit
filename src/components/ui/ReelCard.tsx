@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download, BarChart2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,7 @@ import ProfileLink from '@/components/ui/ProfileLink';
 import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
 import { sendLikeNotification } from '@/services/notificationService';
 import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
+import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -198,6 +199,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDuetModal, setShowDuetModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [realtimeLiker, setRealtimeLiker] = useState<{ avatarUrl: string; username: string } | null>(null);
   const [progress, setProgress] = useState(0);
@@ -1158,6 +1160,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
             <DropdownMenuContent align="end" className="rounded-xl">
               {isOwner && (
                 <>
+                  <DropdownMenuItem onClick={() => setShowAnalyticsModal(true)}>
+                    <BarChart2 className="w-4 h-4 mr-2" />
+                    View Analytics
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowEditModal(true)}>
                     <Edit2 className="w-4 h-4 mr-2" />
                     Edit Muv
@@ -1326,6 +1332,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
               }
             });
         }}
+      />
+
+      {/* Video Analytics Modal */}
+      <VideoAnalyticsModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+        reelId={reel.id}
+        reelTitle={reel.title}
       />
     </div>
   );
