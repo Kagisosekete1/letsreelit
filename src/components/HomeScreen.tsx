@@ -13,6 +13,7 @@ const PAGE_SIZE = 10;
 interface HomeScreenProps {
   setScreen: (screen: Screen | 'following', payload?: any) => void;
   currentScreen: Screen;
+  onRegisterPause?: (pauseFn: () => void) => void;
 }
 
 interface ReelData {
@@ -38,7 +39,7 @@ interface ReelData {
   };
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause }) => {
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   const viewedReels = useRef<Set<string>>(new Set());
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
   const [reelsViewedCount, setReelsViewedCount] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   // For "start paused until user taps play" - track if user has ever played
   // Changed default to TRUE for autoplay behavior
@@ -62,6 +64,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
   
   // Warm the first reel immediately for instant playback
   useFirstReelPreloader(reels);
+
+  // Register pause callback with parent
+  useEffect(() => {
+    if (onRegisterPause) {
+      onRegisterPause(() => setIsPaused(true));
+    }
+  }, [onRegisterPause]);
+
+  // Resume when modal closes
+  useEffect(() => {
+    if (currentScreen === 'home') {
+      setIsPaused(false);
+    }
+  }, [currentScreen]);
 
   // Sync reels when screen becomes active or on mount
   useEffect(() => {
@@ -393,7 +409,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen }) => 
                   }}
                   followingIds={followingIds}
                   toggleFollow={toggleFollow}
-                  isActive={index === activeReelIndex}
+                  isActive={index === activeReelIndex && !isPaused}
                   isOwner={authUser?.id === reel.user_id}
                   onDelete={handleDeleteReel}
                   autoAdvance={false}
