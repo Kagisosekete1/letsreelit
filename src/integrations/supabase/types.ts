@@ -195,6 +195,42 @@ export type Database = {
           },
         ]
       }
+      creator_onboarding: {
+        Row: {
+          completed_at: string | null
+          completed_steps: string[]
+          created_at: string
+          current_step: number
+          id: string
+          is_completed: boolean
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_steps?: string[]
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_steps?: string[]
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       creator_payouts: {
         Row: {
           amount: number
@@ -706,11 +742,59 @@ export type Database = {
         }
         Relationships: []
       }
+      watch_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_complete: boolean
+          reel_id: string
+          started_at: string
+          total_video_duration_seconds: number | null
+          user_id: string | null
+          viewer_id: string | null
+          watch_duration_seconds: number
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_complete?: boolean
+          reel_id: string
+          started_at?: string
+          total_video_duration_seconds?: number | null
+          user_id?: string | null
+          viewer_id?: string | null
+          watch_duration_seconds?: number
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_complete?: boolean
+          reel_id?: string
+          started_at?: string
+          total_video_duration_seconds?: number | null
+          user_id?: string | null
+          viewer_id?: string | null
+          watch_duration_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_sessions_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_creator_watch_hours: { Args: { creator_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
