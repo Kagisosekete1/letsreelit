@@ -4,34 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { X, Scissors, Sparkles, Upload, ArrowLeft, Check, Music2 } from 'lucide-react';
+import { Scissors, Sparkles, ArrowLeft, Check, Music2, Gauge, Wand2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import { reelSchema } from '@/lib/validations';
 import { generateThumbnail } from '@/lib/thumbnailGenerator';
 import MusicLibraryModal, { type PlaceholderSong } from '@/components/MusicLibraryModal';
+import VideoEffectsPanel, { type VideoEffects, FILTERS } from '@/components/VideoEffectsPanel';
 
 interface ReelUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   videoFile: File;
 }
-
-const FILTERS = [
-  { name: 'None', class: '', preview: '✨' },
-  { name: 'Warm', class: 'sepia(30%) saturate(140%)', preview: '🌅' },
-  { name: 'Cool', class: 'hue-rotate(180deg) saturate(80%)', preview: '❄️' },
-  { name: 'Vintage', class: 'sepia(50%) contrast(90%)', preview: '📷' },
-  { name: 'B&W', class: 'grayscale(100%)', preview: '🖤' },
-  { name: 'Vivid', class: 'saturate(200%) contrast(110%)', preview: '🌈' },
-  { name: 'Fade', class: 'brightness(110%) contrast(90%) saturate(80%)', preview: '🌫️' },
-  { name: 'Drama', class: 'contrast(130%) brightness(90%)', preview: '🎭' },
-  { name: 'Glow', class: 'brightness(115%) saturate(120%)', preview: '💫' },
-  { name: 'Noir', class: 'grayscale(80%) contrast(120%)', preview: '🎬' },
-  { name: 'Sunset', class: 'sepia(20%) hue-rotate(-10deg) saturate(130%)', preview: '🌇' },
-  { name: 'Neon', class: 'saturate(180%) brightness(105%) hue-rotate(10deg)', preview: '💜' },
-];
 
 const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, videoFile }) => {
   const { toast } = useToast();
@@ -43,7 +29,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [step, setStep] = useState<'edit' | 'crop' | 'filters' | 'details' | 'uploading'>('edit');
+  const [step, setStep] = useState<'edit' | 'crop' | 'filters' | 'effects' | 'details' | 'uploading'>('edit');
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
   const [selectedFilter, setSelectedFilter] = useState(0);
   const [cropStart, setCropStart] = useState(0);
@@ -55,6 +41,14 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   const [thumbnailOptions, setThumbnailOptions] = useState<string[]>([]);
   const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
   const [customThumbnailTime, setCustomThumbnailTime] = useState(1);
+  
+  // Video effects state
+  const [videoEffects, setVideoEffects] = useState<VideoEffects>({
+    speed: 1,
+    transition: 'none',
+    arFilter: 'none',
+    filter: 'none',
+  });
 
   useEffect(() => {
     if (videoFile) {
@@ -115,7 +109,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   };
 
   const handleFiltersEffects = () => {
-    setStep('filters');
+    setStep('effects');
   };
 
   const applyCropTrim = () => {
@@ -129,7 +123,21 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
   const applyFilter = () => {
     toast({
       title: "Filter Applied",
-      description: `${FILTERS[selectedFilter].name} filter applied to your reel`,
+      description: `${FILTERS[selectedFilter]?.name || 'Filter'} applied to your reel`,
+    });
+    setStep('edit');
+  };
+
+  const handleApplyEffects = () => {
+    const effects = [];
+    if (videoEffects.speed !== 1) effects.push(`${videoEffects.speed}x speed`);
+    if (videoEffects.transition !== 'none') effects.push(videoEffects.transition);
+    if (videoEffects.arFilter !== 'none') effects.push(videoEffects.arFilter);
+    if (videoEffects.filter !== 'none') effects.push(videoEffects.filter);
+    
+    toast({
+      title: "Effects Applied",
+      description: effects.length > 0 ? effects.join(', ') : 'No effects selected',
     });
     setStep('edit');
   };
@@ -280,7 +288,8 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
           <DialogTitle className="flex-1 text-center">
               {step === 'edit' && 'Crop Muv'}
               {step === 'crop' && 'Crop & Trim'}
-              {step === 'filters' && 'Filters & Effects'}
+              {step === 'filters' && 'Filters'}
+              {step === 'effects' && 'Effects & Speed'}
               {step === 'details' && 'Muv Details'}
               {step === 'uploading' && 'Uploading...'}
             </DialogTitle>
@@ -332,14 +341,28 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <Button
                 variant="outline"
                 className="w-full h-auto py-4 justify-start rounded-2xl"
-                onClick={handleFiltersEffects}
+                onClick={() => setStep('filters')}
               >
-                <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center mr-3">
-                  <Sparkles className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center mr-3">
+                  <Sparkles className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold">Filters & Effects</p>
-                  <p className="text-sm text-muted-foreground">Add stunning filters</p>
+                  <p className="font-semibold">Filters</p>
+                  <p className="text-sm text-muted-foreground">Add stunning visual filters</p>
+                </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-auto py-4 justify-start rounded-2xl"
+                onClick={handleFiltersEffects}
+              >
+                <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center mr-3">
+                  <Wand2 className="w-5 h-5 text-accent-foreground" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold">Effects & Speed</p>
+                  <p className="text-sm text-muted-foreground">Speed, transitions, AR effects</p>
                 </div>
               </Button>
             </div>
@@ -438,6 +461,55 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
               <Check className="w-4 h-4 mr-2" />
               Apply Filter
             </Button>
+          </div>
+        )}
+
+        {step === 'effects' && (
+          <div className="space-y-4 py-4">
+            <div 
+              className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden max-h-48"
+              style={{ filter: videoEffects.filter !== 'none' ? FILTERS.find(f => f.id === videoEffects.filter)?.class || '' : '' }}
+            >
+              <video
+                ref={videoRef}
+                src={videoPreviewUrl}
+                className="w-full h-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+                onCanPlay={(e) => {
+                  const video = e.currentTarget;
+                  video.playbackRate = videoEffects.speed;
+                  video.play().catch(() => {});
+                }}
+              />
+              {/* AR Filter Overlay */}
+              {videoEffects.arFilter !== 'none' && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="text-6xl animate-pulse opacity-50">
+                    {videoEffects.arFilter === 'hearts' && '❤️'}
+                    {videoEffects.arFilter === 'stars' && '⭐'}
+                    {videoEffects.arFilter === 'fire' && '🔥'}
+                    {videoEffects.arFilter === 'snow' && '❄️'}
+                    {videoEffects.arFilter === 'crown' && '👑'}
+                    {videoEffects.arFilter === 'party' && '🎉'}
+                  </div>
+                </div>
+              )}
+              {/* Speed indicator */}
+              {videoEffects.speed !== 1 && (
+                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
+                  <span className="text-white text-xs font-bold">{videoEffects.speed}x</span>
+                </div>
+              )}
+            </div>
+
+            <VideoEffectsPanel
+              effects={videoEffects}
+              onEffectsChange={setVideoEffects}
+              onApply={handleApplyEffects}
+            />
           </div>
         )}
 
