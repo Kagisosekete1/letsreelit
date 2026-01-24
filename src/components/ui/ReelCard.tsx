@@ -23,7 +23,6 @@ import { sendLikeNotification } from '@/services/notificationService';
 import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
-import { ReelTransitionManager } from '@/hooks/useReelTransitionManager';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -90,8 +89,6 @@ interface ReelCardProps {
   startPaused?: boolean;
   /** Callback when user manually triggers play for the first time */
   onUserTriggeredPlay?: () => void;
-  /** Optional transition manager for logging buffering metrics */
-  transitionManager?: ReelTransitionManager;
 }
 
 const ReelCard: React.FC<ReelCardProps> = ({ 
@@ -107,7 +104,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
   variant = 'home',
   startPaused = false,
   onUserTriggeredPlay,
-  transitionManager,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -898,14 +894,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onLoadedData={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
-            // Log first frame time to transition manager
-            transitionManager?.markFirstFrame(reel.id);
           }}
           onCanPlay={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
-            // End any buffering tracking
-            transitionManager?.stopBuffering(reel.id);
           }}
           onLoadedMetadata={() => {
             if (videoRef.current && videoRef.current.readyState >= 1) {
@@ -915,24 +907,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
           onError={(e) => {
             console.error('Video load error:', e);
             setIsBuffering(false);
-            transitionManager?.stopBuffering(reel.id);
             if (videoRef.current && reel.videoUrl) {
               videoRef.current.load();
             }
           }}
           onStalled={() => {
             setIsBuffering(true);
-            transitionManager?.startBuffering(reel.id);
           }}
           onWaiting={() => {
             setIsBuffering(true);
-            transitionManager?.startBuffering(reel.id);
           }}
           onPlaying={() => {
             setIsPlaying(true);
             setIsVideoReady(true);
             setIsBuffering(false);
-            transitionManager?.stopBuffering(reel.id);
             // Cache video for offline playback when it starts playing
             if (isOnline && !isVideoCached(reel.id)) {
               cacheVideo(reel.id, reel.videoUrl);
