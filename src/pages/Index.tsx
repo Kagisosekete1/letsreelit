@@ -25,6 +25,7 @@ const Index = () => {
   
   // Ref to pause videos when opening upload modal
   const pauseVideosRef = useRef<(() => void) | null>(null);
+  const resumeVideosRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (isNative) return;
@@ -49,7 +50,11 @@ const Index = () => {
         break;
       case 'create': 
         // Pause any playing video before opening upload modal
-        pauseVideosRef.current?.();
+        try {
+          pauseVideosRef.current?.();
+        } catch (e) {
+          console.warn('Error pausing videos:', e);
+        }
         setIsCreateReelOpen(true);
         break;
       case 'inbox': 
@@ -69,9 +74,26 @@ const Index = () => {
     setCurrentScreen(screen);
   };
   
-  // Register pause callback from HomeScreen
+  // Register pause and resume callbacks from HomeScreen
   const registerPauseCallback = (pauseFn: () => void) => {
     pauseVideosRef.current = pauseFn;
+  };
+  
+  const registerResumeCallback = (resumeFn: () => void) => {
+    resumeVideosRef.current = resumeFn;
+  };
+
+  // Handle upload modal close - resume videos
+  const handleCreateReelClose = () => {
+    setIsCreateReelOpen(false);
+    // Small delay to ensure modal is closed before resuming
+    setTimeout(() => {
+      try {
+        resumeVideosRef.current?.();
+      } catch (e) {
+        console.warn('Error resuming videos:', e);
+      }
+    }, 100);
   };
 
   if (showSplash) {
@@ -88,6 +110,7 @@ const Index = () => {
             setScreen={setScreen} 
             currentScreen={currentScreen}
             onRegisterPause={registerPauseCallback}
+            onRegisterResume={registerResumeCallback}
           />
         )}
       </div>
@@ -95,7 +118,7 @@ const Index = () => {
       
       <CreateReelModal 
         isOpen={isCreateReelOpen} 
-        onClose={() => setIsCreateReelOpen(false)} 
+        onClose={handleCreateReelClose} 
       />
     </div>
   );

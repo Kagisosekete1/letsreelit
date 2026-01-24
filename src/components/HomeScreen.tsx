@@ -14,6 +14,7 @@ interface HomeScreenProps {
   setScreen: (screen: Screen | 'following', payload?: any) => void;
   currentScreen: Screen;
   onRegisterPause?: (pauseFn: () => void) => void;
+  onRegisterResume?: (resumeFn: () => void) => void;
 }
 
 interface ReelData {
@@ -39,7 +40,7 @@ interface ReelData {
   };
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause, onRegisterResume }) => {
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
     if (onRegisterPause) {
       onRegisterPause(() => setIsPaused(true));
     }
-  }, [onRegisterPause]);
+    if (onRegisterResume) {
+      onRegisterResume(() => setIsPaused(false));
+    }
+  }, [onRegisterPause, onRegisterResume]);
 
   // Resume when modal closes
   useEffect(() => {
