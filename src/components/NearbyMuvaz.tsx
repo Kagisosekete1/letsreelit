@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation, type Position } from '@capacitor/geolocation';
+import LocationPermissionPrompt from './LocationPermissionPrompt';
 
 interface NearbyProfile {
   id: string;
@@ -34,6 +35,7 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [pendingFollows, setPendingFollows] = useState<Set<string>>(new Set());
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const { authUser } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -275,23 +277,36 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
 
   if (locationError) {
     return (
-      <div className="bg-card rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-foreground">Nearby Muva'z</h3>
+      <>
+        <div className="bg-card rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="w-5 h-5 text-primary" />
+            <h3 className="font-bold text-foreground">Nearby Muva'z</h3>
+          </div>
+          <div className="text-center py-6">
+            <Navigation className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground mb-3">{locationError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowLocationPrompt(true)}
+            >
+              Enable Location
+            </Button>
+          </div>
         </div>
-        <div className="text-center py-6">
-          <Navigation className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground mb-3">{locationError}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.location.reload()}
-          >
-            Enable Location
-          </Button>
-        </div>
-      </div>
+        <LocationPermissionPrompt
+          isOpen={showLocationPrompt}
+          onClose={() => setShowLocationPrompt(false)}
+          onPermissionGranted={(coords) => {
+            setUserLocation(coords);
+            setLocationError(null);
+            updateUserLocation(coords.lat, coords.lng);
+            fetchNearbyAccounts(coords.lat, coords.lng);
+            setShowLocationPrompt(false);
+          }}
+        />
+      </>
     );
   }
 
