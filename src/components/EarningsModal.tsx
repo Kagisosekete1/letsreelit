@@ -17,15 +17,27 @@ import {
   CheckCircle2,
   ArrowDownToLine,
   CreditCard,
-  Plus
+  Plus,
+  Share2,
+  MessageSquare,
+  Info
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from '@/hooks/use-toast';
 import PaymentMethodsModal from '@/components/PaymentMethodsModal';
 import CountrySelector from '@/components/CountrySelector';
+import {
+  calculateCreatorEarnings,
+  checkEligibility,
+  ELIGIBILITY,
+  CREATOR_SHARE,
+  CPM_RATES,
+  PAYOUT_THRESHOLDS,
+  formatEarnings,
+} from '@/lib/monetization';
 
 interface EarningsModalProps {
   isOpen: boolean;
@@ -38,17 +50,19 @@ interface EarningsData {
   paidEarnings: number;
   watchHours: number;
   followers: number;
+  reelsCount: number;
   isEligible: boolean;
+  eligibilityDetails: ReturnType<typeof checkEligibility> | null;
   countryCode: string;
   countryName: string;
   vatRate: number;
   currency: string;
+  cpmRate: number;
+  platformShare: number;
   weeklyEarnings: { day: string; gross: number; net: number }[];
   reelEarnings: { title: string; gross: number; views: number }[];
+  payoutThreshold: number;
 }
-
-const FOLLOWER_GOAL = 6000;
-const WATCH_HOURS_GOAL = 2000000;
 
 const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
   const { authUser, currentUser } = useUser();
@@ -65,13 +79,18 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
     paidEarnings: 0,
     watchHours: 0,
     followers: 0,
+    reelsCount: 0,
     isEligible: false,
+    eligibilityDetails: null,
     countryCode: 'US',
     countryName: 'United States',
     vatRate: 0,
     currency: 'USD',
+    cpmRate: 2.0,
+    platformShare: 0,
     weeklyEarnings: [],
     reelEarnings: [],
+    payoutThreshold: 25,
   });
 
   useEffect(() => {
@@ -138,7 +157,7 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
       // Fetch profile with monetization data
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*, country_code, is_monetized, total_watch_hours, lifetime_earnings')
+        .select('*, country_code, is_monetized, total_watch_hours, lifetime_earnings, created_at')
         .eq('user_id', authUser.id)
         .single();
 
@@ -162,48 +181,41 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
         .select('id, title, views_count, likes_count, comments_count, shares_count, created_at')
         .eq('user_id', authUser.id);
 
-      // Fetch likes on user's reels for bonus calculation
-      const { count: totalLikesCount } = await supabase
-        .from('likes')
-        .select('*', { count: 'exact', head: true })
-        .in('reel_id', reels?.map(r => r.id) || []);
-
-      // Revenue calculation algorithm:
-      // Base rate: $0.001 per view (CPM = $1.00)
-      // Engagement bonus: $0.002 per like
-      // Share bonus: $0.003 per share
-      // Comment bonus: $0.001 per comment
-      // Watch time multiplier: 1.5x for high engagement content (>5% engagement rate)
-      
-      const BASE_VIEW_RATE = 0.001; // $1 CPM
-      const LIKE_BONUS = 0.002;
-      const SHARE_BONUS = 0.003;
-      const COMMENT_BONUS = 0.001;
-      
-      const totalViews = reels?.reduce((sum, r) => sum + (r.views_count || 0), 0) || 0;
-      const totalLikes = reels?.reduce((sum, r) => sum + (r.likes_count || 0), 0) || 0;
-      const totalShares = reels?.reduce((sum, r) => sum + (r.shares_count || 0), 0) || 0;
-      const totalComments = reels?.reduce((sum, r) => sum + (r.comments_count || 0), 0) || 0;
-      
-      // Calculate engagement rate for bonus multiplier
-      const engagementRate = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
-      const watchTimeMultiplier = engagementRate > 5 ? 1.5 : 1.0;
-      
-      // Calculate gross earnings
-      const viewEarnings = totalViews * BASE_VIEW_RATE * watchTimeMultiplier;
-      const likeEarnings = totalLikes * LIKE_BONUS;
-      const shareEarnings = totalShares * SHARE_BONUS;
-      const commentEarnings = totalComments * COMMENT_BONUS;
-      
-      const grossEarnings = viewEarnings + likeEarnings + shareEarnings + commentEarnings;
       const vatRate = Number(vatData?.vat_rate) || 0;
-      const vatDeduction = grossEarnings * (vatRate / 100);
-      const netEarnings = grossEarnings - vatDeduction;
+      const followers = followersCount || 0;
+      const reelsCount = reels?.length || 0;
+      
+      // Calculate total views for watch hours estimate
+      const totalViews = reels?.reduce((sum, r) => sum + (r.views_count || 0), 0) || 0;
+      const estimatedWatchHours = totalViews * 0.00833; // 30 seconds per view avg
 
-      // Calculate watch hours (estimate: 30 seconds avg per view = 0.00833 hours)
-      const estimatedWatchHours = totalViews * 0.00833;
+      // Check eligibility using the monetization system
+      const eligibilityDetails = checkEligibility({
+        followers,
+        watchHours: estimatedWatchHours,
+        reelsCount,
+        accountCreatedAt: new Date(profile?.created_at || Date.now()),
+      });
 
-      // Generate weekly earnings chart data from actual reel performance
+      // Calculate earnings using the Facebook-style monetization system
+      const earningsResult = calculateCreatorEarnings({
+        reels: reels?.map(r => ({
+          id: r.id,
+          views: r.views_count || 0,
+          likes: r.likes_count || 0,
+          comments: r.comments_count || 0,
+          shares: r.shares_count || 0,
+        })) || [],
+        countryCode,
+        vatRate,
+      });
+
+      // Get CPM rate for this country
+      const cpmRate = CPM_RATES[countryCode] || CPM_RATES.DEFAULT;
+      const currency = vatData?.currency || 'USD';
+      const payoutThreshold = PAYOUT_THRESHOLDS[currency] || PAYOUT_THRESHOLDS.DEFAULT;
+
+      // Generate weekly earnings chart data
       const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const today = new Date();
       const weeklyEarnings = weekDays.map((day, idx) => {
@@ -215,51 +227,54 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
           return reelDate.toDateString() === targetDay.toDateString();
         }) || [];
         
-        const dayViews = dayReels.reduce((s, r) => s + (r.views_count || 0), 0);
-        const dayLikes = dayReels.reduce((s, r) => s + (r.likes_count || 0), 0);
-        const dayShares = dayReels.reduce((s, r) => s + (r.shares_count || 0), 0);
-        const dayComments = dayReels.reduce((s, r) => s + (r.comments_count || 0), 0);
+        // Calculate using proper monetization formula
+        const dayEarnings = calculateCreatorEarnings({
+          reels: dayReels.map(r => ({
+            id: r.id,
+            views: r.views_count || 0,
+            likes: r.likes_count || 0,
+            comments: r.comments_count || 0,
+            shares: r.shares_count || 0,
+          })),
+          countryCode,
+          vatRate,
+        });
         
-        const gross = (dayViews * BASE_VIEW_RATE) + (dayLikes * LIKE_BONUS) + (dayShares * SHARE_BONUS) + (dayComments * COMMENT_BONUS);
-        const net = gross * (1 - vatRate / 100);
-        
-        return { day, gross: Number(gross.toFixed(4)), net: Number(net.toFixed(4)) };
+        return { 
+          day, 
+          gross: Number(dayEarnings.totalCreatorEarnings.toFixed(4)), 
+          net: Number(dayEarnings.netEarnings.toFixed(4)) 
+        };
       });
 
-      // Top performing reels by calculated earnings
-      const reelEarnings = reels?.map(r => {
-        const views = r.views_count || 0;
-        const likes = r.likes_count || 0;
-        const shares = r.shares_count || 0;
-        const comments = r.comments_count || 0;
-        const engagement = views > 0 ? ((likes + comments + shares) / views) * 100 : 0;
-        const multiplier = engagement > 5 ? 1.5 : 1.0;
-        
-        const gross = (views * BASE_VIEW_RATE * multiplier) + (likes * LIKE_BONUS) + (shares * SHARE_BONUS) + (comments * COMMENT_BONUS);
-        
+      // Top performing reels
+      const reelEarnings = earningsResult.reelBreakdown.slice(0, 5).map(r => {
+        const reel = reels?.find(re => re.id === r.id);
         return {
-          title: r.title?.slice(0, 20) + (r.title && r.title.length > 20 ? '...' : ''),
-          gross,
-          views,
+          title: reel?.title?.slice(0, 20) + (reel?.title && reel.title.length > 20 ? '...' : '') || 'Untitled',
+          gross: r.earnings,
+          views: r.views,
         };
-      }).sort((a, b) => b.gross - a.gross).slice(0, 5) || [];
-
-      const followers = followersCount || 0;
-      const isEligible = followers >= FOLLOWER_GOAL && estimatedWatchHours >= WATCH_HOURS_GOAL;
+      });
 
       setData({
-        totalEarnings: netEarnings,
-        pendingEarnings: netEarnings, // All unpaid earnings are pending
-        paidEarnings: 0, // Track from creator_earnings when paid
+        totalEarnings: earningsResult.netEarnings,
+        pendingEarnings: earningsResult.netEarnings,
+        paidEarnings: 0,
         watchHours: estimatedWatchHours,
         followers,
-        isEligible,
+        reelsCount,
+        isEligible: eligibilityDetails.isEligible,
+        eligibilityDetails,
         countryCode,
         countryName: vatData?.country_name || 'United States',
         vatRate,
-        currency: vatData?.currency || 'USD',
+        currency,
+        cpmRate,
+        platformShare: earningsResult.platformRevenue,
         weeklyEarnings,
         reelEarnings,
+        payoutThreshold,
       });
     } catch (error) {
       console.error('Error fetching earnings:', error);
@@ -285,8 +300,15 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
     return num.toFixed(0);
   };
 
-  const followerProgress = Math.min((data.followers / FOLLOWER_GOAL) * 100, 100);
-  const watchHoursProgress = Math.min((data.watchHours / WATCH_HOURS_GOAL) * 100, 100);
+  const followerProgress = data.eligibilityDetails 
+    ? Math.min((data.followers / ELIGIBILITY.MIN_FOLLOWERS) * 100, 100) 
+    : 0;
+  const watchHoursProgress = data.eligibilityDetails 
+    ? Math.min((data.watchHours / ELIGIBILITY.MIN_WATCH_HOURS) * 100, 100) 
+    : 0;
+  const reelsProgress = data.eligibilityDetails 
+    ? Math.min((data.reelsCount / ELIGIBILITY.MIN_REELS) * 100, 100) 
+    : 0;
 
   const chartConfig = {
     gross: { label: 'Gross', color: 'hsl(var(--primary))' },
@@ -335,7 +357,7 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" /> Followers
                     </span>
-                    <span>{formatNumber(data.followers)} / {formatNumber(FOLLOWER_GOAL)}</span>
+                    <span>{formatNumber(data.followers)} / {formatNumber(ELIGIBILITY.MIN_FOLLOWERS)}</span>
                   </div>
                   <Progress value={followerProgress} className="h-2" />
                 </div>
@@ -344,9 +366,18 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" /> Watch Hours
                     </span>
-                    <span>{formatNumber(data.watchHours)} / {formatNumber(WATCH_HOURS_GOAL)}</span>
+                    <span>{formatNumber(data.watchHours)} / {formatNumber(ELIGIBILITY.MIN_WATCH_HOURS)}</span>
                   </div>
                   <Progress value={watchHoursProgress} className="h-2" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-4 h-4" /> Muv'z Posted
+                    </span>
+                    <span>{data.reelsCount} / {ELIGIBILITY.MIN_REELS}</span>
+                  </div>
+                  <Progress value={reelsProgress} className="h-2" />
                 </div>
               </div>
             </div>
@@ -460,19 +491,26 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="p-4 bg-secondary/30 rounded-xl space-y-3">
-                  <h3 className="text-sm font-semibold">How You Earn</h3>
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    How You Earn (Facebook-Style)
+                  </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-primary" />
-                      <span>$0.001 per view on your Muv'z</span>
+                      <DollarSign className="w-4 h-4 text-primary" />
+                      <span>55% revenue share (you keep the majority)</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Heart className="w-4 h-4 text-red-500" />
-                      <span>$0.002 per like (bonus engagement)</span>
+                      <Eye className="w-4 h-4 text-primary" />
+                      <span>CPM Rate: ${data.cpmRate.toFixed(2)} per 1,000 views</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-destructive" />
+                      <span>Engagement bonuses for likes, shares & comments</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-500" />
-                      <span>Performance bonuses for viral content</span>
+                      <span>1.5x multiplier for high-engagement content</span>
                     </div>
                   </div>
                 </div>
