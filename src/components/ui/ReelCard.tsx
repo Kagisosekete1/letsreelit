@@ -844,7 +844,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
         */}
         <div className="absolute inset-0 z-[1]" onClick={handleVideoTap} />
 
-        {/* Thumbnail/placeholder crossfade layer - black screen while loading */}
+        {/* Thumbnail/placeholder crossfade layer */}
         {reel.thumbnailUrl && isVideoReady ? (
           <img
             src={reel.thumbnailUrl}
@@ -859,7 +859,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           />
         ) : (
           <div
-            className="absolute inset-0 bg-black"
+            className="absolute inset-0 bg-video"
             style={{
               opacity: isActive && isVideoReady && isPlaying ? 0 : 1,
               transition: 'opacity 0.25s ease-in-out',
@@ -867,10 +867,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
           />
         )}
 
-        {/* Minimal buffering indicator - no overlay, just small spinner */}
-        {isActive && isBuffering && isVideoReady && (
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1]">
-            <div className="w-6 h-6 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+        {/* Mobile-friendly transition/loading layer: forces a black surface and prevents native big-play overlays */}
+        {isActive && (!isVideoReady || isBuffering) && (
+          <div className="absolute inset-0 z-[2] bg-video flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full border-2 border-foreground/60 border-t-transparent animate-spin" />
           </div>
         )}
 
@@ -889,7 +889,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
-          poster={reel.thumbnailUrl}
+          // IMPORTANT: avoid native poster UI (which can show a big gray play button on mobile)
+          poster={undefined}
           onLoadedData={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
