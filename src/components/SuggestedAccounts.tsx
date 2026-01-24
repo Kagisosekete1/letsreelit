@@ -42,6 +42,23 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
   useEffect(() => {
     fetchSuggestedAccounts();
     if (authUser) fetchFollowing();
+
+    // Subscribe to real-time follower count updates
+    const channel = supabase
+      .channel('suggested-followers')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'follows' },
+        () => {
+          // Refresh accounts when follows change
+          fetchSuggestedAccounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [authUser]);
 
   const fetchFollowing = async () => {
