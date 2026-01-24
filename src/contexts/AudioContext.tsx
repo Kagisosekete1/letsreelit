@@ -183,14 +183,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [isMuted]);
 
-  // AGGRESSIVE periodic safety check - runs every 150ms to catch any stray audio
+  // Less aggressive periodic safety check - runs every 500ms to reduce CPU usage
+  // This prevents reel jamming caused by too frequent DOM queries
   useEffect(() => {
     const interval = setInterval(() => {
       const activeVideo = activeVideoRef.current;
-      const activeReelId = activeReelIdRef.current;
 
-      // Silence all videos that are NOT the active one
-      document.querySelectorAll<HTMLVideoElement>('video').forEach((video) => {
+      // Only check registered videos instead of querying entire DOM
+      registeredVideos.current.forEach((video, reelId) => {
         // Skip the active video
         if (activeVideo && video === activeVideo) {
           // Ensure active video respects mute state
@@ -200,10 +200,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return;
         }
 
-        // Any other video should be silent and paused
-        if (!video.paused || !video.muted || video.volume > 0) {
+        // Any other registered video should be silent
+        if (!video.muted || video.volume > 0) {
           try {
-            video.pause();
             video.muted = true;
             video.volume = 0;
           } catch {
@@ -211,20 +210,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       });
-
-      // ALL audio elements should always be silent (we don't use audio elements)
-      document.querySelectorAll<HTMLAudioElement>('audio').forEach((audio) => {
-        if (!audio.paused || !audio.muted || audio.volume > 0) {
-          try {
-            audio.pause();
-            audio.muted = true;
-            audio.volume = 0;
-          } catch {
-            // ignore
-          }
-        }
-      });
-    }, 150);
+    }, 500);
 
     return () => clearInterval(interval);
   }, [isMuted]);
