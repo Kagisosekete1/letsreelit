@@ -879,17 +879,21 @@ const ReelCard: React.FC<ReelCardProps> = ({
           data-reel-video="true"
           className="absolute inset-0 w-full h-full object-contain sm:object-cover"
           style={{
-            // Completely hide inactive videos to prevent native controls from appearing
-            // Use pointer-events: none to ensure no interaction with hidden video
+            // Keep the video element mounted/loaded even when inactive.
+            // On iOS/Capacitor, swapping src/visibility on scroll can trigger the native
+            // big-play overlay during transitions and when scrolling back.
             opacity: isActive && isVideoReady ? 1 : 0,
-            visibility: isActive ? 'visible' : 'hidden',
+            visibility: 'visible',
             pointerEvents: isActive && isVideoReady ? 'auto' : 'none',
             // Force hardware acceleration for smoother transitions
             transform: 'translateZ(0)',
             willChange: isActive ? 'opacity' : 'auto',
           }}
-          src={isActive ? videoSrc : undefined}
-          preload={isActive ? getPreloadStrategy() : 'none'}
+          // IMPORTANT: do not unset src on inactive reels; it causes iOS to re-create
+          // the native overlay UI when the reel becomes active again.
+          src={videoSrc}
+          // Only actively preload for the active reel; keep inactive reels light.
+          preload={isActive ? getPreloadStrategy() : 'metadata'}
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
@@ -902,7 +906,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
           disableRemotePlayback
           // @ts-ignore - webkit-specific
           webkit-playsinline="true"
-          // IMPORTANT: avoid native poster UI (which can show a big gray play button on mobile)
+          // Keep poster empty; we render our own thumbnail layer above.
           poster=""
           onLoadedData={() => {
             setIsVideoReady(true);
