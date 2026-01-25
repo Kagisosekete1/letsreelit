@@ -44,7 +44,12 @@ interface ReelData {
   user_id: string;
 }
 
-const UserProfileMenu = ({ onReport, onBlock }: { onReport: () => void; onBlock: () => void }) => {
+const UserProfileMenu = ({ onReport, onBlock, isOwnProfile }: { onReport: () => void; onBlock: () => void; isOwnProfile: boolean }) => {
+  // Don't show menu for own profile
+  if (isOwnProfile) {
+    return null;
+  }
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -386,7 +391,7 @@ const UserProfile = () => {
             <ArrowLeft className="w-6 h-6" />
           </Button>
           <h1 className="text-lg font-semibold">@{user.username}</h1>
-          <UserProfileMenu onReport={handleReport} onBlock={handleBlock} />
+          <UserProfileMenu onReport={handleReport} onBlock={handleBlock} isOwnProfile={authUser?.id === user.user_id} />
         </div>
 
         {/* Profile Info */}

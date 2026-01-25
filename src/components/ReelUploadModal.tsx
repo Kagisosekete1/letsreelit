@@ -12,6 +12,7 @@ import { reelSchema } from '@/lib/validations';
 import { generateThumbnail } from '@/lib/thumbnailGenerator';
 import MusicLibraryModal, { type PlaceholderSong } from '@/components/MusicLibraryModal';
 import VideoEffectsPanel, { type VideoEffects, FILTERS } from '@/components/VideoEffectsPanel';
+import { sendNewReelNotification } from '@/services/notificationService';
 
 interface ReelUploadModalProps {
   isOpen: boolean;
@@ -226,7 +227,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
       setUploadProgress(80);
 
       // Step 3: Create reel record in database with thumbnail
-      const { error: dbError } = await supabase
+      const { data: reelData, error: dbError } = await supabase
         .from('reels')
         .insert({
           user_id: authUser.id,
@@ -236,7 +237,9 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
           thumbnail_url: thumbnailUrl,
           is_portrait: true,
           is_tutorial: postAs === 'tutorial',
-        });
+        })
+        .select('id')
+        .single();
 
       if (dbError) throw dbError;
 
@@ -250,6 +253,11 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
       // Refresh profile to update reel count
       await refreshProfile();
+
+      // Notify followers about the new reel
+      if (reelData?.id) {
+        sendNewReelNotification(authUser.id, reelData.id, title.trim());
+      }
 
       setUploadProgress(100);
 
