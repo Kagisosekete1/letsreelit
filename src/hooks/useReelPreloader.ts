@@ -42,10 +42,10 @@ export const useReelPreloader = (
         const nextIndex = activeIndex + i;
         if (nextIndex < reels.length) {
           const reel = reels[nextIndex];
-          if (reel.video_url && !preloadedUrls.current.has(reel.video_url)) {
+          if (reel?.video_url && !preloadedUrls.current.has(reel.video_url)) {
             urlsToPrefetch.add(reel.video_url);
           }
-          if (reel.thumbnail_url && !preloadedUrls.current.has(reel.thumbnail_url)) {
+          if (reel?.thumbnail_url && !preloadedUrls.current.has(reel.thumbnail_url)) {
             thumbnailsToPrefetch.add(reel.thumbnail_url);
           }
         }
@@ -54,10 +54,10 @@ export const useReelPreloader = (
       // Prefetch previous reel for smooth back-scrolling
       if (activeIndex > 0) {
         const prevReel = reels[activeIndex - 1];
-        if (prevReel.video_url && !preloadedUrls.current.has(prevReel.video_url)) {
+        if (prevReel?.video_url && !preloadedUrls.current.has(prevReel.video_url)) {
           urlsToPrefetch.add(prevReel.video_url);
         }
-        if (prevReel.thumbnail_url && !preloadedUrls.current.has(prevReel.thumbnail_url)) {
+        if (prevReel?.thumbnail_url && !preloadedUrls.current.has(prevReel.thumbnail_url)) {
           thumbnailsToPrefetch.add(prevReel.thumbnail_url);
         }
       }

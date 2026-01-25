@@ -227,33 +227,97 @@ All colors MUST be HSL.
   }
 }
 
-/* Suppress native video controls and overlay play buttons (Capacitor/iOS/Android) */
+/* Suppress ALL native video controls and overlay play buttons (Capacitor/iOS/Android) */
 video[data-reel-video="true"] {
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  /* Force GPU layer to prevent native UI */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
-video[data-reel-video="true"]::-webkit-media-controls,
-video[data-reel-video="true"]::-webkit-media-controls-panel,
-video[data-reel-video="true"]::-webkit-media-controls-enclosure,
-video[data-reel-video="true"]::-webkit-media-controls-play-button,
-video[data-reel-video="true"]::-webkit-media-controls-start-playback-button,
-video[data-reel-video="true"]::-webkit-media-controls-overlay-play-button {
+/* Webkit (Safari, iOS, Chrome) - hide all controls */
+video[data-reel-video="true"]::-webkit-media-controls {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-panel {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
 }
 
-/* Older iOS Safari hook */
+video[data-reel-video="true"]::-webkit-media-controls-enclosure {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-play-button {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* THE KEY ONE - overlay big play button on iOS/Android WebView */
+video[data-reel-video="true"]::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
 video[data-reel-video="true"]::-webkit-media-controls-fullscreen-button {
   display: none !important;
 }
 
-/* Firefox (best-effort; often ignored) */
+video[data-reel-video="true"]::-webkit-media-controls-volume-slider {
+  display: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-mute-button {
+  display: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-timeline {
+  display: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-current-time-display {
+  display: none !important;
+}
+
+video[data-reel-video="true"]::-webkit-media-controls-time-remaining-display {
+  display: none !important;
+}
+
+/* Firefox */
 video[data-reel-video="true"]::-moz-media-controls {
   display: none !important;
 }
 
-/* Legacy Edge/IE (best-effort; often ignored) */
+/* Legacy Edge/IE */
 video[data-reel-video="true"]::-ms-media-controls {
+  display: none !important;
+}
+
+/* Android WebView specific */
+video[data-reel-video="true"]::-webkit-media-controls-overlay-enclosure {
   display: none !important;
 }
