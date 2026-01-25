@@ -28,8 +28,9 @@ export const DebugProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useDebug = () => {
   const context = useContext(DebugContext);
+  // Return safe defaults if used outside provider (e.g., during hot reload)
   if (!context) {
-    throw new Error('useDebug must be used within a DebugProvider');
+    return { showVideoDebug: false, setShowVideoDebug: () => {} };
   }
   return context;
 };
