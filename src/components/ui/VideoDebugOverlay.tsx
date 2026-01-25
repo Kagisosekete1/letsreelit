@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bug, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { useDebug } from '@/contexts/DebugContext';
 
 interface VideoDebugOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -27,7 +28,7 @@ const VideoDebugOverlay: React.FC<VideoDebugOverlayProps> = ({
   reelId,
   isActive,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const { showVideoDebug } = useDebug();
   const [stats, setStats] = useState({
     readyState: 0,
     networkState: 0,
@@ -70,22 +71,17 @@ const VideoDebugOverlay: React.FC<VideoDebugOverlayProps> = ({
   }, [videoRef]);
 
   useEffect(() => {
-    if (!isActive || !isExpanded) return;
+    if (!isActive || !showVideoDebug) return;
 
-    // Update stats every 250ms when expanded and active
+    // Update stats every 250ms when visible and active
     const interval = setInterval(updateStats, 250);
     updateStats(); // Initial update
 
     return () => clearInterval(interval);
-  }, [isActive, isExpanded, updateStats]);
+  }, [isActive, showVideoDebug, updateStats]);
 
-  // Only show in development
-  if (import.meta.env.PROD) {
-    return null;
-  }
-
-  // Only show for active reel
-  if (!isActive) {
+  // Only show for active reel when debug is enabled
+  if (!showVideoDebug || !isActive) {
     return null;
   }
 
@@ -102,32 +98,12 @@ const VideoDebugOverlay: React.FC<VideoDebugOverlayProps> = ({
     return 'text-red-400';
   };
 
-  if (!isExpanded) {
-    return (
-      <button
-        onClick={() => setIsExpanded(true)}
-        className="absolute top-20 right-2 z-[60] p-2 bg-black/60 rounded-full backdrop-blur-sm"
-        aria-label="Show debug info"
-      >
-        <Bug className="w-4 h-4 text-white/70" />
-      </button>
-    );
-  }
-
   return (
     <div className="absolute top-20 right-2 z-[60] bg-black/80 backdrop-blur-sm rounded-lg p-3 text-xs font-mono text-white/90 min-w-[200px] max-w-[280px]">
       <div className="flex items-center justify-between mb-2">
         <span className="font-bold text-white flex items-center gap-1.5">
-          <Bug className="w-3.5 h-3.5" />
-          Video Debug
+          🐛 Video Debug
         </span>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="p-1 hover:bg-white/10 rounded"
-          aria-label="Close debug overlay"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       <div className="space-y-1.5">
