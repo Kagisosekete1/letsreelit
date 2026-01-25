@@ -15,9 +15,11 @@ import {
   ChevronRight,
   DollarSign,
   Wifi,
-  HardDrive
+  HardDrive,
+  Bug
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+import { useDebug } from '@/contexts/DebugContext';
 import AccountInfoModal from './settings/AccountInfoModal';
 import PrivacySecurityModal from './settings/PrivacySecurityModal';
 import NotificationsModal from './settings/NotificationsModal';
@@ -36,6 +38,7 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { signOut } = useUser();
+  const { showVideoDebug, setShowVideoDebug } = useDebug();
   const [darkMode, setDarkMode] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
 
@@ -48,6 +51,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const toggleVideoDebug = () => {
+    setShowVideoDebug(!showVideoDebug);
   };
 
   const settingsSections = [
@@ -73,6 +80,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         { icon: Wifi, label: 'Video Quality', action: () => setOpenModal('video-quality') },
         { icon: HardDrive, label: 'Cached Muv\'z', action: () => setOpenModal('cached-videos') },
         { icon: Globe, label: 'Language', action: () => setOpenModal('language') },
+        { icon: Bug, label: 'Video Debug Overlay', toggle: true, value: showVideoDebug, onChange: toggleVideoDebug },
       ],
     },
     {

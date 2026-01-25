@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { VideoQualityProvider } from "@/contexts/VideoQualityContext";
+import { DebugProvider } from "@/contexts/DebugContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { useNativeBackHandler } from "@/hooks/useNativeBackHandler";
@@ -104,14 +105,16 @@ const App = () => {
       <UserProvider>
         <AudioProvider>
           <VideoQualityProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <OfflineIndicator />
-              <BrowserRouter>
-                <AppRoutes />
-              </BrowserRouter>
-            </TooltipProvider>
+            <DebugProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <OfflineIndicator />
+                <BrowserRouter>
+                  <AppRoutes />
+                </BrowserRouter>
+              </TooltipProvider>
+            </DebugProvider>
           </VideoQualityProvider>
         </AudioProvider>
       </UserProvider>
