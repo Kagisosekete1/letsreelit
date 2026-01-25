@@ -900,8 +900,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
           // IMPORTANT: do not unset src on inactive reels; it causes iOS to re-create
           // the native overlay UI when the reel becomes active again.
           src={videoSrc}
-          // Only actively preload for the active reel; keep inactive reels light.
-          preload={isActive ? getPreloadStrategy() : 'metadata'}
+          // Always preload auto to prevent native loading UI
+          preload="auto"
           loop={!autoAdvance}
           muted={isMuted}
           playsInline
@@ -912,10 +912,11 @@ const ReelCard: React.FC<ReelCardProps> = ({
           // These attributes help suppress native UI on mobile
           disablePictureInPicture
           disableRemotePlayback
-          // @ts-ignore - webkit-specific
+          // @ts-ignore - webkit-specific attributes to prevent native overlay
           webkit-playsinline="true"
-          // Keep poster empty; we render our own thumbnail layer above.
-          poster=""
+          x-webkit-airplay="deny"
+          // 1x1 transparent PNG data URI prevents native poster/play button
+          poster="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
           onLoadedData={() => {
             setIsVideoReady(true);
             setIsBuffering(false);
