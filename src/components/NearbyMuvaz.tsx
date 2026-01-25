@@ -204,6 +204,38 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
     };
 
     init();
+
+    // Set up realtime subscription for nearby profiles updates
+    const channel = supabase
+      .channel('nearby-profiles-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          // Refetch nearby accounts when any profile updates
+          if (userLocation) {
+            fetchNearbyAccounts(userLocation.lat, userLocation.lng);
+          }
+        }
+      )
+      .subscribe();
+
+    // Refresh location periodically (every 5 minutes)
+    const locationInterval = setInterval(async () => {
+      try {
+        const location = await getUserLocation();
+        setUserLocation(location);
+        await updateUserLocation(location.lat, location.lng);
+        await fetchNearbyAccounts(location.lat, location.lng);
+      } catch {
+        // Silently fail on interval refreshes
+      }
+    }, 5 * 60 * 1000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(locationInterval);
+    };
   }, [authUser]);
 
   const handleFollow = async (userId: string) => {

@@ -199,11 +199,11 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Close Button */}
+      {/* Close Button - single X icon only */}
       <Button
         variant="ghost"
-        size="sm"
-        className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
+        size="icon"
+        className="absolute top-3 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full w-10 h-10"
         onClick={onClose}
       >
         <X className="w-5 h-5" />

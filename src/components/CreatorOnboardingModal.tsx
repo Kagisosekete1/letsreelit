@@ -225,17 +225,20 @@ const ONBOARDING_STEPS = [
   },
 ];
 
+const REQUIRED_FOLLOWERS = 2000;
+
 const CreatorOnboardingModal: React.FC<CreatorOnboardingModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { authUser } = useUser();
+  const { authUser, currentUser } = useUser();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
-  // Load existing onboarding progress
+  // Load existing onboarding progress and check follower count
   useEffect(() => {
     if (!authUser || !isOpen) return;
 
@@ -250,10 +253,14 @@ const CreatorOnboardingModal: React.FC<CreatorOnboardingModalProps> = ({
         setCurrentStep(data.current_step);
         setCompletedSteps(data.completed_steps || []);
       }
+      
+      // Get current follower count
+      const followers = currentUser?.stats?.followers || 0;
+      setFollowerCount(followers);
     };
 
     loadProgress();
-  }, [authUser, isOpen]);
+  }, [authUser, isOpen, currentUser]);
 
   const saveProgress = async (step: number, completed: string[]) => {
     if (!authUser) return;
@@ -307,49 +314,92 @@ const CreatorOnboardingModal: React.FC<CreatorOnboardingModalProps> = ({
   const step = ONBOARDING_STEPS[currentStep];
   const progress = ((currentStep + 1) / ONBOARDING_STEPS.length) * 100;
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
+  const canActivate = followerCount >= REQUIRED_FOLLOWERS;
+  const followersNeeded = Math.max(0, REQUIRED_FOLLOWERS - followerCount);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {step && React.createElement(step.icon, { className: 'w-5 h-5 text-primary' })}
-              <DialogTitle className="text-lg">{step?.title}</DialogTitle>
+        {/* Show eligibility gate if user doesn't have enough followers */}
+        {!canActivate ? (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                <DialogTitle className="text-lg">Creator Journey</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="py-6 text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Users className="w-10 h-10 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-2">Keep Growing!</h3>
+                <p className="text-muted-foreground text-sm">
+                  You need at least <strong>{REQUIRED_FOLLOWERS.toLocaleString()}</strong> followers to start your creator journey.
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-secondary/50">
+                <p className="text-sm text-muted-foreground mb-2">Your current followers</p>
+                <p className="text-3xl font-bold text-primary">{followerCount.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {followersNeeded.toLocaleString()} more to go!
+                </p>
+              </div>
+              <Progress value={(followerCount / REQUIRED_FOLLOWERS) * 100} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Keep creating great content and engaging with your audience to grow your following!
+              </p>
             </div>
-            <span className="text-sm text-muted-foreground">
-              {currentStep + 1}/{ONBOARDING_STEPS.length}
-            </span>
-          </div>
-          <Progress value={progress} className="h-1" />
-        </DialogHeader>
+            <div className="pt-4 border-t">
+              <Button onClick={onClose} className="w-full">
+                Got it!
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {step && React.createElement(step.icon, { className: 'w-5 h-5 text-primary' })}
+                  <DialogTitle className="text-lg">{step?.title}</DialogTitle>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {currentStep + 1}/{ONBOARDING_STEPS.length}
+                </span>
+              </div>
+              <Progress value={progress} className="h-1" />
+            </DialogHeader>
 
-        <div className="py-4">
-          {step?.description && (
-            <p className="text-muted-foreground mb-4">{step.description}</p>
-          )}
-          {step?.content}
-        </div>
+            <div className="py-4">
+              {step?.description && (
+                <p className="text-muted-foreground mb-4">{step.description}</p>
+              )}
+              {step?.content}
+            </div>
 
-        <div className="flex gap-3 pt-4 border-t">
-          {!isLastStep && (
-            <Button
-              variant="ghost"
-              onClick={handleSkip}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Skip
-            </Button>
-          )}
-          <Button
-            onClick={isLastStep ? onClose : handleNext}
-            className="flex-1"
-          >
-            {isLastStep ? 'Get Started' : 'Continue'}
-            {!isLastStep && <ArrowRight className="w-4 h-4 ml-2" />}
-          </Button>
-        </div>
+            <div className="flex gap-3 pt-4 border-t">
+              {!isLastStep && (
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  Skip
+                </Button>
+              )}
+              <Button
+                onClick={isLastStep ? onClose : handleNext}
+                className="flex-1"
+              >
+                {isLastStep ? 'Get Started' : 'Continue'}
+                {!isLastStep && <ArrowRight className="w-4 h-4 ml-2" />}
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
