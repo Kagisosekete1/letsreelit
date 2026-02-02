@@ -410,7 +410,8 @@ const Inbox = () => {
           </div>
         )}
 
-        <div className="flex px-4 mb-6">
+        {/* Tab switcher - only show on mobile, hide on tablet/desktop */}
+        <div className="flex px-4 mb-6 lg:hidden">
           <div className="flex space-x-1 bg-secondary rounded-xl p-1 w-full">
             <Button
               variant="ghost"
@@ -449,6 +450,11 @@ const Inbox = () => {
               )}
             </Button>
           </div>
+        </div>
+        
+        {/* Desktop title for messages only */}
+        <div className="hidden lg:block px-4 mb-4">
+          <h2 className="text-lg font-semibold">Messages</h2>
         </div>
 
         <div className="px-4">
