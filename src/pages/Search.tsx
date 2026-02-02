@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search as SearchIcon, Hash, TrendingUp, Play, Heart, Eye, Video, X, Users, Flame, ChevronRight, Clock } from 'lucide-react';
@@ -9,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import ReelCard from '@/components/ui/ReelCard';
 import CreateReelModal from '@/components/CreateReelModal';
+import SettingsModal from '@/components/SettingsModal';
+import NotificationsModal from '@/components/settings/NotificationsModal';
 import TrendingHashtags from '@/components/TrendingHashtags';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
@@ -65,6 +68,8 @@ const Search = () => {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [trendingHashtags, setTrendingHashtags] = useState<TrendingHashtag[]>([]);
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [hoveredReelId, setHoveredReelId] = useState<string | null>(null);
   const hoverVideoRef = useRef<HTMLVideoElement | null>(null);
   const [showAddFriends, setShowAddFriends] = useState(false);
@@ -307,8 +312,11 @@ const Search = () => {
       case 'home': navigate('/', { state: { from: location.pathname } }); break;
       case 'tutorials': break;
       case 'create': setIsCreateReelOpen(true); break;
+      case 'notifications': setIsNotificationsOpen(true); break;
       case 'inbox': navigate('/inbox', { state: { from: location.pathname } }); break;
+      case 'dashboard': navigate('/monetization-analytics', { state: { from: location.pathname } }); break;
       case 'profile': navigate('/profile', { state: { from: location.pathname } }); break;
+      case 'settings': setIsSettingsOpen(true); break;
     }
   };
 
@@ -542,14 +550,20 @@ const Search = () => {
   }
 
   return (
-  <MobileViewWrapper>
-    <div className="relative h-full overflow-hidden bg-background flex flex-col">
-      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-      <div 
-        ref={containerRef}
-        className="pt-4 pb-20 px-4 flex-1 overflow-y-auto"
-        {...handlers}
-      >
+    <div className="min-h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Main Content */}
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <MobileViewWrapper>
+          <div className="relative h-full overflow-hidden bg-background flex flex-col">
+            <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+            <div 
+              ref={containerRef}
+              className="pt-4 pb-20 lg:pb-4 px-4 flex-1 overflow-y-auto"
+              {...handlers}
+            >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Search</h1>
@@ -832,10 +846,16 @@ const Search = () => {
       </div>
 
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
+      </MobileViewWrapper>
+    </div>
+      
+      {/* Modals */}
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
       <AddFriendsFromContacts isOpen={showAddFriends} onClose={() => setShowAddFriends(false)} />
     </div>
-  </MobileViewWrapper>
   );
 };
 

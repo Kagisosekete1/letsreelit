@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3 } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
 import SettingsModal from '@/components/SettingsModal';
+import NotificationsModal from '@/components/settings/NotificationsModal';
 import ShareProfileModal from '@/components/ShareProfileModal';
 import CreateReelModal from '@/components/CreateReelModal';
 import FollowersModal from '@/components/FollowersModal';
@@ -44,6 +46,7 @@ const Profile = () => {
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const [followersModal, setFollowersModal] = useState(false);
@@ -114,8 +117,11 @@ const Profile = () => {
       case 'home': navigate('/', { state: { from: location.pathname } }); break;
       case 'tutorials': navigate('/tutorials', { state: { from: location.pathname } }); break;
       case 'create': setIsCreateReelOpen(true); break;
+      case 'notifications': setIsNotificationsOpen(true); break;
       case 'inbox': navigate('/inbox', { state: { from: location.pathname } }); break;
+      case 'dashboard': navigate('/monetization-analytics', { state: { from: location.pathname } }); break;
       case 'profile': break;
+      case 'settings': setIsSettingsOpen(true); break;
     }
   };
 
@@ -125,24 +131,35 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <MobileViewWrapper>
-        <div className="relative h-full overflow-hidden bg-background">
-          <div className="pt-4 pb-20 h-full overflow-y-auto px-4">
-            <div className="flex items-center justify-between mb-4"><div className="w-10 h-10" /><div className="h-6 w-24 bg-muted rounded animate-pulse" /><div className="w-10 h-10" /></div>
-            <ProfileHeaderSkeleton />
-            <div className="border-t border-border mt-6 pt-4"><ProfileGridSkeleton count={6} /></div>
-          </div>
+      <div className="min-h-screen bg-background">
+        <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+        <div className="lg:pl-[72px] xl:pl-[244px]">
+          <MobileViewWrapper>
+            <div className="relative h-full overflow-hidden bg-background">
+              <div className="pt-4 pb-20 lg:pb-4 h-full overflow-y-auto px-4">
+                <div className="flex items-center justify-between mb-4"><div className="w-10 h-10" /><div className="h-6 w-24 bg-muted rounded animate-pulse" /><div className="w-10 h-10" /></div>
+                <ProfileHeaderSkeleton />
+                <div className="border-t border-border mt-6 pt-4"><ProfileGridSkeleton count={6} /></div>
+              </div>
+            </div>
+          </MobileViewWrapper>
         </div>
-      </MobileViewWrapper>
+      </div>
     );
   }
 
   if (!currentUser) { navigate('/auth'); return null; }
 
   return (
-    <MobileViewWrapper>
+    <div className="min-h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Main Content */}
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <MobileViewWrapper>
       <div className="relative h-full overflow-hidden bg-background">
-        <div className="pt-4 pb-20 h-full overflow-y-auto">
+        <div className="pt-4 pb-20 lg:pb-4 h-full overflow-y-auto">
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
@@ -251,8 +268,14 @@ const Profile = () => {
           isOpen={creatorDashboardOpen} 
           onClose={() => setCreatorDashboardOpen(false)} 
         />
-      </div>
-    </MobileViewWrapper>
+        <NotificationsModal 
+          isOpen={isNotificationsOpen} 
+          onClose={() => setIsNotificationsOpen(false)} 
+        />
+        </div>
+      </MobileViewWrapper>
+    </div>
+  </div>
   );
 };
 
