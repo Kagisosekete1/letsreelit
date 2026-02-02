@@ -163,7 +163,12 @@ const Profile = () => {
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}><Settings className="w-6 h-6" /></Button>
+          {/* Settings icon only on mobile */}
+          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)} className="lg:hidden">
+            <Settings className="w-6 h-6" />
+          </Button>
+          {/* Empty spacer for desktop to maintain layout */}
+          <div className="hidden lg:block w-10 h-10" />
         </div>
 
         <div className="px-4 mb-6">
