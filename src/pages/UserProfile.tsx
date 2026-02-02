@@ -15,6 +15,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { sendFollowNotification } from '@/services/notificationService';
 
@@ -230,28 +240,24 @@ const UserProfile = () => {
     setLoading(false);
   };
 
+  const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
+
   const handleFollow = async () => {
     if (!authUser || !user) return;
 
-    // Optimistic UI first (instant)
-    const wasFollowing = isFollowing;
-    setIsFollowing(!wasFollowing);
-    setFollowingIds(!wasFollowing ? new Set([user.user_id]) : new Set());
-    setUser(prev => prev ? {
-      ...prev,
-      followers_count: Math.max(0, (prev.followers_count || 0) + (wasFollowing ? -1 : 1)),
-    } : prev);
-
-    if (wasFollowing) {
-      await supabase
-        .from('follows')
-        .delete()
-        .eq('follower_id', authUser.id)
-        .eq('following_id', user.user_id);
-
-      toast({ title: 'Unfollowed', description: `You unfollowed @${user.username}` });
+    // If already following, show confirmation dialog
+    if (isFollowing) {
+      setShowUnfollowConfirm(true);
       return;
     }
+
+    // Optimistic UI first (instant)
+    setIsFollowing(true);
+    setFollowingIds(new Set([user.user_id]));
+    setUser(prev => prev ? {
+      ...prev,
+      followers_count: (prev.followers_count || 0) + 1,
+    } : prev);
 
     // Follow (idempotent)
     const { data: existing } = await supabase
@@ -274,6 +280,28 @@ const UserProfile = () => {
     }
 
     toast({ title: 'Following', description: `You are now following @${user.username}` });
+  };
+
+  const confirmUnfollow = async () => {
+    if (!authUser || !user) return;
+    
+    setShowUnfollowConfirm(false);
+    
+    // Optimistic UI
+    setIsFollowing(false);
+    setFollowingIds(new Set());
+    setUser(prev => prev ? {
+      ...prev,
+      followers_count: Math.max(0, (prev.followers_count || 0) - 1),
+    } : prev);
+
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', authUser.id)
+      .eq('following_id', user.user_id);
+
+    toast({ title: 'Unfollowed', description: `You unfollowed @${user.username}` });
   };
 
   const toggleFollow = async (_profileId: string) => {
@@ -572,6 +600,24 @@ const UserProfile = () => {
           }}
         />
       )}
+
+      {/* Unfollow Confirmation Dialog */}
+      <AlertDialog open={showUnfollowConfirm} onOpenChange={setShowUnfollowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unfollow @{user.username}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unfollow this user? You won't see their Muv'z in your feed anymore.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUnfollow} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Unfollow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
