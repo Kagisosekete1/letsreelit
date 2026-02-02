@@ -24,6 +24,8 @@ import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
 import VideoDebugOverlay from '@/components/ui/VideoDebugOverlay';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 // Helper to parse and render hashtags as clickable links
 const renderTextWithHashtags = (text: string, navigate: (path: string) => void) => {
@@ -727,6 +729,9 @@ const ReelCard: React.FC<ReelCardProps> = ({
     try {
       toast({ title: 'Preparing download...', description: "Adding Muv'it watermark" });
       
+      // Check if running on native platform
+      const isNative = Capacitor.isNativePlatform();
+      
       // Load video and logo
       const [videoResponse, logoResponse] = await Promise.all([
         fetch(reel.videoUrl),
@@ -753,14 +758,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
       
       if (!ctx) {
         // Fallback: download without watermark
-        const url = URL.createObjectURL(videoBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (isNative) {
+          await saveToGallery(videoBlob, `Muvit_@${reel.user.username}_${reel.id}.mp4`);
+        } else {
+          const url = URL.createObjectURL(videoBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
         URL.revokeObjectURL(video.src);
         toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
         return;
@@ -837,14 +846,18 @@ const ReelCard: React.FC<ReelCardProps> = ({
       if (logoImg) URL.revokeObjectURL(logoImg.src);
       
       // Download the watermarked video
-      const downloadUrl = URL.createObjectURL(watermarkedBlob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `Muvit_@${reel.user.username}_${reel.id}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      if (isNative) {
+        await saveToGallery(watermarkedBlob, `Muvit_@${reel.user.username}_${reel.id}.webm`);
+      } else {
+        const downloadUrl = URL.createObjectURL(watermarkedBlob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `Muvit_@${reel.user.username}_${reel.id}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      }
       
       toast({ title: 'Download complete!', description: "Your Muv'it video has been saved with watermark." });
     } catch (error) {
@@ -853,18 +866,56 @@ const ReelCard: React.FC<ReelCardProps> = ({
       try {
         const response = await fetch(reel.videoUrl);
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        
+        if (Capacitor.isNativePlatform()) {
+          await saveToGallery(blob, `Muvit_@${reel.user.username}_${reel.id}.mp4`);
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
         toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
       } catch {
         toast({ title: 'Download failed', description: 'Could not download video.', variant: 'destructive' });
       }
+    }
+  };
+
+  // Save to device gallery using Capacitor Filesystem
+  const saveToGallery = async (blob: Blob, fileName: string) => {
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(blob);
+      const base64Data = await base64Promise;
+
+      // Save to Downloads/Muvit folder
+      await Filesystem.writeFile({
+        path: `Muvit/${fileName}`,
+        data: base64Data,
+        directory: Directory.Documents,
+        recursive: true,
+      });
+
+      toast({ 
+        title: 'Saved to Gallery!', 
+        description: `Video saved to Documents/Muvit/${fileName}` 
+      });
+    } catch (error) {
+      console.error('Error saving to gallery:', error);
+      throw error;
     }
   };
 
