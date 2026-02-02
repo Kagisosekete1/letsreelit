@@ -664,21 +664,30 @@ const ReelCard: React.FC<ReelCardProps> = ({
       return;
     }
 
-    const newIsLiked = !isLiked;
-    const nextCount = newIsLiked ? likeCount + 1 : Math.max(0, likeCount - 1);
+    // Optimistic UI - instant feedback
+    const wasLiked = isLiked;
+    setIsLiked(!wasLiked);
+    setLikeCount(prev => wasLiked ? Math.max(0, prev - 1) : prev + 1);
 
-    setIsLiked(newIsLiked);
-    setLikeCount(nextCount);
-
-    if (newIsLiked) {
-      await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
-      await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
-      
+    try {
+      if (!wasLiked) {
+        setShowDoubleTapHeart(true);
+        setTimeout(() => setShowDoubleTapHeart(false), 800);
+        
+        await supabase.from('likes').insert({ user_id: authUser.id, reel_id: reel.id });
+        
         // Send push + create in-app notification via backend (prevents duplicates)
-        void sendLikeNotification(reel.user.id, authUser.id, reel.id);
-    } else {
-      await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
-      await supabase.from('reels').update({ likes_count: nextCount }).eq('id', reel.id);
+        if (reel.user.id !== authUser.id) {
+          void sendLikeNotification(reel.user.id, authUser.id, reel.id);
+        }
+      } else {
+        await supabase.from('likes').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
+      }
+    } catch (error) {
+      // Revert on error
+      setIsLiked(wasLiked);
+      setLikeCount(prev => wasLiked ? prev + 1 : Math.max(0, prev - 1));
+      console.error('Error toggling like:', error);
     }
   };
 
@@ -711,28 +720,151 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   const handleShare = async () => {
-    const nextCount = shareCount + 1;
-    setShareCount(nextCount);
-    await supabase.from('reels').update({ shares_count: nextCount }).eq('id', reel.id);
     setShowShareModal(true);
   };
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(reel.videoUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      toast({ title: 'Preparing download...', description: "Adding Muv'it watermark" });
+      
+      // Load video and logo
+      const [videoResponse, logoResponse] = await Promise.all([
+        fetch(reel.videoUrl),
+        fetch('/icons/android/icon-192x192.png').catch(() => null)
+      ]);
+      
+      const videoBlob = await videoResponse.blob();
+      
+      // Create canvas for watermarking
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(videoBlob);
+      video.muted = true;
+      video.playsInline = true;
+      
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+        video.load();
+      });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 1280;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        // Fallback: download without watermark
+        const url = URL.createObjectURL(videoBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(video.src);
+        toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
+        return;
+      }
+      
+      // Load logo image
+      let logoImg: HTMLImageElement | null = null;
+      if (logoResponse) {
+        const logoBlob = await logoResponse.blob();
+        logoImg = new Image();
+        logoImg.src = URL.createObjectURL(logoBlob);
+        await new Promise<void>((resolve) => {
+          logoImg!.onload = () => resolve();
+        });
+      }
+      
+      // Record video with watermark using MediaRecorder
+      const stream = canvas.captureStream(30);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      const recordingPromise = new Promise<Blob>((resolve) => {
+        mediaRecorder.onstop = () => {
+          resolve(new Blob(chunks, { type: 'video/webm' }));
+        };
+      });
+      
+      mediaRecorder.start();
+      video.currentTime = 0;
+      await video.play();
+      
+      const drawFrame = () => {
+        if (video.paused || video.ended) {
+          mediaRecorder.stop();
+          return;
+        }
+        
+        // Draw video frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Draw Muv'it logo watermark at 30% opacity on middle-left
+        if (logoImg) {
+          ctx.save();
+          ctx.globalAlpha = 0.3;
+          const logoSize = Math.min(canvas.width, canvas.height) * 0.15;
+          const logoX = 20;
+          const logoY = (canvas.height - logoSize) / 2;
+          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+          ctx.restore();
+        }
+        
+        // Add Muv'it text below logo
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${Math.floor(canvas.width * 0.04)}px sans-serif`;
+        ctx.fillText("Muv'it", 20, (canvas.height / 2) + (canvas.width * 0.1));
+        ctx.restore();
+        
+        requestAnimationFrame(drawFrame);
+      };
+      
+      drawFrame();
+      
+      const watermarkedBlob = await recordingPromise;
+      
+      // Clean up video
+      video.pause();
+      URL.revokeObjectURL(video.src);
+      if (logoImg) URL.revokeObjectURL(logoImg.src);
+      
+      // Download the watermarked video
+      const downloadUrl = URL.createObjectURL(watermarkedBlob);
       const a = document.createElement('a');
-      a.href = url;
-      // Watermark filename like TikTok/Instagram: "Muv'it_username_id.mp4"
-      a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
+      a.href = downloadUrl;
+      a.download = `Muvit_@${reel.user.username}_${reel.id}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
-    } catch {
-      toast({ title: 'Download failed', description: 'Could not download video.', variant: 'destructive' });
+      URL.revokeObjectURL(downloadUrl);
+      
+      toast({ title: 'Download complete!', description: "Your Muv'it video has been saved with watermark." });
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: simple download without watermark
+      try {
+        const response = await fetch(reel.videoUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Muvit_@${reel.user.username}_${reel.id}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({ title: 'Download started', description: "Your Muv'it video is being downloaded." });
+      } catch {
+        toast({ title: 'Download failed', description: 'Could not download video.', variant: 'destructive' });
+      }
     }
   };
 
@@ -1138,7 +1270,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
             <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
               <Share className={`${iconSize} text-white`} />
             </div>
-            <span className="text-[10px] text-white mt-0.5">{formatCount(shareCount)}</span>
           </button>
 
           {/* Download for offline */}

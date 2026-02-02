@@ -351,9 +351,6 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
       <div className="flex items-center gap-2 mb-4">
         <MapPin className="w-5 h-5 text-primary" />
         <h3 className="font-bold text-foreground">Nearby Muva'z</h3>
-        <Badge variant="secondary" className="text-xs">
-          Within {maxDistance}km
-        </Badge>
       </div>
 
       <div className="space-y-3">
@@ -364,7 +361,7 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
           >
             <div
               className="flex items-center gap-3 flex-1 cursor-pointer"
-              onClick={() => navigate(`/user/${account.user_id}`)}
+              onClick={() => navigate(`/user/${account.username}`)}
             >
               <Avatar className="w-12 h-12 border-2 border-primary/20">
                 <AvatarImage src={account.avatar_url} alt={account.display_name} />
@@ -377,12 +374,6 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
                 <p className="text-xs text-muted-foreground truncate">
                   @{account.username}
                 </p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3 text-primary" />
-                  <span className="text-xs text-primary font-medium">
-                    {formatDistance(account.distance)}
-                  </span>
-                </div>
               </div>
             </div>
             <Button
