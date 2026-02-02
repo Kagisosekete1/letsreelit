@@ -7,7 +7,7 @@ import { ArrowLeft, Send, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
-import SwipeableMessage from './SwipeableMessage';
+import MessageDeletePopover from './MessageDeletePopover';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -35,7 +35,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [showDeleteConversation, setShowDeleteConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,6 +116,18 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
           ));
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -159,43 +174,68 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId);
+    
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete message',
+        variant: 'destructive'
+      });
+    } else {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast({ title: 'Deleted', description: 'Message removed.' });
+    }
+    setSelectedMessageId(null);
+  };
+
   const handleDeleteConversation = async () => {
     if (!authUser) return;
 
-    const confirmed = window.confirm('Delete this entire chat? This will remove all messages.');
-    if (!confirmed) return;
-
-    // Best-effort: delete messages first, then the conversation
-    const { error: msgError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', conversationId);
-
-    if (msgError) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete messages',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const { error: convError } = await supabase
-      .from('conversations')
-      .delete()
-      .eq('id', conversationId);
-
-    if (convError) {
+    try {
+      await supabase.from('messages').delete().eq('conversation_id', conversationId);
+      await supabase.from('conversations').delete().eq('id', conversationId);
+      toast({ title: 'Chat deleted', description: 'The conversation has been removed.' });
+      setMessages([]);
+      onClose();
+    } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to delete chat',
         variant: 'destructive',
       });
-      return;
     }
+    setShowDeleteConversation(false);
+  };
 
-    setMessages([]);
-    onClose();
+  const handleMessageLongPressStart = (messageId: string) => {
+    longPressTimer.current = setTimeout(() => {
+      setSelectedMessageId(messageId);
+    }, 500);
+  };
+
+  const handleMessageLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleHeaderLongPressStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowDeleteConversation(true);
+    }, 500);
+  };
+
+  const handleHeaderLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   return (
@@ -205,22 +245,31 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={otherUser.avatar_url || ''} />
-            <AvatarFallback>{otherUser.display_name[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <DialogTitle className="text-base font-semibold">{otherUser.display_name}</DialogTitle>
-            <p className="text-xs text-muted-foreground">@{otherUser.username}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDeleteConversation}
-            title="Delete chat"
+          <MessageDeletePopover
+            open={showDeleteConversation}
+            onOpenChange={setShowDeleteConversation}
+            onDelete={handleDeleteConversation}
+            side="bottom"
           >
-            <Trash2 className="w-5 h-5 text-muted-foreground" />
-          </Button>
+            <div 
+              className="flex items-center gap-3 flex-1 cursor-pointer select-none"
+              onTouchStart={handleHeaderLongPressStart}
+              onTouchEnd={handleHeaderLongPressEnd}
+              onTouchCancel={handleHeaderLongPressEnd}
+              onMouseDown={handleHeaderLongPressStart}
+              onMouseUp={handleHeaderLongPressEnd}
+              onMouseLeave={handleHeaderLongPressEnd}
+            >
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={otherUser.avatar_url || ''} />
+                <AvatarFallback>{otherUser.display_name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <DialogTitle className="text-base font-semibold">{otherUser.display_name}</DialogTitle>
+                <p className="text-xs text-muted-foreground">@{otherUser.username}</p>
+              </div>
+            </div>
+          </MessageDeletePopover>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -237,32 +286,25 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
           ) : (
             messages.map((message) => {
               const isMe = message.sender_id === authUser?.id;
-              
-              const handleDeleteMessage = async () => {
-                const { error } = await supabase
-                  .from('messages')
-                  .delete()
-                  .eq('id', message.id);
-                
-                if (error) {
-                  toast({
-                    title: 'Error',
-                    description: 'Failed to delete message',
-                    variant: 'destructive'
-                  });
-                } else {
-                  setMessages(prev => prev.filter(m => m.id !== message.id));
-                }
-              };
 
               return (
-                <SwipeableMessage
+                <MessageDeletePopover
                   key={message.id}
-                  canDelete={true}
-                  onDelete={handleDeleteMessage}
+                  open={selectedMessageId === message.id}
+                  onOpenChange={(open) => {
+                    if (!open) setSelectedMessageId(null);
+                  }}
+                  onDelete={() => handleDeleteMessage(message.id)}
+                  side={isMe ? 'left' : 'right'}
                 >
                   <div
-                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} group select-none`}
+                    onTouchStart={() => handleMessageLongPressStart(message.id)}
+                    onTouchEnd={handleMessageLongPressEnd}
+                    onTouchCancel={handleMessageLongPressEnd}
+                    onMouseDown={() => handleMessageLongPressStart(message.id)}
+                    onMouseUp={handleMessageLongPressEnd}
+                    onMouseLeave={handleMessageLongPressEnd}
                   >
                     <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                       <div
@@ -277,7 +319,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
                           <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
                           {isMe && (
                             message.is_read ? (
-                              <CheckCheck className="w-3 h-3 text-blue-400" />
+                              <CheckCheck className="w-3 h-3 text-primary" />
                             ) : (
                               <Check className="w-3 h-3 opacity-70" />
                             )
@@ -286,7 +328,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
                       </div>
                     </div>
                   </div>
-                </SwipeableMessage>
+                </MessageDeletePopover>
               );
             })
           )}

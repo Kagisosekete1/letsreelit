@@ -6,7 +6,7 @@ import {
   Film, 
   Search, 
   Plus, 
-  Bell, 
+  Heart, 
   MessageSquare, 
   Menu,
   Sun,
@@ -14,8 +14,7 @@ import {
   AlertCircle,
   LogOut,
   BarChart3,
-  ChevronLeft,
-  ChevronRight
+  Settings
 } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 import { useUser } from '@/contexts/UserContext';
@@ -37,7 +36,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const counts = useNotificationCounts();
   const { currentUser, signOut } = useUser();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   const hasUnreadNotifications = counts.notifications > 0;
@@ -46,8 +44,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const mainNavItems = [
     { id: 'home', icon: Film, label: 'Reels', path: '/' },
     { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
-    { id: 'create', icon: Plus, label: 'Create', special: true },
-    { id: 'notifications', icon: Bell, label: 'Activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
+    { id: 'create', icon: Plus, label: 'Create' },
+    { id: 'notifications', icon: Heart, label: 'Activity', path: '/activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox', path: '/inbox', badge: hasUnreadMessages, badgeCount: counts.messages },
   ];
 
@@ -57,11 +55,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
       return;
     }
     
-    if (item.id === 'notifications') {
-      onTabChange('notifications');
-      return;
-    }
-
     onTabChange(item.id);
     if (item.path) {
       navigate(item.path);
@@ -71,6 +64,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const handleProfileClick = () => {
     onTabChange('profile');
     navigate('/profile');
+  };
+
+  const handleSettingsClick = () => {
+    onTabChange('settings');
   };
 
   const toggleTheme = () => {
@@ -108,40 +105,15 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
     return activeTab === itemId;
   };
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
   return (
-    <div 
-      className={cn(
-        "hidden lg:flex flex-col h-screen border-r border-border bg-background fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-[72px]" : "w-[72px] xl:w-[244px]"
-      )}
-    >
+    <div className="hidden lg:flex flex-col h-screen border-r border-border bg-background fixed left-0 top-0 z-50 w-[72px] xl:w-[244px]">
       {/* Logo */}
       <div className="p-4 xl:px-6 flex items-center justify-center xl:justify-start">
         <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center font-bold text-primary-foreground text-xl shadow-md">
           M
         </div>
-        {!isCollapsed && (
-          <span className="hidden xl:block ml-3 text-xl font-bold text-foreground">Muv'it</span>
-        )}
+        <span className="hidden xl:block ml-3 text-xl font-bold text-foreground">Muv'it</span>
       </div>
-
-      {/* Collapse Toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -right-3 top-16 w-6 h-6 rounded-full bg-background border border-border shadow-sm hover:bg-accent hidden xl:flex"
-        onClick={toggleCollapse}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="w-3 h-3" />
-        ) : (
-          <ChevronLeft className="w-3 h-3" />
-        )}
-      </Button>
 
       {/* Main Navigation - Centered vertically */}
       <nav className="flex-1 px-2 xl:px-3 flex flex-col justify-center space-y-1">
@@ -151,21 +123,17 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
             variant="ghost"
             className={cn(
               "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all relative group",
-              item.special 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : isActive(item.id, item.path)
-                  ? "bg-accent text-foreground font-semibold"
-                  : "text-foreground hover:bg-accent/50",
-              // Left border indicator for active item
-              isActive(item.id, item.path) && !item.special && "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-r-full"
+              isActive(item.id, item.path)
+                ? "bg-accent text-foreground font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-r-full"
+                : "text-foreground hover:bg-accent/50"
             )}
             onClick={() => handleNavClick(item)}
           >
             <item.icon className={cn(
               "w-6 h-6 shrink-0",
-              isActive(item.id, item.path) && !item.special && "stroke-[2.5px]"
+              isActive(item.id, item.path) && "stroke-[2.5px]"
             )} />
-            {!isCollapsed && <span className="hidden xl:block text-base">{item.label}</span>}
+            <span className="hidden xl:block text-base">{item.label}</span>
             
             {/* Notification badge with count */}
             {item.badge && (
@@ -201,7 +169,22 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
               {currentUser?.displayName?.[0] || 'U'}
             </AvatarFallback>
           </Avatar>
-          {!isCollapsed && <span className="hidden xl:block text-base">Profile</span>}
+          <span className="hidden xl:block text-base">Profile</span>
+        </Button>
+
+        {/* Settings - under Profile */}
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all relative",
+            activeTab === 'settings'
+              ? "bg-accent text-foreground font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-r-full"
+              : "text-foreground hover:bg-accent/50"
+          )}
+          onClick={handleSettingsClick}
+        >
+          <Settings className="w-6 h-6 shrink-0" />
+          <span className="hidden xl:block text-base">Settings</span>
         </Button>
       </nav>
 
@@ -214,7 +197,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
               className="w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl text-foreground hover:bg-accent/50"
             >
               <Menu className="w-6 h-6 shrink-0" />
-              {!isCollapsed && <span className="hidden xl:block text-base">More</span>}
+              <span className="hidden xl:block text-base">More</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent 

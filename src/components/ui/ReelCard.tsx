@@ -90,6 +90,8 @@ interface ReelCardProps {
   startPaused?: boolean;
   /** Callback when user manually triggers play for the first time */
   onUserTriggeredPlay?: () => void;
+  /** Callback to open comments in a side panel (desktop) */
+  onOpenDesktopComments?: (reelId: string, reelOwnerId: string) => void;
 }
 
 const ReelCard: React.FC<ReelCardProps> = ({ 
@@ -105,6 +107,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   variant = 'home',
   startPaused = false,
   onUserTriggeredPlay,
+  onOpenDesktopComments,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -698,7 +701,13 @@ const ReelCard: React.FC<ReelCardProps> = ({
   };
 
   const handleComment = () => {
-    setShowComments(true);
+    // On desktop/tablet, use side panel if callback provided
+    const isDesktop = window.innerWidth >= 1024;
+    if (isDesktop && onOpenDesktopComments) {
+      onOpenDesktopComments(reel.id, reel.user.id);
+    } else {
+      setShowComments(true);
+    }
   };
 
   const handleShare = async () => {

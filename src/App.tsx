@@ -14,6 +14,7 @@ import { useRouteMemory } from "@/hooks/useRouteMemory";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import Inbox from "./pages/Inbox";
+import Activity from "./pages/Activity";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -64,6 +65,11 @@ const AppRoutes = () => {
         <Route path="/inbox" element={
           <ProtectedRoute>
             <Inbox />
+          </ProtectedRoute>
+        } />
+        <Route path="/activity" element={
+          <ProtectedRoute>
+            <Activity />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={

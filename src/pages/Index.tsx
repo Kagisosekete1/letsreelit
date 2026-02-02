@@ -8,7 +8,7 @@ import SplashScreen from '@/components/SplashScreen';
 import CreateReelModal from '@/components/CreateReelModal';
 import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
 import SettingsModal from '@/components/SettingsModal';
-import NotificationsModal from '@/components/settings/NotificationsModal';
+import DesktopCommentsPanel from '@/components/DesktopCommentsPanel';
 import { Screen } from '@/types';
 
 const SPLASH_SHOWN_KEY = 'splashShown';
@@ -25,7 +25,9 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  // Desktop comments panel state
+  const [desktopCommentsReelId, setDesktopCommentsReelId] = useState<string | null>(null);
+  const [desktopCommentsOwnerId, setDesktopCommentsOwnerId] = useState<string | null>(null);
   const navigate = useNavigate();
   
   // Ref to pause videos when opening upload modal
@@ -63,7 +65,7 @@ const Index = () => {
         setIsCreateReelOpen(true);
         break;
       case 'notifications':
-        setIsNotificationsOpen(true);
+        navigate('/activity');
         break;
       case 'inbox': 
         navigate('/inbox'); 
@@ -110,6 +112,17 @@ const Index = () => {
     }, 100);
   };
 
+  // Desktop comments panel handler
+  const handleOpenDesktopComments = (reelId: string, reelOwnerId: string) => {
+    setDesktopCommentsReelId(reelId);
+    setDesktopCommentsOwnerId(reelOwnerId);
+  };
+
+  const handleCloseDesktopComments = () => {
+    setDesktopCommentsReelId(null);
+    setDesktopCommentsOwnerId(null);
+  };
+
   if (showSplash) {
     return <div className="h-screen w-full"><SplashScreen /></div>;
   }
@@ -121,19 +134,30 @@ const Index = () => {
       
       {/* Main Content */}
       <div className="lg:pl-[72px] xl:pl-[244px]">
-        <div className="relative h-screen overflow-hidden">
+        <div className="relative h-screen overflow-hidden flex">
           <NotificationPermissionPrompt enabled={!isCreateReelOpen} />
 
-          <div className="pb-16 lg:pb-0 h-full">
+          <div className="pb-16 lg:pb-0 flex-1 h-full">
             {currentScreen === 'home' && (
               <HomeScreen 
                 setScreen={setScreen} 
                 currentScreen={currentScreen}
                 onRegisterPause={registerPauseCallback}
                 onRegisterResume={registerResumeCallback}
+                onOpenDesktopComments={handleOpenDesktopComments}
               />
             )}
           </div>
+          
+          {/* Desktop Comments Side Panel */}
+          {desktopCommentsReelId && (
+            <DesktopCommentsPanel
+              isOpen={!!desktopCommentsReelId}
+              onClose={handleCloseDesktopComments}
+              reelId={desktopCommentsReelId}
+              reelOwnerId={desktopCommentsOwnerId || undefined}
+            />
+          )}
           
           {/* Mobile Bottom Navigation */}
           <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
@@ -148,10 +172,6 @@ const Index = () => {
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
-      />
-      <NotificationsModal 
-        isOpen={isNotificationsOpen} 
-        onClose={() => setIsNotificationsOpen(false)} 
       />
     </div>
   );
