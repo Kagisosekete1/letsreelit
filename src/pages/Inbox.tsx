@@ -239,8 +239,8 @@ const Inbox = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
-      case 'like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
-      case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
+      case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };
@@ -266,7 +266,7 @@ const Inbox = () => {
       case 'home': navigate('/'); break;
       case 'tutorials': navigate('/tutorials'); break;
       case 'create': setIsCreateReelOpen(true); break;
-      case 'notifications': setIsNotificationsOpen(true); break;
+      case 'notifications': navigate('/activity'); break;
       case 'inbox': break;
       case 'dashboard': navigate('/monetization-analytics'); break;
       case 'profile': navigate('/profile'); break;

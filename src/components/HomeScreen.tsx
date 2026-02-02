@@ -16,6 +16,7 @@ interface HomeScreenProps {
   currentScreen: Screen;
   onRegisterPause?: (pauseFn: () => void) => void;
   onRegisterResume?: (resumeFn: () => void) => void;
+  onOpenDesktopComments?: (reelId: string, reelOwnerId: string) => void;
 }
 
 interface ReelData {
@@ -41,7 +42,7 @@ interface ReelData {
   };
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause, onRegisterResume }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause, onRegisterResume, onOpenDesktopComments }) => {
   const { currentUser, authUser } = useUser();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -431,6 +432,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
                   autoAdvance={false}
                   startPaused={!userTriggeredPlay}
                   onUserTriggeredPlay={() => setUserTriggeredPlay(true)}
+                  onOpenDesktopComments={onOpenDesktopComments}
                 />
               </div>
             ))}

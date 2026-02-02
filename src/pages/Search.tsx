@@ -312,7 +312,7 @@ const Search = () => {
       case 'home': navigate('/', { state: { from: location.pathname } }); break;
       case 'tutorials': break;
       case 'create': setIsCreateReelOpen(true); break;
-      case 'notifications': setIsNotificationsOpen(true); break;
+      case 'notifications': navigate('/activity', { state: { from: location.pathname } }); break;
       case 'inbox': navigate('/inbox', { state: { from: location.pathname } }); break;
       case 'dashboard': navigate('/monetization-analytics', { state: { from: location.pathname } }); break;
       case 'profile': navigate('/profile', { state: { from: location.pathname } }); break;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Film, Search, Plus, MessageSquare, User } from 'lucide-react';
+import { Film, Search, Plus, MessageSquare, User, Heart } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
 interface BottomNavigationProps {
@@ -10,13 +10,15 @@ interface BottomNavigationProps {
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
   const counts = useNotificationCounts();
-  const hasUnread = counts.notifications + counts.messages > 0;
+  const hasUnreadInbox = counts.messages > 0;
+  const hasUnreadActivity = counts.notifications > 0;
 
   const tabs = [
     { id: 'home', icon: Film, label: 'Reels' },
     { id: 'tutorials', icon: Search, label: 'Search' },
     { id: 'create', icon: Plus, label: 'Create', special: true },
-    { id: 'inbox', icon: MessageSquare, label: 'Inbox' },
+    { id: 'notifications', icon: Heart, label: 'Activity', badge: hasUnreadActivity },
+    { id: 'inbox', icon: MessageSquare, label: 'Inbox', badge: hasUnreadInbox },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 
@@ -37,17 +39,17 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
             }`}
             onClick={() => onTabChange(tab.id)}
           >
-            <tab.icon className={`${tab.special ? 'w-7 h-7' : 'w-6 h-6'}`} strokeWidth={2} />
+            <tab.icon className={`${tab.special ? 'w-7 h-7' : 'w-5 h-5'}`} strokeWidth={2} />
             {!tab.special && (
-              <span className="text-xs font-medium">
+              <span className="text-[10px] font-medium">
                 {tab.label}
               </span>
             )}
-            {/* Notification badge with count */}
-            {tab.id === 'inbox' && hasUnread && (
+            {/* Notification badge */}
+            {tab.badge && (
               <NotificationBadge 
                 className="absolute -top-0.5 -right-0.5" 
-                showDotOnly={false}
+                showDotOnly={true}
               />
             )}
           </Button>
