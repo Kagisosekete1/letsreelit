@@ -202,7 +202,12 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl">
+      <DialogContent 
+        className="max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down"
+        style={{
+          animation: isOpen ? 'slideUp 0.3s ease-out' : 'slideDown 0.3s ease-in',
+        }}
+      >
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="text-center">{comments.length} Comments</DialogTitle>
         </DialogHeader>
@@ -215,7 +220,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
             </div>
           ) : (
             comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
+              <div key={comment.id} className="flex gap-3 animate-fade-in">
                 <ProfileLink username={comment.profile?.username || 'user'}>
                   <img
                     src={comment.profile?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
@@ -275,6 +280,36 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           </form>
         )}
       </DialogContent>
+
+      <style>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideDown {
+          from {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.2s ease-out;
+        }
+      `}</style>
     </Dialog>
   );
 };

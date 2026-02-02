@@ -200,10 +200,16 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     return `${days}d`;
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="hidden lg:flex flex-col w-[350px] h-full border-l border-border bg-background">
+    <div 
+      className={`hidden lg:flex flex-col w-[350px] h-full border-l border-border bg-background transition-all duration-300 ease-out ${
+        isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
+      }`}
+      style={{
+        position: isOpen ? 'relative' : 'absolute',
+        right: 0,
+      }}
+    >
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="font-semibold text-lg">{comments.length} Comments</h2>
@@ -220,8 +226,12 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
             <p className="text-sm">Be the first to comment!</p>
           </div>
         ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3">
+          comments.map((comment, index) => (
+            <div 
+              key={comment.id} 
+              className="flex gap-3 animate-fade-in"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
               <ProfileLink username={comment.profile?.username || 'user'}>
                 <Avatar className="w-8 h-8 flex-shrink-0">
                   <AvatarImage src={comment.profile?.avatar_url || ''} />
@@ -280,6 +290,17 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
           </Button>
         </form>
       )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 };
