@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
+import SettingsModal from '@/components/SettingsModal';
+import NotificationsModal from '@/components/settings/NotificationsModal';
 import ChatModal from '@/components/ChatModal';
 import NotificationReelModal from '@/components/NotificationReelModal';
 import NotificationProfileView from '@/components/NotificationProfileView';
@@ -55,6 +58,8 @@ const Inbox = () => {
   const [activeTab, setActiveTab] = useState('inbox');
   const [inboxTab, setInboxTab] = useState('messages');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,8 +266,11 @@ const Inbox = () => {
       case 'home': navigate('/'); break;
       case 'tutorials': navigate('/tutorials'); break;
       case 'create': setIsCreateReelOpen(true); break;
-      case 'inbox': navigate('/inbox'); break;
+      case 'notifications': setIsNotificationsOpen(true); break;
+      case 'inbox': break;
+      case 'dashboard': navigate('/monetization-analytics'); break;
       case 'profile': navigate('/profile'); break;
+      case 'settings': setIsSettingsOpen(true); break;
     }
   };
 
@@ -350,26 +358,39 @@ const Inbox = () => {
   // Profile view within notifications
   if (viewState.type === 'profile') {
     return (
-      <div className="relative h-screen overflow-hidden bg-background">
-        <NotificationProfileView
-          userId={viewState.userId}
-          onBack={handleBackToList}
-          onReelClick={handleProfileReelClick}
-        />
-        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      <div className="min-h-screen bg-background">
+        <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+        <div className="lg:pl-[72px] xl:pl-[244px]">
+          <div className="relative h-screen overflow-hidden bg-background">
+            <NotificationProfileView
+              userId={viewState.userId}
+              onBack={handleBackToList}
+              onReelClick={handleProfileReelClick}
+            />
+            <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+          </div>
+        </div>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+        <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
       </div>
     );
   }
 
   return (
-    <MobileViewWrapper>
-      <div className="relative h-full overflow-hidden bg-background flex flex-col">
-        <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-        <div 
-          ref={containerRef}
-          className="pt-8 pb-20 flex-1 overflow-y-auto"
-          {...handlers}
-        >
+    <div className="min-h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Main Content */}
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <MobileViewWrapper>
+          <div className="relative h-full overflow-hidden bg-background flex flex-col">
+            <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+            <div 
+              ref={containerRef}
+              className="pt-8 pb-20 lg:pb-4 flex-1 overflow-y-auto"
+              {...handlers}
+            >
         {isSearchOpen ? (
           <InboxSearch
             isOpen={isSearchOpen}
@@ -562,7 +583,6 @@ const Inbox = () => {
           otherUser={selectedConversation.other_user}
         />
       )}
-
       {/* Notification Reel Modal */}
       {viewState.type === 'reel' && (
         <NotificationReelModal
@@ -571,8 +591,15 @@ const Inbox = () => {
           reelId={viewState.reelId}
         />
       )}
+          </div>
+        </MobileViewWrapper>
+      </div>
+      
+      {/* Modals */}
+      <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <NotificationsModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
     </div>
-    </MobileViewWrapper>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Search, Plus, MessageSquare, User } from 'lucide-react';
+import { Film, Search, Plus, MessageSquare, User } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
 interface BottomNavigationProps {
@@ -13,7 +13,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   const hasUnread = counts.notifications + counts.messages > 0;
 
   const tabs = [
-    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'home', icon: Film, label: 'Reels' },
     { id: 'tutorials', icon: Search, label: 'Search' },
     { id: 'create', icon: Plus, label: 'Create', special: true },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox' },
@@ -21,8 +21,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   ];
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full lg:w-[740px] lg:bottom-4">
-      <div className="bg-card border-t border-border lg:border lg:rounded-full lg:mx-4 lg:shadow-xl flex items-center justify-around px-2 py-2">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md lg:hidden">
+      <div className="bg-card border border-border rounded-full shadow-xl flex items-center justify-around px-2 py-2">
         {tabs.map((tab) => (
           <Button
             key={tab.id}

@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import HomeScreen from '@/components/HomeScreen';
 import SplashScreen from '@/components/SplashScreen';
 import CreateReelModal from '@/components/CreateReelModal';
 import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
+import SettingsModal from '@/components/SettingsModal';
+import NotificationsModal from '@/components/settings/NotificationsModal';
 import { Screen } from '@/types';
 
 const SPLASH_SHOWN_KEY = 'splashShown';
@@ -21,6 +24,8 @@ const Index = () => {
   });
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   
   // Ref to pause videos when opening upload modal
@@ -57,11 +62,20 @@ const Index = () => {
         }
         setIsCreateReelOpen(true);
         break;
+      case 'notifications':
+        setIsNotificationsOpen(true);
+        break;
       case 'inbox': 
         navigate('/inbox'); 
         break;
+      case 'dashboard':
+        navigate('/monetization-analytics');
+        break;
       case 'profile': 
         navigate('/profile'); 
+        break;
+      case 'settings':
+        setIsSettingsOpen(true);
         break;
     }
   };
@@ -101,24 +115,43 @@ const Index = () => {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
-      <NotificationPermissionPrompt enabled={!isCreateReelOpen} />
-
-      <div className="pb-16 h-full">
-        {currentScreen === 'home' && (
-          <HomeScreen 
-            setScreen={setScreen} 
-            currentScreen={currentScreen}
-            onRegisterPause={registerPauseCallback}
-            onRegisterResume={registerResumeCallback}
-          />
-        )}
-      </div>
-      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+    <div className="min-h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
       
+      {/* Main Content */}
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <div className="relative h-screen overflow-hidden">
+          <NotificationPermissionPrompt enabled={!isCreateReelOpen} />
+
+          <div className="pb-16 lg:pb-0 h-full">
+            {currentScreen === 'home' && (
+              <HomeScreen 
+                setScreen={setScreen} 
+                currentScreen={currentScreen}
+                onRegisterPause={registerPauseCallback}
+                onRegisterResume={registerResumeCallback}
+              />
+            )}
+          </div>
+          
+          {/* Mobile Bottom Navigation */}
+          <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
+      </div>
+      
+      {/* Modals */}
       <CreateReelModal 
         isOpen={isCreateReelOpen} 
         onClose={handleCreateReelClose} 
+      />
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
+      <NotificationsModal 
+        isOpen={isNotificationsOpen} 
+        onClose={() => setIsNotificationsOpen(false)} 
       />
     </div>
   );

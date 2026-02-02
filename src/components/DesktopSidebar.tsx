@@ -1,0 +1,263 @@
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Film, 
+  Search, 
+  Plus, 
+  Bell, 
+  MessageSquare, 
+  BarChart3, 
+  Settings,
+  Menu,
+  Sun,
+  Moon,
+  AlertCircle,
+  LogOut
+} from 'lucide-react';
+import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
+import { useUser } from '@/contexts/UserContext';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from '@/lib/utils';
+
+interface DesktopSidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTabChange }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const counts = useNotificationCounts();
+  const { currentUser, signOut } = useUser();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  const hasUnreadNotifications = counts.notifications > 0;
+  const hasUnreadMessages = counts.messages > 0;
+
+  const mainNavItems = [
+    { id: 'home', icon: Film, label: 'Reels', path: '/' },
+    { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
+    { id: 'create', icon: Plus, label: 'Create', special: true },
+    { id: 'notifications', icon: Bell, label: 'Notifications', badge: hasUnreadNotifications },
+    { id: 'inbox', icon: MessageSquare, label: 'Inbox', path: '/inbox', badge: hasUnreadMessages },
+    { id: 'dashboard', icon: BarChart3, label: 'Dashboard', path: '/monetization-analytics' },
+  ];
+
+  const handleNavClick = (item: typeof mainNavItems[0]) => {
+    if (item.id === 'create') {
+      onTabChange('create');
+      return;
+    }
+    
+    if (item.id === 'notifications') {
+      // Open notifications - you might want to handle this differently
+      onTabChange('notifications');
+      return;
+    }
+
+    onTabChange(item.id);
+    if (item.path) {
+      navigate(item.path);
+    }
+  };
+
+  const handleProfileClick = () => {
+    onTabChange('profile');
+    navigate('/profile');
+  };
+
+  const handleSettingsClick = () => {
+    onTabChange('settings');
+    // Settings is typically a modal, but for sidebar we navigate
+    navigate('/profile');
+    // Will need to open settings modal somehow
+  };
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    if (newIsDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+    setMoreOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+    setMoreOpen(false);
+  };
+
+  const handleReportProblem = () => {
+    // Could open a modal or navigate to a support page
+    setMoreOpen(false);
+    // For now, just close the popover
+  };
+
+  const handleDashboardFromMore = () => {
+    setMoreOpen(false);
+    navigate('/monetization-analytics');
+  };
+
+  const isActive = (itemId: string, path?: string) => {
+    if (path) {
+      return location.pathname === path;
+    }
+    return activeTab === itemId;
+  };
+
+  return (
+    <div className="hidden lg:flex flex-col h-screen w-[72px] xl:w-[244px] border-r border-border bg-background fixed left-0 top-0 z-50">
+      {/* Logo */}
+      <div className="p-4 xl:px-6 flex items-center justify-center xl:justify-start">
+        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center font-bold text-primary-foreground text-xl shadow-md">
+          M
+        </div>
+        <span className="hidden xl:block ml-3 text-xl font-bold text-foreground">Muv'it</span>
+      </div>
+
+      {/* Main Navigation */}
+      <nav className="flex-1 px-2 xl:px-3 py-4 space-y-1">
+        {mainNavItems.map((item) => (
+          <Button
+            key={item.id}
+            variant="ghost"
+            className={cn(
+              "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all relative group",
+              item.special 
+                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                : isActive(item.id, item.path)
+                  ? "bg-accent text-foreground font-semibold"
+                  : "text-foreground hover:bg-accent/50"
+            )}
+            onClick={() => handleNavClick(item)}
+          >
+            <item.icon className={cn(
+              "w-6 h-6 shrink-0",
+              isActive(item.id, item.path) && !item.special && "stroke-[2.5px]"
+            )} />
+            <span className="hidden xl:block text-base">{item.label}</span>
+            
+            {/* Notification badge */}
+            {item.badge && (
+              <NotificationBadge 
+                className="absolute top-2 left-6 xl:left-auto xl:right-3" 
+                showDotOnly={true}
+              />
+            )}
+          </Button>
+        ))}
+
+        {/* Profile */}
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all",
+            isActive('profile', '/profile')
+              ? "bg-accent text-foreground font-semibold"
+              : "text-foreground hover:bg-accent/50"
+          )}
+          onClick={handleProfileClick}
+        >
+          <Avatar className="w-6 h-6 ring-2 ring-border">
+            <AvatarImage src={currentUser?.avatarUrl || ''} alt="Profile" />
+            <AvatarFallback className="text-xs">
+              {currentUser?.displayName?.[0] || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <span className="hidden xl:block text-base">Profile</span>
+        </Button>
+
+        {/* Settings */}
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all",
+            "text-foreground hover:bg-accent/50"
+          )}
+          onClick={handleSettingsClick}
+        >
+          <Settings className="w-6 h-6 shrink-0" />
+          <span className="hidden xl:block text-base">Settings</span>
+        </Button>
+      </nav>
+
+      {/* More Menu at bottom */}
+      <div className="p-3 border-t border-border">
+        <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl text-foreground hover:bg-accent/50"
+            >
+              <Menu className="w-6 h-6 shrink-0" />
+              <span className="hidden xl:block text-base">More</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent 
+            side="right" 
+            align="end"
+            className="w-64 p-2 rounded-2xl shadow-lg"
+          >
+            <div className="space-y-1">
+              {/* Theme Toggle */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={toggleTheme}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+              </Button>
+
+              {/* Report a Problem */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={handleReportProblem}
+              >
+                <AlertCircle className="w-5 h-5" />
+                <span>Report a Problem</span>
+              </Button>
+
+              {/* Dashboard */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={handleDashboardFromMore}
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Dashboard</span>
+              </Button>
+
+              <div className="h-px bg-border my-2" />
+
+              {/* Logout */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Log Out</span>
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+};
+
+export default DesktopSidebar;
