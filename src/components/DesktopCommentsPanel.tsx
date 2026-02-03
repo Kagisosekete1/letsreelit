@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Trash2, X, MessageCircle } from 'lucide-react';
+import { Send, Trash2, X, MessageCircle, Heart, Reply } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,11 +14,15 @@ interface Comment {
   content: string;
   created_at: string;
   user_id: string;
+  reply_to_id: string | null;
+  reply_to_username: string | null;
+  likes_count: number;
   profile?: {
     username: string;
     display_name: string;
     avatar_url: string | null;
   };
+  isLiked?: boolean;
 }
 
 interface DesktopCommentsPanelProps {
@@ -41,6 +45,8 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,6 +76,13 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     }
   }, [isOpen, reelId]);
 
+  // Focus input when replying
+  useEffect(() => {
+    if (replyingTo) {
+      inputRef.current?.focus();
+    }
+  }, [replyingTo]);
+
   const fetchComments = async () => {
     const { data: commentsData } = await supabase
       .from('comments')
@@ -79,16 +92,29 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
 
     if (commentsData && commentsData.length > 0) {
       const userIds = [...new Set(commentsData.map(c => c.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
-        .in('user_id', userIds);
+      const commentIds = commentsData.map(c => c.id);
+      
+      const [profilesResult, likesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', userIds),
+        authUser
+          ? supabase
+              .from('comment_likes')
+              .select('comment_id')
+              .eq('user_id', authUser.id)
+              .in('comment_id', commentIds)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profilesResult.data?.map(p => [p.user_id, p]) || []);
+      const likedCommentIds = new Set(likesResult.data?.map(l => l.comment_id) || []);
       
       const commentsWithProfiles = commentsData.map(c => ({
         ...c,
         profile: profileMap.get(c.user_id),
+        isLiked: likedCommentIds.has(c.id),
       }));
 
       setComments(commentsWithProfiles);
@@ -105,13 +131,25 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
 
     setLoading(true);
     const commentText = newComment.trim();
-    const { error } = await supabase
-      .from('comments')
-      .insert({
-        reel_id: reelId,
-        user_id: authUser.id,
-        content: commentText,
-      });
+    
+    const insertData: {
+      reel_id: string;
+      user_id: string;
+      content: string;
+      reply_to_id?: string;
+      reply_to_username?: string;
+    } = {
+      reel_id: reelId,
+      user_id: authUser.id,
+      content: commentText,
+    };
+
+    if (replyingTo) {
+      insertData.reply_to_id = replyingTo.id;
+      insertData.reply_to_username = replyingTo.username;
+    }
+
+    const { error } = await supabase.from('comments').insert(insertData);
 
     if (error) {
       toast({
@@ -121,6 +159,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
       });
     } else {
       setNewComment('');
+      setReplyingTo(null);
       await fetchComments();
       
       // Update reel comments_count and get owner id
@@ -186,6 +225,70 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     toast({ title: 'Deleted', description: 'Comment removed.' });
   };
 
+  const handleLikeComment = async (comment: Comment) => {
+    if (!authUser) {
+      toast({ title: 'Sign in required', description: 'Please sign in to like comments' });
+      return;
+    }
+
+    const wasLiked = comment.isLiked;
+    const newLikeCount = wasLiked ? Math.max(0, comment.likes_count - 1) : comment.likes_count + 1;
+
+    // Optimistic update
+    setComments(prev =>
+      prev.map(c =>
+        c.id === comment.id
+          ? { ...c, isLiked: !wasLiked, likes_count: newLikeCount }
+          : c
+      )
+    );
+
+    try {
+      if (wasLiked) {
+        await supabase
+          .from('comment_likes')
+          .delete()
+          .eq('comment_id', comment.id)
+          .eq('user_id', authUser.id);
+        
+        await supabase
+          .from('comments')
+          .update({ likes_count: newLikeCount })
+          .eq('id', comment.id);
+      } else {
+        await supabase
+          .from('comment_likes')
+          .insert({ comment_id: comment.id, user_id: authUser.id });
+        
+        await supabase
+          .from('comments')
+          .update({ likes_count: newLikeCount })
+          .eq('id', comment.id);
+      }
+    } catch {
+      // Revert on error
+      setComments(prev =>
+        prev.map(c =>
+          c.id === comment.id
+            ? { ...c, isLiked: wasLiked, likes_count: comment.likes_count }
+            : c
+        )
+      );
+    }
+  };
+
+  const handleReply = (comment: Comment) => {
+    setReplyingTo({
+      id: comment.id,
+      username: comment.profile?.username || 'user',
+    });
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewComment('');
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -198,6 +301,45 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     if (mins < 60) return `${mins}m`;
     if (hours < 24) return `${hours}h`;
     return `${days}d`;
+  };
+
+  // Render username mentions as clickable links
+  const renderCommentContent = (content: string, replyToUsername: string | null) => {
+    const parts: React.ReactNode[] = [];
+    
+    if (replyToUsername) {
+      parts.push(
+        <ProfileLink key="reply-mention" username={replyToUsername} className="inline">
+          <span className="text-primary font-semibold">@{replyToUsername}</span>
+        </ProfileLink>,
+        ' '
+      );
+    }
+
+    const mentionRegex = /@(\w+)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(content.slice(lastIndex, match.index));
+      }
+      
+      const username = match[1];
+      parts.push(
+        <ProfileLink key={`mention-${match.index}`} username={username} className="inline">
+          <span className="text-primary font-semibold">@{username}</span>
+        </ProfileLink>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : content;
   };
 
   return (
@@ -243,7 +385,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
         </div>
 
         {/* Comments List */}
-        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-3 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           {comments.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
@@ -256,7 +398,9 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
             comments.map((comment, index) => (
               <div 
                 key={comment.id} 
-                className="flex gap-3 p-3 rounded-2xl bg-secondary/30 hover:bg-secondary/50 transition-all duration-200 group animate-comment-in"
+                className={`flex gap-3 p-3 rounded-2xl bg-secondary/30 hover:bg-secondary/50 transition-all duration-200 group animate-comment-in ${
+                  comment.reply_to_id ? 'ml-6' : ''
+                }`}
                 style={{ animationDelay: `${index * 40}ms` }}
               >
                 <ProfileLink username={comment.profile?.username || 'user'}>
@@ -276,7 +420,35 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
                       {formatTime(comment.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm break-words leading-relaxed">{comment.content}</p>
+                  <p className="text-sm break-words leading-relaxed">
+                    {renderCommentContent(comment.content, comment.reply_to_username)}
+                  </p>
+                  
+                  {/* Comment actions: Reply and Like */}
+                  <div className="flex items-center gap-4 mt-2">
+                    <button
+                      onClick={() => handleReply(comment)}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                      <Reply className="w-3 h-3" />
+                      Reply
+                    </button>
+                    <button
+                      onClick={() => handleLikeComment(comment)}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                    >
+                      <Heart
+                        className={`w-3 h-3 transition-all ${
+                          comment.isLiked ? 'text-destructive fill-destructive' : ''
+                        }`}
+                      />
+                      {comment.likes_count > 0 && (
+                        <span className={comment.isLiked ? 'text-destructive' : ''}>
+                          {comment.likes_count}
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 {authUser?.id === comment.user_id && (
                   <Button
@@ -299,30 +471,50 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
 
         {/* Comment Input with modern styling */}
         {authUser && (
-          <form onSubmit={handleSubmit} className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-xl">
-            <div className="flex gap-3 items-center">
-              <Avatar className="w-8 h-8 flex-shrink-0">
-                <AvatarFallback className="text-xs">You</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 relative">
-                <Input
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="pr-12 rounded-full border-border/50 bg-secondary/50 focus:bg-background transition-colors"
-                  disabled={loading}
-                />
+          <div className="border-t border-border/50 bg-background/50 backdrop-blur-xl">
+            {/* Reply indicator */}
+            {replyingTo && (
+              <div className="px-4 py-2 bg-secondary/50 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Replying to <span className="text-primary font-semibold">@{replyingTo.username}</span>
+                </span>
                 <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!newComment.trim() || loading}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full"
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 h-auto"
+                  onClick={cancelReply}
                 >
-                  <Send className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-          </form>
+            )}
+            
+            <form onSubmit={handleSubmit} className="p-4">
+              <div className="flex gap-3 items-center">
+                <Avatar className="w-8 h-8 flex-shrink-0">
+                  <AvatarFallback className="text-xs">You</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 relative">
+                  <Input
+                    ref={inputRef}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Write a comment...'}
+                    className="pr-12 rounded-full border-border/50 bg-secondary/50 focus:bg-background transition-colors"
+                    disabled={loading}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!newComment.trim() || loading}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
         )}
       </div>
 

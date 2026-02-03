@@ -3,13 +3,18 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
+import CommentsModal from '@/components/CommentsModal';
+import DesktopCommentsPanel from '@/components/DesktopCommentsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface NotificationReelModalProps {
   isOpen: boolean;
   onClose: () => void;
   reelId: string;
+  notificationType?: string; // 'like' | 'comment' | 'new_reel' etc
+  openCommentsOnLoad?: boolean; // Automatically open comments when modal opens
 }
 
 interface ReelData {
@@ -38,11 +43,16 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
   isOpen,
   onClose,
   reelId,
+  notificationType,
+  openCommentsOnLoad = false,
 }) => {
   const { authUser } = useUser();
+  const isMobile = useIsMobile();
   const [reel, setReel] = useState<ReelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [showComments, setShowComments] = useState(false);
+  const [showDesktopComments, setShowDesktopComments] = useState(false);
 
   useEffect(() => {
     if (isOpen && reelId) {
@@ -50,6 +60,21 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
       if (authUser) fetchFollowing();
     }
   }, [isOpen, reelId, authUser]);
+
+  // Auto-open comments for comment notifications
+  useEffect(() => {
+    if (isOpen && reel && (notificationType === 'comment' || openCommentsOnLoad)) {
+      // Small delay to let the modal render first
+      const timer = setTimeout(() => {
+        if (isMobile) {
+          setShowComments(true);
+        } else {
+          setShowDesktopComments(true);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, reel, notificationType, openCommentsOnLoad, isMobile]);
 
   const fetchReel = async () => {
     setLoading(true);
@@ -124,41 +149,68 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-full h-[85vh] p-0 bg-black border-none rounded-3xl overflow-hidden">
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 left-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
-          onClick={onClose}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+  const handleOpenDesktopComments = () => {
+    setShowDesktopComments(true);
+  };
 
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : reel ? (
-          <div className="relative w-full h-full">
-            <ReelCard
-              reel={reel}
-              followingIds={followingIds}
-              toggleFollow={toggleFollow}
-              isActive={true}
-              isOwner={authUser?.id === reel.user.id}
-              autoAdvance={false}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-white">
-            <p>Reel not found</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md w-full h-[85vh] p-0 bg-black border-none rounded-3xl overflow-hidden">
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 left-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
+            onClick={onClose}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : reel ? (
+            <div className="relative w-full h-full">
+              <ReelCard
+                reel={reel}
+                followingIds={followingIds}
+                toggleFollow={toggleFollow}
+                isActive={true}
+                isOwner={authUser?.id === reel.user.id}
+                autoAdvance={false}
+                onOpenDesktopComments={handleOpenDesktopComments}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-white">
+              <p>Reel not found</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Comments Modal */}
+      {reel && (
+        <CommentsModal
+          isOpen={showComments}
+          onClose={() => setShowComments(false)}
+          reelId={reel.id}
+          reelOwnerId={reel.user.id}
+        />
+      )}
+
+      {/* Desktop Comments Panel */}
+      {reel && showDesktopComments && (
+        <DesktopCommentsPanel
+          isOpen={showDesktopComments}
+          onClose={() => setShowDesktopComments(false)}
+          reelId={reel.id}
+          reelOwnerId={reel.user.id}
+        />
+      )}
+    </>
   );
 };
 
