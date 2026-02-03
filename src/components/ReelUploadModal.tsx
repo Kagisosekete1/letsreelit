@@ -515,7 +515,13 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
             <VideoEffectsPanel
               effects={videoEffects}
-              onEffectsChange={setVideoEffects}
+              onEffectsChange={(newEffects) => {
+                setVideoEffects(newEffects);
+                // Apply speed change immediately to the video
+                if (videoRef.current && newEffects.speed !== videoEffects.speed) {
+                  videoRef.current.playbackRate = newEffects.speed;
+                }
+              }}
               onApply={handleApplyEffects}
             />
           </div>
@@ -597,7 +603,7 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
 
               <div>
                 <Input
-                  placeholder="Add Caption..."
+                  placeholder="Add Title..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}

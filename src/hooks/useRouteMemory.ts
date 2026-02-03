@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const LAST_ROUTE_KEY = 'muvit_last_route';
 const ROUTE_HISTORY_KEY = 'muvit_route_history';
-const MAX_HISTORY_LENGTH = 20;
+const MAX_HISTORY_LENGTH = 50;
 
 // Routes that should not be remembered (auth, etc.)
 const EXCLUDED_ROUTES = ['/auth', '/terms', '/privacy', '/about'];
@@ -19,20 +19,24 @@ export const useRouteMemory = () => {
   const initializedRef = useRef(false);
   const lastPathRef = useRef<string | null>(null);
 
-  // On mount, restore last route (only once)
+  // On mount, restore last route (only once) - but NOT for home navigation
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
     const lastRoute = localStorage.getItem(LAST_ROUTE_KEY);
     
-    // Only restore if we're at root and have a saved route
-    if (lastRoute && location.pathname === '/' && !EXCLUDED_ROUTES.includes(lastRoute)) {
-      // Small delay to ensure router is ready
-      const timeout = setTimeout(() => {
-        navigate(lastRoute, { replace: true });
-      }, 50);
-      return () => clearTimeout(timeout);
+    // Only restore if we're at root, have a saved route, and it's not home
+    if (lastRoute && lastRoute !== '/' && location.pathname === '/' && !EXCLUDED_ROUTES.includes(lastRoute)) {
+      // Check if this is a fresh app load (not internal navigation)
+      const isInternalNav = sessionStorage.getItem('muvit_app_initialized');
+      if (!isInternalNav) {
+        // Small delay to ensure router is ready
+        const timeout = setTimeout(() => {
+          navigate(lastRoute, { replace: true });
+        }, 50);
+        return () => clearTimeout(timeout);
+      }
     }
   }, []);
 
