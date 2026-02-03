@@ -95,8 +95,9 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
             </Label>
             <Input
               id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              key="edit-title-input"
+              defaultValue={title}
+              onBlur={(e) => setTitle(e.target.value)}
               placeholder="Enter Muv title"
               className="rounded-xl"
               maxLength={100}
@@ -108,13 +109,14 @@ const EditReelModal: React.FC<EditReelModalProps> = ({ isOpen, onClose, reel, on
 
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium">
-              Description & Hashtags
+              Hashtags
             </Label>
             <Textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a description and hashtags like #dance #hiphop"
+              key="edit-description-input"
+              defaultValue={description}
+              onBlur={(e) => setDescription(e.target.value)}
+              placeholder="Add hashtags like #dance #hiphop"
               className="rounded-xl resize-none"
               rows={4}
               maxLength={500}

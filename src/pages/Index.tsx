@@ -12,6 +12,7 @@ import DesktopCommentsPanel from '@/components/DesktopCommentsPanel';
 import { Screen } from '@/types';
 
 const SPLASH_SHOWN_KEY = 'splashShown';
+const APP_INITIALIZED_KEY = 'muvit_app_initialized';
 
 const Index = () => {
   const isNative = Capacitor.isNativePlatform();
@@ -19,6 +20,8 @@ const Index = () => {
   const [showSplash, setShowSplash] = useState(() => {
     // On native builds, rely ONLY on the native launch screen (avoid double splash).
     if (isNative) return false;
+    // Check if app has been initialized this session - skip splash for internal navigation
+    if (sessionStorage.getItem(APP_INITIALIZED_KEY)) return false;
     // Only show splash once per session (web)
     return !sessionStorage.getItem(SPLASH_SHOWN_KEY);
   });
@@ -35,6 +38,9 @@ const Index = () => {
   const resumeVideosRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    // Mark app as initialized for this session
+    sessionStorage.setItem(APP_INITIALIZED_KEY, 'true');
+    
     if (isNative) return;
     if (showSplash) {
       const timer = setTimeout(() => {
