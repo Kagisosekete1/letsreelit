@@ -44,8 +44,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const mainNavItems = [
     { id: 'home', icon: Film, label: 'Reels', path: '/' },
     { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
-    { id: 'create', icon: Plus, label: 'Create' },
     { id: 'notifications', icon: Heart, label: 'Activity', path: '/activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
+    { id: 'create', icon: Plus, label: 'Create' },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox', path: '/inbox', badge: hasUnreadMessages, badgeCount: counts.messages },
   ];
 

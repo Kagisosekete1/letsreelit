@@ -57,8 +57,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
 
       if (error) {
         console.error('Error fetching messages:', error);
+        setMessages([]);
       } else {
-        setMessages(data || []);
+        // Filter out any null/undefined messages
+        setMessages((data || []).filter(msg => msg && msg.id && msg.content));
       }
       setLoading(false);
     };
@@ -175,6 +177,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    // Immediately remove from UI (optimistic)
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    setSelectedMessageId(null);
+    
     const { error } = await supabase
       .from('messages')
       .delete()
@@ -186,11 +192,16 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
         description: 'Failed to delete message',
         variant: 'destructive'
       });
+      // Refetch to restore state if delete failed
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+      setMessages((data || []).filter(msg => msg && msg.id && msg.content));
     } else {
-      setMessages(prev => prev.filter(m => m.id !== messageId));
       toast({ title: 'Deleted', description: 'Message removed.' });
     }
-    setSelectedMessageId(null);
   };
 
   const handleDeleteConversation = async () => {

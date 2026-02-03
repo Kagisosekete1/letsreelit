@@ -59,11 +59,14 @@ const Terms = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">4. User Content</h3>
+              <h3 className="text-lg font-semibold">4. User Content & Monetization Eligibility</h3>
               <ul className="list-disc list-inside space-y-2 text-foreground/90 text-sm">
                 <li>You retain ownership of any videos, photos, or other content you post.</li>
                 <li>By posting content on Muv'it, you grant us a non-exclusive, worldwide, royalty-free license to host, use, distribute, modify, and display your content within the app.</li>
                 <li>You may not post content that is illegal, harmful, threatening, abusive, discriminatory, or infringes on others' rights.</li>
+                <li><strong>Monetization Requirement:</strong> To be eligible for earnings, all content you post must be original and owned by you. You must hold full rights to any videos, music, choreography, or other creative elements used in your content.</li>
+                <li><strong>Content Monitoring:</strong> Before any payments are processed, we monitor content for compliance. Any violation of content ownership rules will result in immediate deletion of pending payments and may lead to account suspension or termination.</li>
+                <li><strong>Warning:</strong> Posting content you do not own the rights to is strictly prohibited. Users must be careful to only post content they have created or have explicit permission to use commercially.</li>
               </ul>
             </div>
 

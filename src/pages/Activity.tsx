@@ -4,7 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -16,6 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
+import { deduplicateNotifications } from '@/lib/notificationDeduplication';
+import { getPreviousRoute, popRouteFromHistory } from '@/hooks/useRouteMemory';
 
 interface Notification {
   id: string;
@@ -210,19 +212,34 @@ const Activity = () => {
     setSearchQuery(query);
   }, []);
 
-  const filteredNotifications = useMemo(() => {
-    if (!searchQuery.trim()) return notifications;
+  // Deduplicate and filter notifications based on search
+  const processedNotifications = useMemo(() => {
+    // First deduplicate
+    const deduplicated = deduplicateNotifications(notifications);
+    
+    // Then filter by search
+    if (!searchQuery.trim()) return deduplicated;
     const q = searchQuery.toLowerCase();
-    return notifications.filter(n => 
+    return deduplicated.filter(n => 
       n.from_user?.display_name?.toLowerCase().includes(q) ||
       n.from_user?.username?.toLowerCase().includes(q) ||
       n.type.toLowerCase().includes(q)
     );
   }, [notifications, searchQuery]);
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setViewState({ type: 'list' });
-  };
+  }, []);
+  
+  const handleGoBack = useCallback(() => {
+    const prevRoute = getPreviousRoute();
+    if (prevRoute && prevRoute !== '/activity') {
+      popRouteFromHistory();
+      navigate(prevRoute);
+    } else {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const handleProfileReelClick = (reelId: string) => {
     setViewState({ type: 'reel', reelId });
@@ -299,7 +316,7 @@ const Activity = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredNotifications.map((notif) => (
+                    {processedNotifications.map((notif) => (
                       <div
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Trash2, X } from 'lucide-react';
+import { Send, Trash2, X, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -201,107 +201,148 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
   };
 
   return (
-    <div 
-      className={`hidden lg:flex flex-col w-[350px] h-full border-l border-border bg-background transition-all duration-300 ease-out ${
-        isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
-      }`}
-      style={{
-        position: isOpen ? 'relative' : 'absolute',
-        right: 0,
-      }}
-    >
-      {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="font-semibold text-lg">{comments.length} Comments</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Comments List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {comments.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            <p>No comments yet</p>
-            <p className="text-sm">Be the first to comment!</p>
-          </div>
-        ) : (
-          comments.map((comment, index) => (
-            <div 
-              key={comment.id} 
-              className="flex gap-3 animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <ProfileLink username={comment.profile?.username || 'user'}>
-                <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage src={comment.profile?.avatar_url || ''} />
-                  <AvatarFallback>{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-              </ProfileLink>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <ProfileLink username={comment.profile?.username || 'user'}>
-                    <span className="font-semibold text-sm">
-                      @{comment.profile?.username || 'user'}
-                    </span>
-                  </ProfileLink>
-                  <span className="text-xs text-muted-foreground">
-                    {formatTime(comment.created_at)}
-                  </span>
-                </div>
-                <p className="text-sm break-words">{comment.content}</p>
-              </div>
-              {authUser?.id === comment.user_id && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 hover:bg-destructive/20"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(comment.id);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              )}
+    <>
+      {/* Backdrop */}
+      <div 
+        className={`hidden lg:block fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+      
+      {/* Floating Comments Bubble */}
+      <div 
+        className={`hidden lg:flex flex-col fixed right-8 top-1/2 -translate-y-1/2 w-[380px] max-h-[70vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl z-50 overflow-hidden transition-all duration-500 ease-out ${
+          isOpen 
+            ? 'translate-x-0 opacity-100 scale-100' 
+            : 'translate-x-[120%] opacity-0 scale-95 pointer-events-none'
+        }`}
+        style={{
+          boxShadow: isOpen ? '0 25px 80px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset' : 'none',
+        }}
+      >
+        {/* Header with gradient */}
+        <div className="relative p-5 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-primary" />
             </div>
-          ))
-        )}
-        <div ref={commentsEndRef} />
-      </div>
-
-      {/* Comment Input */}
-      {authUser && (
-        <form onSubmit={handleSubmit} className="p-4 border-t border-border flex gap-2">
-          <Input
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            className="flex-1 rounded-full"
-            disabled={loading}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!newComment.trim() || loading}
-            className="rounded-full"
+            <div>
+              <h2 className="font-bold text-lg">{comments.length} Comments</h2>
+              <p className="text-xs text-muted-foreground">Join the conversation</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
-            <Send className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </Button>
-        </form>
-      )}
+        </div>
+
+        {/* Comments List */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+          {comments.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
+                <MessageCircle className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="font-medium text-foreground">No comments yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Be the first to share your thoughts!</p>
+            </div>
+          ) : (
+            comments.map((comment, index) => (
+              <div 
+                key={comment.id} 
+                className="flex gap-3 p-3 rounded-2xl bg-secondary/30 hover:bg-secondary/50 transition-all duration-200 group animate-comment-in"
+                style={{ animationDelay: `${index * 40}ms` }}
+              >
+                <ProfileLink username={comment.profile?.username || 'user'}>
+                  <Avatar className="w-9 h-9 flex-shrink-0 ring-2 ring-background">
+                    <AvatarImage src={comment.profile?.avatar_url || ''} />
+                    <AvatarFallback className="text-sm">{comment.profile?.display_name?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                </ProfileLink>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ProfileLink username={comment.profile?.username || 'user'}>
+                      <span className="font-semibold text-sm hover:text-primary transition-colors">
+                        @{comment.profile?.username || 'user'}
+                      </span>
+                    </ProfileLink>
+                    <span className="text-xs text-muted-foreground">
+                      {formatTime(comment.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm break-words leading-relaxed">{comment.content}</p>
+                </div>
+                {authUser?.id === comment.user_id && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(comment.id);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            ))
+          )}
+          <div ref={commentsEndRef} />
+        </div>
+
+        {/* Comment Input with modern styling */}
+        {authUser && (
+          <form onSubmit={handleSubmit} className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-xl">
+            <div className="flex gap-3 items-center">
+              <Avatar className="w-8 h-8 flex-shrink-0">
+                <AvatarFallback className="text-xs">You</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 relative">
+                <Input
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write a comment..."
+                  className="pr-12 rounded-full border-border/50 bg-secondary/50 focus:bg-background transition-colors"
+                  disabled={loading}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!newComment.trim() || loading}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes commentIn {
+          from { 
+            opacity: 0; 
+            transform: translateX(20px) scale(0.95); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateX(0) scale(1); 
+          }
         }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out forwards;
+        .animate-comment-in {
+          animation: commentIn 0.4s ease-out forwards;
           opacity: 0;
         }
       `}</style>
-    </div>
+    </>
   );
 };
 

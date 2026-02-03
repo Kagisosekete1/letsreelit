@@ -19,6 +19,8 @@ import { useUser } from '@/contexts/UserContext';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/ui/PullToRefresh';
 import { useNotificationCountsDetailed } from '@/components/ui/NotificationBadge';
+import { deduplicateNotifications } from '@/lib/notificationDeduplication';
+
 interface Notification {
   id: string;
   type: string;
@@ -322,9 +324,12 @@ const Inbox = () => {
   }, [conversations, searchQuery]);
 
   const filteredNotifications = useMemo(() => {
-    if (!searchQuery.trim()) return notifications;
+    // First deduplicate notifications
+    const deduplicated = deduplicateNotifications(notifications);
+    
+    if (!searchQuery.trim()) return deduplicated;
     const q = searchQuery.toLowerCase();
-    return notifications.filter(n => 
+    return deduplicated.filter(n => 
       n.from_user?.display_name?.toLowerCase().includes(q) ||
       n.from_user?.username?.toLowerCase().includes(q) ||
       n.type.toLowerCase().includes(q)
