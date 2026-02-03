@@ -287,7 +287,7 @@ const MonetizationAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 overflow-y-auto">
+    <div className="min-h-screen bg-background pb-20 overflow-y-auto overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">

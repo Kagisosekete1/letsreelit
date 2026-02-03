@@ -16,8 +16,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   const tabs = [
     { id: 'home', icon: Film, label: 'Reels' },
     { id: 'tutorials', icon: Search, label: 'Search' },
-    { id: 'create', icon: Plus, label: 'Create', special: true },
     { id: 'notifications', icon: Heart, label: 'Activity', badge: hasUnreadActivity },
+    { id: 'create', icon: Plus, label: 'Create', special: true },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox', badge: hasUnreadInbox },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
