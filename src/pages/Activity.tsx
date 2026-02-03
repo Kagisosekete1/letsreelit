@@ -37,7 +37,7 @@ interface Notification {
 type ViewState = 
   | { type: 'list' }
   | { type: 'profile'; userId: string }
-  | { type: 'reel'; reelId: string };
+  | { type: 'reel'; reelId: string; notificationType?: string };
 
 const Activity = () => {
   const [activeTab, setActiveTab] = useState('notifications');
@@ -196,9 +196,13 @@ const Activity = () => {
       prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
     );
 
-    // Navigate based on type
+    // Navigate based on type - for comments, pass the notification type to open comments
     if (notif.reel_id) {
-      setViewState({ type: 'reel', reelId: notif.reel_id });
+      setViewState({ 
+        type: 'reel', 
+        reelId: notif.reel_id, 
+        notificationType: notif.type 
+      });
     } else if (notif.type === 'follow' && notif.from_user_id) {
       setViewState({ type: 'profile', userId: notif.from_user_id });
     }
@@ -367,6 +371,8 @@ const Activity = () => {
           isOpen={true}
           onClose={handleBackToList}
           reelId={viewState.reelId}
+          notificationType={viewState.notificationType}
+          openCommentsOnLoad={viewState.notificationType === 'comment'}
         />
       )}
     </div>
