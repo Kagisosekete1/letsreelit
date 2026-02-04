@@ -68,6 +68,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
 
   const handleSettingsClick = () => {
     onTabChange('settings');
+    navigate('/settings');
   };
 
   const toggleTheme = () => {

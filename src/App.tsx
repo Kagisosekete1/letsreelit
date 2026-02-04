@@ -28,6 +28,7 @@ import NotificationPreferencesPage from "./components/settings/NotificationPrefe
 import NotFound from "./pages/NotFound";
 import AdminPayouts from "./pages/AdminPayouts";
 import MonetizationAnalytics from "./pages/MonetizationAnalytics";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,11 @@ const AppRoutes = () => {
         <Route path="/monetization-analytics" element={
           <ProtectedRoute>
             <MonetizationAnalytics />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
