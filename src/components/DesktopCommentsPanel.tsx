@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
-import { sendCommentNotification } from '@/services/notificationService';
+import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
 
 interface Comment {
   id: string;
@@ -45,7 +45,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; userId: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -158,6 +158,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
         variant: 'destructive',
       });
     } else {
+      const savedReplyingTo = replyingTo; // Save before clearing
       setNewComment('');
       setReplyingTo(null);
       await fetchComments();
@@ -174,9 +175,16 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
         .update({ comments_count: (reel?.comments_count || 0) + 1 })
         .eq('id', reelId);
 
-      // Send notification
+      // Send notifications
       const ownerId = reelOwnerId || reel?.user_id;
-      if (ownerId && ownerId !== authUser.id) {
+      
+      // If this is a reply, notify the original commenter
+      if (savedReplyingTo && savedReplyingTo.userId !== authUser.id) {
+        void sendCommentReplyNotification(savedReplyingTo.userId, authUser.id, reelId, commentText);
+      }
+      
+      // Also notify reel owner if different from replier and original commenter
+      if (ownerId && ownerId !== authUser.id && (!savedReplyingTo || ownerId !== savedReplyingTo.userId)) {
         void sendCommentNotification(ownerId, authUser.id, reelId, commentText);
       }
       
@@ -281,6 +289,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     setReplyingTo({
       id: comment.id,
       username: comment.profile?.username || 'user',
+      userId: comment.user_id,
     });
   };
 
@@ -344,22 +353,24 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - highest z-index layer */}
       <div 
-        className={`hidden lg:block fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`hidden lg:block fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
+        style={{ zIndex: 9998 }}
         onClick={onClose}
       />
       
-      {/* Floating Comments Bubble */}
+      {/* Floating Comments Bubble - on top of everything */}
       <div 
-        className={`hidden lg:flex flex-col fixed right-8 top-1/2 -translate-y-1/2 w-[380px] max-h-[70vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl z-50 overflow-hidden transition-all duration-500 ease-out ${
+        className={`hidden lg:flex flex-col fixed right-8 top-1/2 -translate-y-1/2 w-[380px] max-h-[70vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ease-out ${
           isOpen 
             ? 'translate-x-0 opacity-100 scale-100' 
             : 'translate-x-[120%] opacity-0 scale-95 pointer-events-none'
         }`}
         style={{
+          zIndex: 9999,
           boxShadow: isOpen ? '0 25px 80px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset' : 'none',
         }}
       >

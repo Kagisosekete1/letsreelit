@@ -135,6 +135,7 @@ const Activity = () => {
       case 'follow': return 'New Follower';
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
+      case 'comment_reply': return 'Reply to Comment';
       default: return 'Notification';
     }
   };
@@ -144,6 +145,7 @@ const Activity = () => {
       case 'follow': return 'started following you';
       case 'like': return 'liked your Muv';
       case 'comment': return 'commented on your Muv';
+      case 'comment_reply': return 'replied to your comment';
       default: return 'interacted with you';
     }
   };
@@ -153,6 +155,7 @@ const Activity = () => {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'comment_reply': return <MessageCircle className="w-4 h-4 text-primary" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };
@@ -196,7 +199,7 @@ const Activity = () => {
       prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
     );
 
-    // Navigate based on type - for comments, pass the notification type to open comments
+    // Navigate based on type - for comments and replies, pass the notification type to open comments
     if (notif.reel_id) {
       setViewState({ 
         type: 'reel', 
@@ -365,14 +368,14 @@ const Activity = () => {
       <CreateReelModal isOpen={isCreateReelOpen} onClose={() => setIsCreateReelOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       
-      {/* Notification Reel Modal */}
+      {/* Notification Reel Modal - open comments for comment_reply as well */}
       {viewState.type === 'reel' && (
         <NotificationReelModal
           isOpen={true}
           onClose={handleBackToList}
           reelId={viewState.reelId}
           notificationType={viewState.notificationType}
-          openCommentsOnLoad={viewState.notificationType === 'comment'}
+          openCommentsOnLoad={viewState.notificationType === 'comment' || viewState.notificationType === 'comment_reply'}
         />
       )}
     </div>

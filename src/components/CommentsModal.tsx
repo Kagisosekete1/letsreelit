@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
-import { sendCommentNotification } from '@/services/notificationService';
+import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
 
 interface Comment {
   id: string;
@@ -45,7 +45,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; userId: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -159,6 +159,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         variant: 'destructive',
       });
     } else {
+      const savedReplyingTo = replyingTo; // Save before clearing
       setNewComment('');
       setReplyingTo(null);
       await fetchComments();
@@ -175,9 +176,16 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         .update({ comments_count: (reel?.comments_count || 0) + 1 })
         .eq('id', reelId);
 
-      // Send in-app + push via backend (prevents duplicates)
+      // Send notifications
       const ownerId = reelOwnerId || reel?.user_id;
-      if (ownerId && ownerId !== authUser.id) {
+      
+      // If this is a reply, notify the original commenter
+      if (savedReplyingTo && savedReplyingTo.userId !== authUser.id) {
+        void sendCommentReplyNotification(savedReplyingTo.userId, authUser.id, reelId, commentText);
+      }
+      
+      // Also notify reel owner if different from replier and original commenter
+      if (ownerId && ownerId !== authUser.id && (!savedReplyingTo || ownerId !== savedReplyingTo.userId)) {
         void sendCommentNotification(ownerId, authUser.id, reelId, commentText);
       }
       
@@ -282,6 +290,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
     setReplyingTo({
       id: comment.id,
       username: comment.profile?.username || 'user',
+      userId: comment.user_id,
     });
   };
 
@@ -354,6 +363,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         className="max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down"
         style={{
           animation: isOpen ? 'slideUp 0.3s ease-out' : 'slideDown 0.3s ease-in',
+          zIndex: 9999,
         }}
       >
         <DialogHeader className="p-4 border-b border-border">

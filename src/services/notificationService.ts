@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface NotificationPayload {
   userId: string;
   fromUserId: string;
-  type: 'like' | 'comment' | 'follow' | 'new_reel';
+  type: 'like' | 'comment' | 'follow' | 'new_reel' | 'comment_reply';
   reelId?: string;
   message?: string;
 }
@@ -106,6 +106,31 @@ export const sendCommentNotification = async (
     type: 'comment',
     reelId,
     message: commentText.slice(0, 100), // Truncate long comments
+  });
+};
+
+/**
+ * Send notification when someone replies to a comment
+ */
+export const sendCommentReplyNotification = async (
+  originalCommenterId: string,
+  replierId: string,
+  reelId: string,
+  replyText: string
+): Promise<void> => {
+  // Don't notify if user replied to their own comment
+  if (originalCommenterId === replierId) return;
+
+  // Check for duplicate notification (5 second window for replies)
+  const exists = await checkNotificationExists(originalCommenterId, replierId, 'comment_reply', reelId, 5000);
+  if (exists) return;
+
+  await sendPushNotification({
+    userId: originalCommenterId,
+    fromUserId: replierId,
+    type: 'comment_reply',
+    reelId,
+    message: replyText.slice(0, 100),
   });
 };
 

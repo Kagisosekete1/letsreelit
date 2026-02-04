@@ -120,11 +120,11 @@ const NotificationProfileView: React.FC<NotificationProfileViewProps> = ({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-card/95 backdrop-blur-xl rounded-3xl border border-border/50 shadow-2xl">
       {/* Header */}
-      <div className="sticky top-0 bg-background z-10 p-4 border-b border-border">
+      <div className="sticky top-0 bg-card/80 backdrop-blur-lg z-10 p-4 border-b border-border/50 rounded-t-3xl">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full hover:bg-secondary">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h2 className="font-semibold">@{profile.username}</h2>
