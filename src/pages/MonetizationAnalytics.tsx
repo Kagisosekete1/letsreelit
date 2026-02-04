@@ -287,9 +287,9 @@ const MonetizationAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 overflow-y-auto overflow-x-hidden">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background border-b border-border px-4 py-3">
+      <div className="sticky top-0 z-50 bg-background border-b border-border px-4 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
@@ -309,21 +309,23 @@ const MonetizationAnalytics: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Eligibility Status */}
-        {eligibility && !eligibility.isEligible && (
-          <div className="bg-secondary/30 rounded-2xl p-4">
-            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              Path to Monetization
-            </h3>
-            <div className="space-y-2">
-              {eligibility.missingRequirements.map((req, idx) => (
-                <p key={idx} className="text-sm text-muted-foreground">• {req}</p>
-              ))}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto pb-24 lg:pb-8">
+        <div className="p-4 space-y-6">
+          {/* Eligibility Status */}
+          {eligibility && !eligibility.isEligible && (
+            <div className="bg-secondary/30 rounded-2xl p-4">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Path to Monetization
+              </h3>
+              <div className="space-y-2">
+                {eligibility.missingRequirements.map((req, idx) => (
+                  <p key={idx} className="text-sm text-muted-foreground">• {req}</p>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Total Earnings Card */}
         <div className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-5">
@@ -512,6 +514,7 @@ const MonetizationAnalytics: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </div>
 
       <BottomNavigation activeTab="profile" onTabChange={(tab) => {

@@ -7,7 +7,7 @@ import HomeScreen from '@/components/HomeScreen';
 import SplashScreen from '@/components/SplashScreen';
 import CreateReelModal from '@/components/CreateReelModal';
 import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
-import SettingsModal from '@/components/SettingsModal';
+
 import DesktopCommentsPanel from '@/components/DesktopCommentsPanel';
 import { Screen } from '@/types';
 
@@ -27,7 +27,7 @@ const Index = () => {
   });
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   // Desktop comments panel state
   const [desktopCommentsReelId, setDesktopCommentsReelId] = useState<string | null>(null);
   const [desktopCommentsOwnerId, setDesktopCommentsOwnerId] = useState<string | null>(null);
@@ -83,7 +83,7 @@ const Index = () => {
         navigate('/profile'); 
         break;
       case 'settings':
-        setIsSettingsOpen(true);
+        navigate('/settings');
         break;
     }
   };
@@ -174,10 +174,6 @@ const Index = () => {
       <CreateReelModal 
         isOpen={isCreateReelOpen} 
         onClose={handleCreateReelClose} 
-      />
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
       />
     </div>
   );
