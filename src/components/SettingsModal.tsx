@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { 
@@ -16,7 +15,9 @@ import {
   DollarSign,
   Wifi,
   HardDrive,
-  Bug
+  Bug,
+  Settings,
+  X
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useDebug } from '@/contexts/DebugContext';
@@ -39,7 +40,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { signOut } = useUser();
   const { showVideoDebug, setShowVideoDebug } = useDebug();
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [openModal, setOpenModal] = useState<string | null>(null);
 
   const handleLogout = async () => {
@@ -49,8 +50,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
   };
 
   const toggleVideoDebug = () => {
@@ -95,13 +103,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto bg-card border-border rounded-3xl shadow-2xl">
-          <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="text-xl font-semibold text-foreground">Settings</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
+      {/* Backdrop */}
+      <div 
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ zIndex: 9998 }}
+        onClick={onClose}
+      />
+      
+      {/* Floating Settings Bubble */}
+      <div 
+        className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[420px] max-h-[85vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ease-out ${
+          isOpen 
+            ? 'scale-100 opacity-100' 
+            : 'scale-95 opacity-0 pointer-events-none'
+        }`}
+        style={{
+          zIndex: 9999,
+          boxShadow: isOpen ? '0 25px 80px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset' : 'none',
+        }}
+      >
+        {/* Header with gradient */}
+        <div className="relative p-5 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">Settings</h2>
+              <p className="text-xs text-muted-foreground">Manage your preferences</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+        
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto max-h-[calc(85vh-180px)] px-4 py-4">
+          <div className="space-y-6">
             {settingsSections.map((section, idx) => (
               <div key={idx}>
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">
@@ -129,19 +175,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
             ))}
-
-            {/* Logout Button */}
-            <Button
-              variant="destructive"
-              className="w-full rounded-2xl h-12"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Log Out
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+
+        {/* Logout Button - Fixed at bottom */}
+        <div className="p-4 border-t border-border/50 bg-background/50 backdrop-blur-xl">
+          <Button
+            variant="destructive"
+            className="w-full rounded-2xl h-12"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Log Out
+          </Button>
+        </div>
+      </div>
 
       {/* Sub-modals */}
       <AccountInfoModal isOpen={openModal === 'account'} onClose={() => setOpenModal(null)} />

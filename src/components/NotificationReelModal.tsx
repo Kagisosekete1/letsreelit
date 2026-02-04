@@ -61,9 +61,9 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
     }
   }, [isOpen, reelId, authUser]);
 
-  // Auto-open comments for comment notifications
+  // Auto-open comments for comment/reply notifications
   useEffect(() => {
-    if (isOpen && reel && (notificationType === 'comment' || openCommentsOnLoad)) {
+    if (isOpen && reel && (notificationType === 'comment' || notificationType === 'comment_reply' || openCommentsOnLoad)) {
       // Small delay to let the modal render first
       const timer = setTimeout(() => {
         if (isMobile) {
