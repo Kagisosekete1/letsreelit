@@ -532,7 +532,9 @@ const UserProfile = () => {
                   key={reel.id}
                   videoUrl={reel.video_url}
                   thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
+                  likesCount={reel.likes_count || 0}
+                  commentsCount={reel.comments_count || 0}
+                  showStats={true}
                   onClick={() => setSelectedReelIndex(index)}
                 />
               ))}
@@ -555,7 +557,9 @@ const UserProfile = () => {
                   key={reel.id}
                   videoUrl={reel.video_url}
                   thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
+                  likesCount={reel.likes_count || 0}
+                  commentsCount={reel.comments_count || 0}
+                  showStats={true}
                   onClick={() => setSelectedReelIndex(userReels.findIndex(r => r.id === reel.id))}
                 />
               ))}

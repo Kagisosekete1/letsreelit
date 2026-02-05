@@ -359,7 +359,10 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={{ zIndex: 99998 }}
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
       />
       
       {/* Floating Comments Bubble - on top of everything */}
@@ -367,12 +370,13 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
         className={`hidden lg:flex flex-col fixed right-8 top-1/2 -translate-y-1/2 w-[380px] max-h-[70vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ease-out ${
           isOpen 
             ? 'translate-x-0 opacity-100 scale-100' 
-            : 'translate-x-[120%] opacity-0 scale-95 pointer-events-none'
+            : 'translate-x-[120%] opacity-0 scale-95 invisible'
         }`}
         style={{
           zIndex: 99999,
           boxShadow: isOpen ? '0 25px 80px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset' : 'none',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header with gradient */}
         <div className="relative p-5 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent">

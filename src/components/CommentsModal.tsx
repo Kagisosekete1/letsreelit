@@ -365,6 +365,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           animation: isOpen ? 'slideUp 0.3s ease-out' : 'slideDown 0.3s ease-in',
           zIndex: 99999,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="text-center">{comments.length} Comments</DialogTitle>
