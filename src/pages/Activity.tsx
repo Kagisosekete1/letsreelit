@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import SettingsModal from '@/components/SettingsModal';
 import NotificationReelModal from '@/components/NotificationReelModal';
-import NotificationProfileView from '@/components/NotificationProfileView';
 import InboxSearch from '@/components/InboxSearch';
 import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,6 @@ interface Notification {
 
 type ViewState = 
   | { type: 'list' }
-  | { type: 'profile'; userId: string }
   | { type: 'reel'; reelId: string; notificationType?: string };
 
 const Activity = () => {
@@ -206,8 +204,9 @@ const Activity = () => {
         reelId: notif.reel_id, 
         notificationType: notif.type 
       });
-    } else if (notif.type === 'follow' && notif.from_user_id) {
-      setViewState({ type: 'profile', userId: notif.from_user_id });
+    } else if (notif.type === 'follow' && notif.from_user?.username) {
+      // Navigate to full user profile page
+      navigate(`/user/${notif.from_user.username}`);
     }
   };
 
@@ -248,29 +247,11 @@ const Activity = () => {
     }
   }, [navigate]);
 
-  const handleProfileReelClick = (reelId: string) => {
-    setViewState({ type: 'reel', reelId });
+  // Handle username click - navigate to full profile
+  const handleUsernameClick = (username: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/user/${username}`);
   };
-
-  // Profile view within notifications
-  if (viewState.type === 'profile') {
-    return (
-      <div className="min-h-screen bg-background">
-        <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-        <div className="lg:pl-[72px] xl:pl-[244px]">
-          <div className="relative h-screen overflow-hidden bg-background">
-            <NotificationProfileView
-              userId={viewState.userId}
-              onBack={handleBackToList}
-              onReelClick={handleProfileReelClick}
-            />
-            <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-          </div>
-        </div>
-        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -332,7 +313,14 @@ const Activity = () => {
                         } hover:bg-secondary`}
                       >
                         <div className="relative">
-                          <Avatar className="w-12 h-12">
+                          <Avatar 
+                            className="w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={(e) => {
+                              if (notif.from_user?.username) {
+                                handleUsernameClick(notif.from_user.username, e);
+                              }
+                            }}
+                          >
                             <AvatarImage src={notif.from_user?.avatar_url || ''} />
                             <AvatarFallback>{notif.from_user?.display_name?.[0] || '?'}</AvatarFallback>
                           </Avatar>
@@ -342,7 +330,16 @@ const Activity = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm">
-                            <span className="font-semibold">{notif.from_user?.display_name || 'Someone'}</span>
+                            <span 
+                              className="font-semibold hover:underline cursor-pointer"
+                              onClick={(e) => {
+                                if (notif.from_user?.username) {
+                                  handleUsernameClick(notif.from_user.username, e);
+                                }
+                              }}
+                            >
+                              {notif.from_user?.display_name || 'Someone'}
+                            </span>
                             {' '}{getNotificationAction(notif.type)}
                           </p>
                           <span className="text-xs text-muted-foreground">{formatTime(notif.created_at)}</span>

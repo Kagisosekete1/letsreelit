@@ -30,6 +30,8 @@ interface ReelData {
   video_url: string;
   thumbnail_url: string | null;
   views_count: number;
+  likes_count: number;
+  comments_count: number;
 }
 
 const NotificationProfileView: React.FC<NotificationProfileViewProps> = ({
@@ -63,7 +65,7 @@ const NotificationProfileView: React.FC<NotificationProfileViewProps> = ({
   const fetchReels = async () => {
     const { data } = await supabase
       .from('reels')
-      .select('id, video_url, thumbnail_url, views_count')
+      .select('id, video_url, thumbnail_url, views_count, likes_count, comments_count')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (data) setReels(data);
@@ -193,7 +195,9 @@ const NotificationProfileView: React.FC<NotificationProfileViewProps> = ({
                   key={reel.id}
                   videoUrl={reel.video_url}
                   thumbnailUrl={reel.thumbnail_url}
-                  viewsCount={reel.views_count || 0}
+                  likesCount={reel.likes_count || 0}
+                  commentsCount={reel.comments_count || 0}
+                  showStats={true}
                   onClick={() => onReelClick?.(reel.id)}
                 />
               ))}
