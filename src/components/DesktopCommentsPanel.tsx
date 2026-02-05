@@ -358,7 +358,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
         className={`hidden lg:block fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ zIndex: 9998 }}
+        style={{ zIndex: 99998 }}
         onClick={onClose}
       />
       
@@ -370,7 +370,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
             : 'translate-x-[120%] opacity-0 scale-95 pointer-events-none'
         }`}
         style={{
-          zIndex: 9999,
+          zIndex: 99999,
           boxShadow: isOpen ? '0 25px 80px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset' : 'none',
         }}
       >

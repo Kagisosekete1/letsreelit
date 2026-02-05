@@ -363,7 +363,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         className="max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down"
         style={{
           animation: isOpen ? 'slideUp 0.3s ease-out' : 'slideDown 0.3s ease-in',
-          zIndex: 9999,
+          zIndex: 99999,
         }}
       >
         <DialogHeader className="p-4 border-b border-border">
