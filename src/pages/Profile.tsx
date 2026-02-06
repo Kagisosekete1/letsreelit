@@ -20,6 +20,7 @@ import CreatorOnboardingModal from '@/components/CreatorOnboardingModal';
 import CreatorDashboardModal from '@/components/CreatorDashboardModal';
 import CreatorProgressWidget from '@/components/CreatorProgressWidget';
 import MobileViewWrapper from '@/components/MobileViewWrapper';
+import MuviiAssistant from '@/components/MuviiAssistant';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -279,6 +280,9 @@ const Profile = () => {
         />
         </div>
       </MobileViewWrapper>
+      
+      {/* MuVii AI Assistant */}
+      <MuviiAssistant />
     </div>
   </div>
   );

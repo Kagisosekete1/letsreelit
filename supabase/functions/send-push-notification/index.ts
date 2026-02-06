@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface PushPayload {
   userId: string;
-  type: 'like' | 'comment' | 'follow' | 'new_reel' | 'saved' | 'duet' | 'message';
+  type: 'like' | 'comment' | 'follow' | 'new_reel' | 'saved' | 'message';
   fromUserId: string;
   reelId?: string;
   message?: string;
@@ -42,7 +42,6 @@ serve(async (req) => {
       follow: 'follows',
       new_reel: 'new_reels',
       saved: 'likes', // Treat saved as likes category
-      duet: 'mentions',
       message: 'messages',
     };
 
@@ -110,10 +109,6 @@ serve(async (req) => {
       case 'saved':
         title = 'Reel Saved 🔖';
         body = `${senderName} saved your reel`;
-        break;
-      case 'duet':
-        title = 'New Duet 🎭';
-        body = `${senderName} created a duet with your reel`;
         break;
       case 'message':
         title = 'New Message 💬';
