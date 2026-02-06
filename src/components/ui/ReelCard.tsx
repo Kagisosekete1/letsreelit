@@ -15,7 +15,7 @@ import { useAudio } from '@/contexts/AudioContext';
 import { useVideoQuality } from '@/contexts/VideoQualityContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
-import DuetModal from '@/components/DuetModal';
+
 import EditReelModal from '@/components/EditReelModal';
 import ProfileLink from '@/components/ui/ProfileLink';
 import DoubleTapLikeAnimation from '@/components/ui/DoubleTapLikeAnimation';
@@ -204,7 +204,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   }, [reel.id]);
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showDuetModal, setShowDuetModal] = useState(false);
+  
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
@@ -1341,27 +1341,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
             </div>
             <span className="text-[10px] text-white mt-0.5">{isVideoCached(reel.id) ? 'Saved' : 'Save'}</span>
           </button>
-
-          {/* Duet */}
-          {!isOwner && (
-            <button
-              className="flex flex-col items-center"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!authUser) {
-                  toast({ title: 'Sign in required', description: 'Please sign in to create duets' });
-                  return;
-                }
-                setShowDuetModal(true);
-              }}
-            >
-              <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
-                <Users className={`${iconSize} text-white`} />
-              </div>
-              <span className="text-[10px] text-white mt-0.5">Duet</span>
-            </button>
-          )}
-
           {/* More Options */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1508,20 +1487,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
         videoUrl={reel.videoUrl}
       />
 
-      {/* Duet Modal */}
-      <DuetModal
-        isOpen={showDuetModal}
-        onClose={() => setShowDuetModal(false)}
-        originalReel={{
-          id: reel.id,
-          videoUrl: reel.videoUrl,
-          title: reel.title,
-          user: {
-            username: reel.user.username,
-            avatarUrl: reel.user.avatarUrl,
-          },
-        }}
-      />
 
       {/* Edit Reel Modal */}
       <EditReelModal
