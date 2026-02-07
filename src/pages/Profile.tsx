@@ -170,7 +170,8 @@ const Profile = () => {
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setSwitchAccountsOpen(true)} className="relative">
+            {/* Switch accounts only on mobile phones (< md breakpoint) */}
+            <Button variant="ghost" size="sm" onClick={() => setSwitchAccountsOpen(true)} className="relative md:hidden">
               <Users className="w-5 h-5" />
               {hasMultipleAccounts && (
                 <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
@@ -180,8 +181,6 @@ const Profile = () => {
               <Settings className="w-6 h-6" />
             </Button>
           </div>
-          {/* Empty spacer for desktop to maintain layout */}
-          <div className="hidden lg:block w-0 h-10" />
         </div>
 
         <div className="px-4 mb-6">
