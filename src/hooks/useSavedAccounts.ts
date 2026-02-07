@@ -11,6 +11,7 @@ export interface SavedAccount {
 }
 
 const STORAGE_KEY = 'muvit_saved_accounts';
+const AUTO_SAVE_KEY = 'muvit_auto_save_accounts';
 const MAX_ACCOUNTS = 4;
 
 function loadAccounts(): SavedAccount[] {
@@ -26,13 +27,27 @@ function persistAccounts(accounts: SavedAccount[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
 }
 
+export function getAutoSavePreference(): boolean {
+  try {
+    return localStorage.getItem(AUTO_SAVE_KEY) !== 'false'; // default true
+  } catch {
+    return true;
+  }
+}
+
+export function setAutoSavePreference(enabled: boolean) {
+  localStorage.setItem(AUTO_SAVE_KEY, enabled ? 'true' : 'false');
+}
+
 export function useSavedAccounts() {
   const [accounts, setAccounts] = useState<SavedAccount[]>(loadAccounts);
+  const [autoSave, setAutoSaveState] = useState(getAutoSavePreference);
 
   // Keep state in sync if another tab changes storage
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) setAccounts(loadAccounts());
+      if (e.key === AUTO_SAVE_KEY) setAutoSaveState(getAutoSavePreference());
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
@@ -61,5 +76,18 @@ export function useSavedAccounts() {
     [accounts],
   );
 
-  return { accounts, saveAccount, removeAccount, getAccount, isFull: accounts.length >= MAX_ACCOUNTS };
+  const setAutoSave = useCallback((enabled: boolean) => {
+    setAutoSavePreference(enabled);
+    setAutoSaveState(enabled);
+  }, []);
+
+  return {
+    accounts,
+    saveAccount,
+    removeAccount,
+    getAccount,
+    isFull: accounts.length >= MAX_ACCOUNTS,
+    autoSave,
+    setAutoSave,
+  };
 }

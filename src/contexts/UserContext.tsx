@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserProfile } from '@/types/user';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { getAutoSavePreference } from '@/hooks/useSavedAccounts';
+import type { SavedAccount } from '@/hooks/useSavedAccounts';
 
 interface UserContextType {
   currentUser: UserProfile | null;
@@ -72,6 +74,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthUser(session?.user ?? null);
       if (session?.user) {
         setTimeout(() => fetchProfile(session.user.id), 0);
+
+        // Auto-save account on sign-in if preference is enabled
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && getAutoSavePreference()) {
+          setTimeout(() => {
+            autoSaveCurrentSession(session);
+          }, 500); // small delay to let profile load
+        }
       } else {
         setCurrentUser(null);
       }
@@ -88,6 +97,45 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Auto-save the current session to localStorage
+  const autoSaveCurrentSession = async (session: any) => {
+    if (!session?.user || !session?.refresh_token) return;
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, display_name, avatar_url')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (!profile) return;
+
+      const STORAGE_KEY = 'muvit_saved_accounts';
+      const MAX_ACCOUNTS = 4;
+      let accounts: SavedAccount[] = [];
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        accounts = raw ? JSON.parse(raw) : [];
+      } catch { /* empty */ }
+
+      const newAccount: SavedAccount = {
+        userId: session.user.id,
+        email: session.user.email || '',
+        username: profile.username,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url || '',
+        refreshToken: session.refresh_token,
+        savedAt: Date.now(),
+      };
+
+      const filtered = accounts.filter((a: SavedAccount) => a.userId !== session.user.id);
+      const next = [newAccount, ...filtered].slice(0, MAX_ACCOUNTS);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // silently fail — auto-save is best-effort
+    }
+  };
 
   // Realtime: keep own Following/Followers counts in sync everywhere
   useEffect(() => {

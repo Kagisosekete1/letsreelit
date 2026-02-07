@@ -16,7 +16,7 @@ interface SwitchAccountsModalProps {
 
 const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClose }) => {
   const { currentUser, authUser } = useUser();
-  const { accounts, saveAccount, removeAccount, isFull } = useSavedAccounts();
+  const { accounts, saveAccount, removeAccount, isFull, autoSave, setAutoSave } = useSavedAccounts();
   const { toast } = useToast();
   const [saveLogin, setSaveLogin] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
@@ -155,6 +155,15 @@ const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClo
                   <p className="text-xs text-muted-foreground">Remember this session when switching</p>
                 </div>
                 <Switch checked={saveLogin} onCheckedChange={setSaveLogin} />
+              </div>
+
+              {/* Auto-save toggle */}
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Auto-Save Logins</p>
+                  <p className="text-xs text-muted-foreground">Automatically save every account you log into</p>
+                </div>
+                <Switch checked={autoSave} onCheckedChange={setAutoSave} />
               </div>
 
               {!isCurrentAccountSaved && (
