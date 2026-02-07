@@ -14,8 +14,11 @@ import {
   AlertCircle,
   LogOut,
   BarChart3,
-  Settings
+  Settings,
+  Users
 } from 'lucide-react';
+import { useSavedAccounts } from '@/hooks/useSavedAccounts';
+import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 import { useUser } from '@/contexts/UserContext';
 import {
@@ -37,6 +40,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const { currentUser, signOut } = useUser();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [switchAccountsOpen, setSwitchAccountsOpen] = useState(false);
+  const { accounts } = useSavedAccounts();
+  const hasMultipleAccounts = accounts.length > 1;
 
   const hasUnreadNotifications = counts.notifications > 0;
   const hasUnreadMessages = counts.messages > 0;
@@ -237,6 +243,24 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
                 <span>Dashboard</span>
               </Button>
 
+              {/* Switch Accounts */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl relative"
+                onClick={() => { setMoreOpen(false); setSwitchAccountsOpen(true); }}
+              >
+                <div className="relative">
+                  <Users className="w-5 h-5" />
+                  {hasMultipleAccounts && (
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
+                  )}
+                </div>
+                <span>Switch Accounts</span>
+                {hasMultipleAccounts && (
+                  <span className="ml-auto text-xs text-muted-foreground">{accounts.length}</span>
+                )}
+              </Button>
+
               <div className="h-px bg-border my-2" />
 
               {/* Logout */}
@@ -252,6 +276,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
           </PopoverContent>
         </Popover>
       </div>
+      <SwitchAccountsModal
+        isOpen={switchAccountsOpen}
+        onClose={() => setSwitchAccountsOpen(false)}
+      />
     </div>
   );
 };

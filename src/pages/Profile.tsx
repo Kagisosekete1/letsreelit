@@ -4,6 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users } from 'lucide-react';
+import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -58,6 +59,8 @@ const Profile = () => {
   const [creatorOnboardingOpen, setCreatorOnboardingOpen] = useState(false);
   const [creatorDashboardOpen, setCreatorDashboardOpen] = useState(false);
   const [switchAccountsOpen, setSwitchAccountsOpen] = useState(false);
+  const { accounts } = useSavedAccounts();
+  const hasMultipleAccounts = accounts.length > 1;
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
@@ -167,8 +170,11 @@ const Profile = () => {
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setSwitchAccountsOpen(true)}>
+            <Button variant="ghost" size="sm" onClick={() => setSwitchAccountsOpen(true)} className="relative">
               <Users className="w-5 h-5" />
+              {hasMultipleAccounts && (
+                <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
+              )}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)} className="lg:hidden">
               <Settings className="w-6 h-6" />
