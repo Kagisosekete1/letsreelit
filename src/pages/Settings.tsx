@@ -17,7 +17,8 @@ import {
   ChevronRight,
   LogOut,
   Video,
-  BarChart3
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +26,7 @@ import AccountInfoModal from '@/components/settings/AccountInfoModal';
 import PrivacySecurityModal from '@/components/settings/PrivacySecurityModal';
 import VideoQualityModal from '@/components/settings/VideoQualityModal';
 import HelpCenterModal from '@/components/settings/HelpCenterModal';
-
+import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
 const Settings = () => {
   const navigate = useNavigate();
   const { signOut } = useUser();
@@ -38,6 +39,7 @@ const Settings = () => {
   const [showPrivacySecurity, setShowPrivacySecurity] = useState(false);
   const [showVideoQuality, setShowVideoQuality] = useState(false);
   const [showHelpCenter, setShowHelpCenter] = useState(false);
+  const [showSwitchAccounts, setShowSwitchAccounts] = useState(false);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -87,6 +89,12 @@ const Settings = () => {
       label: 'Creator Dashboard', 
       description: 'Stats, earnings, monetization',
       onClick: () => navigate('/monetization-analytics')
+    },
+    { 
+      icon: Users, 
+      label: 'Switch Accounts', 
+      description: 'Manage up to 4 saved accounts',
+      onClick: () => setShowSwitchAccounts(true)
     },
     { 
       icon: Video, 
@@ -205,6 +213,10 @@ const Settings = () => {
       <HelpCenterModal 
         isOpen={showHelpCenter} 
         onClose={() => setShowHelpCenter(false)} 
+      />
+      <SwitchAccountsModal 
+        isOpen={showSwitchAccounts} 
+        onClose={() => setShowSwitchAccounts(false)} 
       />
     </div>
   );
