@@ -66,15 +66,12 @@ const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClo
         }
       }
 
-      // Sign out current session first
-      await supabase.auth.signOut();
-
-      // Restore saved session via refresh token
-      const { error } = await supabase.auth.refreshSession({
+      // Restore saved session via refresh token (no sign-out first — let refresh handle it)
+      const { data, error } = await supabase.auth.refreshSession({
         refresh_token: account.refreshToken,
       });
 
-      if (error) {
+      if (error || !data.session) {
         toast({
           title: 'Session expired',
           description: 'Please log in again for this account.',
@@ -82,6 +79,12 @@ const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClo
         });
         removeAccount(account.userId);
       } else {
+        // Update the saved refresh token with the fresh one
+        saveAccount({
+          ...account,
+          refreshToken: data.session.refresh_token,
+          savedAt: Date.now(),
+        });
         toast({ title: `Switched to @${account.username}` });
         onClose();
       }
