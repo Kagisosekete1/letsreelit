@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3 } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users } from 'lucide-react';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -21,6 +21,7 @@ import CreatorDashboardModal from '@/components/CreatorDashboardModal';
 import CreatorProgressWidget from '@/components/CreatorProgressWidget';
 import MobileViewWrapper from '@/components/MobileViewWrapper';
 import MuviiAssistant from '@/components/MuviiAssistant';
+import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileHeaderSkeleton, ProfileGridSkeleton } from '@/components/ui/ProfileSkeleton';
 
@@ -56,6 +57,7 @@ const Profile = () => {
   const [badgesModal, setBadgesModal] = useState(false);
   const [creatorOnboardingOpen, setCreatorOnboardingOpen] = useState(false);
   const [creatorDashboardOpen, setCreatorDashboardOpen] = useState(false);
+  const [switchAccountsOpen, setSwitchAccountsOpen] = useState(false);
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
@@ -164,12 +166,16 @@ const Profile = () => {
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="w-6 h-6" /></Button>
           <h1 className="text-lg font-semibold">@{currentUser.username}</h1>
-          {/* Settings icon only on mobile */}
-          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)} className="lg:hidden">
-            <Settings className="w-6 h-6" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setSwitchAccountsOpen(true)}>
+              <Users className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)} className="lg:hidden">
+              <Settings className="w-6 h-6" />
+            </Button>
+          </div>
           {/* Empty spacer for desktop to maintain layout */}
-          <div className="hidden lg:block w-10 h-10" />
+          <div className="hidden lg:block w-0 h-10" />
         </div>
 
         <div className="px-4 mb-6">
@@ -277,6 +283,10 @@ const Profile = () => {
         <NotificationsModal 
           isOpen={isNotificationsOpen} 
           onClose={() => setIsNotificationsOpen(false)} 
+        />
+        <SwitchAccountsModal
+          isOpen={switchAccountsOpen}
+          onClose={() => setSwitchAccountsOpen(false)}
         />
         </div>
       </MobileViewWrapper>
