@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import ReelCard from '@/components/ui/ReelCard';
@@ -14,8 +12,8 @@ interface NotificationReelModalProps {
   isOpen: boolean;
   onClose: () => void;
   reelId: string;
-  notificationType?: string; // 'like' | 'comment' | 'new_reel' etc
-  openCommentsOnLoad?: boolean; // Automatically open comments when modal opens
+  notificationType?: string;
+  openCommentsOnLoad?: boolean;
 }
 
 interface ReelData {
@@ -60,12 +58,16 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
       fetchReel();
       if (authUser) fetchFollowing();
     }
+    if (!isOpen) {
+      setReel(null);
+      setShowComments(false);
+      setShowDesktopComments(false);
+    }
   }, [isOpen, reelId, authUser]);
 
   // Auto-open comments for comment/reply notifications
   useEffect(() => {
     if (isOpen && reel && (notificationType === 'comment' || notificationType === 'comment_reply' || openCommentsOnLoad)) {
-      // Small delay to let the modal render first
       const timer = setTimeout(() => {
         if (isMobile) {
           setShowComments(true);
@@ -150,14 +152,27 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
     }
   };
 
-  const handleOpenDesktopComments = () => {
+  const handleOpenDesktopComments = useCallback(() => {
     setShowDesktopComments(true);
-  };
+  }, []);
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    // Only close if clicking the overlay background itself
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }, [onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md w-full h-[85vh] p-0 bg-black border-none rounded-3xl overflow-hidden">
+      {/* Custom overlay — no Radix Dialog, no pointer-event trapping */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-in fade-in-0 duration-200"
+        onClick={handleOverlayClick}
+      >
+        <div className="relative max-w-md w-full h-[85vh] bg-black rounded-3xl overflow-hidden">
           {/* Back button */}
           <Button
             variant="ghost"
@@ -189,29 +204,27 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
               <p>Reel not found</p>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
-      {/* Mobile Comments Modal - portaled to escape Radix Dialog modal trapping */}
-      {reel && createPortal(
+      {/* Mobile Comments Modal */}
+      {reel && (
         <CommentsModal
           isOpen={showComments}
           onClose={() => setShowComments(false)}
           reelId={reel.id}
           reelOwnerId={reel.user.id}
-        />,
-        document.body
+        />
       )}
 
-      {/* Desktop Comments Panel - portaled to escape Radix Dialog modal trapping */}
-      {reel && showDesktopComments && createPortal(
+      {/* Desktop Comments Panel */}
+      {reel && showDesktopComments && (
         <DesktopCommentsPanel
           isOpen={showDesktopComments}
           onClose={() => setShowDesktopComments(false)}
           reelId={reel.id}
           reelOwnerId={reel.user.id}
-        />,
-        document.body
+        />
       )}
     </>
   );
