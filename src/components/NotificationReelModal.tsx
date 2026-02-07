@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -191,24 +192,26 @@ const NotificationReelModal: React.FC<NotificationReelModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Comments Modal */}
-      {reel && (
+      {/* Mobile Comments Modal - portaled to escape Radix Dialog modal trapping */}
+      {reel && createPortal(
         <CommentsModal
           isOpen={showComments}
           onClose={() => setShowComments(false)}
           reelId={reel.id}
           reelOwnerId={reel.user.id}
-        />
+        />,
+        document.body
       )}
 
-      {/* Desktop Comments Panel */}
-      {reel && showDesktopComments && (
+      {/* Desktop Comments Panel - portaled to escape Radix Dialog modal trapping */}
+      {reel && showDesktopComments && createPortal(
         <DesktopCommentsPanel
           isOpen={showDesktopComments}
           onClose={() => setShowDesktopComments(false)}
           reelId={reel.id}
           reelOwnerId={reel.user.id}
-        />
+        />,
+        document.body
       )}
     </>
   );
