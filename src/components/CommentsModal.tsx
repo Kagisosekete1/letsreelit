@@ -358,14 +358,17 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
       <DialogContent 
-        className="max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down"
+        className="comments-modal-content max-w-md h-[70vh] flex flex-col p-0 rounded-t-3xl data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down"
         style={{
           animation: isOpen ? 'slideUp 0.3s ease-out' : 'slideDown 0.3s ease-in',
-          zIndex: 99999,
+          zIndex: 100001,
+          position: 'fixed',
         }}
         onClick={(e) => e.stopPropagation()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="text-center">{comments.length} Comments</DialogTitle>
@@ -493,25 +496,17 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
       </DialogContent>
 
       <style>{`
+        /* Ensure CommentsModal portal overlay sits above all parent dialogs */
+        [data-radix-portal]:has(.comments-modal-content) > [data-radix-dialog-overlay] {
+          z-index: 100000 !important;
+        }
         @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         @keyframes slideDown {
-          from {
-            transform: translateY(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateY(100%);
-            opacity: 0;
-          }
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(100%); opacity: 0; }
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
