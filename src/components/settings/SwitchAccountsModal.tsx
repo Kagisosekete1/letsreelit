@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, Plus, X, UserCheck, LogIn } from 'lucide-react';
+import { ArrowLeft, Plus, X, UserCheck, LogIn, LogOut } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { useSavedAccounts, SavedAccount } from '@/hooks/useSavedAccounts';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +16,7 @@ interface SwitchAccountsModalProps {
 
 const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClose }) => {
   const { currentUser, authUser } = useUser();
-  const { accounts, saveAccount, removeAccount, isFull, autoSave, setAutoSave } = useSavedAccounts();
+  const { accounts, saveAccount, removeAccount, clearAllAccounts, isFull, autoSave, setAutoSave } = useSavedAccounts();
   const { toast } = useToast();
   const [saveLogin, setSaveLogin] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
@@ -248,6 +248,23 @@ const SwitchAccountsModal: React.FC<SwitchAccountsModalProps> = ({ isOpen, onClo
                 <p className="text-sm text-muted-foreground">Log in with a different account</p>
               </div>
             </button>
+          )}
+
+          {/* Log Out of All Accounts */}
+          {accounts.length > 0 && (
+            <Button
+              variant="destructive"
+              className="w-full rounded-xl"
+              onClick={async () => {
+                clearAllAccounts();
+                await supabase.auth.signOut();
+                toast({ title: 'Logged out of all accounts' });
+                window.location.href = '/auth';
+              }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Log Out of All Accounts
+            </Button>
           )}
 
           {/* Info */}
