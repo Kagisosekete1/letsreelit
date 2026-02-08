@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, Clock, Trash2 } from 'lucide-react';
+import { Upload, Clock, Trash2, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReelUploadModal from './ReelUploadModal';
+import GoLiveModal from './GoLiveModal';
 
 interface Draft {
   id: string;
@@ -22,6 +23,7 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
 
   // Load drafts from localStorage
@@ -93,7 +95,15 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
     });
   };
 
-  // Only upload option - Live is hidden for now
+  const handleGoLive = () => {
+    setShowGoLiveModal(true);
+  };
+
+  const handleGoLiveClose = () => {
+    setShowGoLiveModal(false);
+    onClose();
+  };
+
   const options = [
     {
       icon: Upload,
@@ -102,8 +112,18 @@ const CreateReelModal: React.FC<CreateReelModalProps> = ({ isOpen, onClose }) =>
       color: 'bg-primary',
       action: handleUpload,
     },
-    // Go Live option hidden - will be implemented soon
+    {
+      icon: Radio,
+      title: 'Go Live',
+      description: 'Start a live stream with your followers',
+      color: 'bg-destructive',
+      action: handleGoLive,
+    },
   ];
+
+  if (showGoLiveModal) {
+    return <GoLiveModal isOpen={showGoLiveModal} onClose={handleGoLiveClose} />;
+  }
 
   if (showUploadModal && selectedFile) {
     return (

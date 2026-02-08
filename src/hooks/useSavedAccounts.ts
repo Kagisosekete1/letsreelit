@@ -71,6 +71,11 @@ export function useSavedAccounts() {
     });
   }, []);
 
+  const clearAllAccounts = useCallback(() => {
+    persistAccounts([]);
+    setAccounts([]);
+  }, []);
+
   const getAccount = useCallback(
     (userId: string) => accounts.find((a) => a.userId === userId) ?? null,
     [accounts],
@@ -85,6 +90,7 @@ export function useSavedAccounts() {
     accounts,
     saveAccount,
     removeAccount,
+    clearAllAccounts,
     getAccount,
     isFull: accounts.length >= MAX_ACCOUNTS,
     autoSave,
