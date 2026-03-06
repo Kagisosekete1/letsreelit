@@ -45,6 +45,7 @@ interface ReelData {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause, onRegisterResume, onOpenDesktopComments }) => {
   const { currentUser, authUser } = useUser();
+  const navigate = useNavigate();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
