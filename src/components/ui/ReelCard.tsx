@@ -1474,26 +1474,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </div>
         )}
       </div>
-
-  const handleRepost = async () => {
-    if (!authUser) {
-      toast({ title: 'Sign in to repost', variant: 'destructive' });
-      return;
-    }
-    if (isReposted) {
-      await supabase.from('reposts').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
-      setIsReposted(false);
-      setRepostCount(prev => Math.max(0, prev - 1));
-      toast({ title: 'Repost removed' });
-    } else {
-      await supabase.from('reposts').insert({ user_id: authUser.id, reel_id: reel.id });
-      setIsReposted(true);
-      setRepostCount(prev => prev + 1);
-      toast({ title: 'Reposted!' });
-    }
-  };
-
-
       {/* Edit Reel Modal */}
       <EditReelModal
         isOpen={showEditModal}
