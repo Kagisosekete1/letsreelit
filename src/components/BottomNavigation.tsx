@@ -24,11 +24,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   ];
 
   const handleTabClick = (tab: typeof tabs[0]) => {
-    if (tab.route) {
-      navigate(tab.route);
-    } else {
-      onTabChange(tab.id);
-    }
+    onTabChange(tab.id);
   };
 
   return (
