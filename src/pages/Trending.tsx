@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, TrendingUp, Flame, Eye, Heart, Share2, Loader2, X, Clock, Play, Video } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
