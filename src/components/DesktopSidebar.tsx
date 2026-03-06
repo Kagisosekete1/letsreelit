@@ -48,7 +48,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const hasUnreadMessages = counts.messages > 0;
 
   const mainNavItems = [
-    { id: 'home', icon: Film, label: 'Reels', path: '/' },
+    { id: 'home', icon: Film, label: "Muv'z", path: '/' },
     { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
     { id: 'notifications', icon: Heart, label: 'Activity', path: '/activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
     { id: 'create', icon: Plus, label: 'Create' },

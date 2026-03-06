@@ -105,6 +105,11 @@ const AppRoutes = () => {
             <Settings />
           </ProtectedRoute>
         } />
+        <Route path="/live" element={
+          <ProtectedRoute>
+            <LiveDiscovery />
+          </ProtectedRoute>
+        } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

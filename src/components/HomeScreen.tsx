@@ -386,7 +386,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
                   Following
                 </button>
               </div>
-              {/* Live button hidden - coming soon */}
+              {/* Live button */}
+              <button
+                onClick={() => navigate('/live')}
+                className="flex items-center gap-1 bg-destructive px-3 py-1.5 rounded-full"
+              >
+                <Radio className="w-3 h-3 text-white animate-pulse" />
+                <span className="text-white text-xs font-semibold">Live</span>
+              </button>
             </div>
           </div>
 

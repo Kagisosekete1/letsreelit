@@ -16,13 +16,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   const hasUnreadActivity = counts.notifications > 0;
 
   const tabs = [
-    { id: 'home', icon: Film, label: 'Reels' },
+    { id: 'home', icon: Play, label: "Muv'z" },
     { id: 'tutorials', icon: Search, label: 'Search' },
+    { id: 'create', icon: Plus, label: 'Upload', special: true },
     { id: 'notifications', icon: Heart, label: 'Activity', badge: hasUnreadActivity },
-    { id: 'create', icon: Plus, label: 'Create', special: true },
-    { id: 'inbox', icon: MessageSquare, label: 'Inbox', badge: hasUnreadInbox },
-    { id: 'profile', icon: User, label: 'Me' },
-    { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' },
+    { id: 'profile', icon: User, label: 'Profile' },
   ];
 
   const handleTabClick = (tab: typeof tabs[0]) => {
