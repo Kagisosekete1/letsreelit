@@ -432,9 +432,7 @@ const UserProfile = () => {
                 className="w-24 h-24 rounded-full object-cover border-2 border-border"
               />
               {user.verified && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-xs text-primary-foreground font-bold">✓</span>
-                </div>
+                <VerifiedBadge size="lg" className="absolute -bottom-1 -right-1" />
               )}
             </div>
             
