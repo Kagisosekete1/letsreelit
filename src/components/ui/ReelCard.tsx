@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download, BarChart2 } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal, Volume2, VolumeX, Flag, Ban, Trash2, Bookmark, BookmarkCheck, UserPlus, UserCheck, Users, Edit2, Maximize, Play, Pause, Download, BarChart2, Repeat2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
 import VideoDebugOverlay from '@/components/ui/VideoDebugOverlay';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
@@ -121,6 +122,8 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(reel.isLiked || false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(0);
   const [likeCount, setLikeCount] = useState(reel.stats.likes);
   const [commentCount, setCommentCount] = useState(reel.stats.comments);
   const [shareCount, setShareCount] = useState(reel.stats.shares);
@@ -241,13 +244,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const checkUserInteractions = async () => {
     if (!authUser) return;
 
-    const [{ data: likeData }, { data: saveData }] = await Promise.all([
+    const [{ data: likeData }, { data: saveData }, { data: repostData }, { count: repostCountData }] = await Promise.all([
       supabase.from('likes').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
       supabase.from('saved_reels').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
+      supabase.from('reposts').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
+      supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('reel_id', reel.id),
     ]);
 
     setIsLiked(!!likeData);
     setIsSaved(!!saveData);
+    setIsReposted(!!repostData);
+    setRepostCount(repostCountData || 0);
   };
 
   // Watch time tracking for monetization
@@ -723,6 +730,24 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
   const handleShare = async () => {
     setShowShareModal(true);
+  };
+
+  const handleRepost = async () => {
+    if (!authUser) {
+      toast({ title: 'Sign in to repost', variant: 'destructive' });
+      return;
+    }
+    if (isReposted) {
+      await supabase.from('reposts').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
+      setIsReposted(false);
+      setRepostCount(prev => Math.max(0, prev - 1));
+      toast({ title: 'Repost removed' });
+    } else {
+      await supabase.from('reposts').insert({ user_id: authUser.id, reel_id: reel.id });
+      setIsReposted(true);
+      setRepostCount(prev => prev + 1);
+      toast({ title: 'Reposted!' });
+    }
   };
 
   const handleDownload = async () => {
@@ -1209,9 +1234,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
                 </span>
               </ProfileLink>
               {reel.user.verified && (
-                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-[10px] text-white font-bold">✓</span>
-                </div>
+                <VerifiedBadge size="sm" />
               )}
             </div>
 
@@ -1321,6 +1344,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
             <div className={`${buttonSize} rounded-full bg-black/20 flex items-center justify-center`}>
               <Share className={`${iconSize} text-white`} />
             </div>
+          </button>
+
+          {/* Repost */}
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRepost();
+            }}
+          >
+            <div className={`${buttonSize} rounded-full flex items-center justify-center ${isReposted ? 'bg-green-500/30' : 'bg-black/20'}`}>
+              <Repeat2 className={`${iconSize} ${isReposted ? 'text-green-500' : 'text-white'}`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{repostCount > 0 ? repostCount : ''}</span>
           </button>
 
           {/* Download for offline */}
@@ -1467,27 +1504,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
           </div>
         )}
       </div>
-
-
-      {/* Comments Modal */}
-      <CommentsModal
-        isOpen={showComments}
-        onClose={() => setShowComments(false)}
-        reelId={reel.id}
-        onCommentCountChange={(count) => setCommentCount(count)}
-      />
-
-      {/* Share Modal */}
-      <ShareReelModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        reelId={reel.id}
-        reelTitle={reel.title}
-        username={reel.user.username}
-        videoUrl={reel.videoUrl}
-      />
-
-
       {/* Edit Reel Modal */}
       <EditReelModal
         isOpen={showEditModal}

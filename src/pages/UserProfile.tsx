@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import ChatModal from '@/components/ChatModal';
 import { useUser } from '@/contexts/UserContext';
@@ -432,9 +433,7 @@ const UserProfile = () => {
                 className="w-24 h-24 rounded-full object-cover border-2 border-border"
               />
               {user.verified && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-xs text-primary-foreground font-bold">✓</span>
-                </div>
+                <VerifiedBadge size="lg" className="absolute -bottom-1 -right-1" />
               )}
             </div>
             

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share, MoreHorizontal, Play, Volume2, VolumeX } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { Reel } from '@/types';
 
 interface VideoCardProps {
@@ -132,9 +133,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
               <span className="text-white font-semibold drop-shadow-lg">@{reel.user.username}</span>
             </Button>
             {reel.user.verified && (
-              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-xs text-white">✓</span>
-              </div>
+              <VerifiedBadge size="sm" />
             )}
             {!isFollowing && (
               <Button

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { UserPlus, UserCheck, ChevronRight, Users, Loader2, Flame, MapPin } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -299,9 +300,7 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
                 <div className="flex items-center gap-1">
                   <p className="font-medium truncate">{account.display_name}</p>
                   {account.verified && (
-                    <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-[8px] text-white font-bold">✓</span>
-                    </div>
+                    <VerifiedBadge size="sm" />
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground truncate">

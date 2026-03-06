@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { UserPlus, UserCheck, ArrowLeft, Loader2, Users } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -221,9 +222,7 @@ const SuggestedMuvaz = () => {
                     <div className="flex items-center gap-1.5">
                       <p className="font-semibold truncate">{account.display_name}</p>
                       {account.verified && (
-                        <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-[8px] text-white font-bold">✓</span>
-                        </div>
+                        <VerifiedBadge size="sm" />
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">@{account.username}</p>
