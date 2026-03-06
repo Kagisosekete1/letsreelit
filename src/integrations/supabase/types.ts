@@ -632,6 +632,7 @@ export type Database = {
           is_portrait: boolean | null
           is_tutorial: boolean | null
           likes_count: number | null
+          reposts_count: number | null
           shares_count: number | null
           thumbnail_url: string | null
           title: string
@@ -649,6 +650,7 @@ export type Database = {
           is_portrait?: boolean | null
           is_tutorial?: boolean | null
           likes_count?: number | null
+          reposts_count?: number | null
           shares_count?: number | null
           thumbnail_url?: string | null
           title: string
@@ -666,6 +668,7 @@ export type Database = {
           is_portrait?: boolean | null
           is_tutorial?: boolean | null
           likes_count?: number | null
+          reposts_count?: number | null
           shares_count?: number | null
           thumbnail_url?: string | null
           title?: string
@@ -704,6 +707,35 @@ export type Database = {
           {
             foreignKeyName: "reports_reported_reel_id_fkey"
             columns: ["reported_reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reposts: {
+        Row: {
+          created_at: string
+          id: string
+          reel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reposts_reel_id_fkey"
+            columns: ["reel_id"]
             isOneToOne: false
             referencedRelation: "reels"
             referencedColumns: ["id"]
