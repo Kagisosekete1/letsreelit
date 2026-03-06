@@ -9,9 +9,7 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
-  const navigate = useNavigate();
   const counts = useNotificationCounts();
-  const hasUnreadInbox = counts.messages > 0;
   const hasUnreadActivity = counts.notifications > 0;
 
   const tabs = [
