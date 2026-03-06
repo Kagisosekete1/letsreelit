@@ -427,9 +427,7 @@ const Trending = () => {
                       />
                       <span className="text-xs text-muted-foreground">@{reel.profile.username}</span>
                       {reel.profile.verified && (
-                        <div className="w-3 h-3 bg-primary rounded-full flex items-center justify-center">
-                          <span className="text-[6px] text-white font-bold">✓</span>
-                        </div>
+                        <VerifiedBadge size="sm" />
                       )}
                     </div>
                   )}

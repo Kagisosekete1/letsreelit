@@ -132,9 +132,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
               <span className="text-white font-semibold drop-shadow-lg">@{reel.user.username}</span>
             </Button>
             {reel.user.verified && (
-              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-xs text-white">✓</span>
-              </div>
+              <VerifiedBadge size="sm" />
             )}
             {!isFollowing && (
               <Button

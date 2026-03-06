@@ -299,9 +299,7 @@ const SuggestedAccounts: React.FC<SuggestedAccountsProps> = ({
                 <div className="flex items-center gap-1">
                   <p className="font-medium truncate">{account.display_name}</p>
                   {account.verified && (
-                    <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-[8px] text-white font-bold">✓</span>
-                    </div>
+                    <VerifiedBadge size="sm" />
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground truncate">

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import ChatModal from '@/components/ChatModal';
 import { useUser } from '@/contexts/UserContext';
