@@ -1475,43 +1475,6 @@ const ReelCard: React.FC<ReelCardProps> = ({
         )}
       </div>
 
-  const handleRepost = async () => {
-    if (!authUser) {
-      toast({ title: 'Sign in to repost', variant: 'destructive' });
-      return;
-    }
-    if (isReposted) {
-      // Unrepost
-      await supabase.from('reposts').delete().eq('user_id', authUser.id).eq('reel_id', reel.id);
-      setIsReposted(false);
-      setRepostCount(prev => Math.max(0, prev - 1));
-      toast({ title: 'Repost removed' });
-    } else {
-      await supabase.from('reposts').insert({ user_id: authUser.id, reel_id: reel.id });
-      setIsReposted(true);
-      setRepostCount(prev => prev + 1);
-      toast({ title: 'Reposted!' });
-    }
-  };
-
-      {/* Comments Modal */}
-      <CommentsModal
-        isOpen={showComments}
-        onClose={() => setShowComments(false)}
-        reelId={reel.id}
-        onCommentCountChange={(count) => setCommentCount(count)}
-      />
-
-      {/* Share Modal */}
-      <ShareReelModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        reelId={reel.id}
-        reelTitle={reel.title}
-        username={reel.user.username}
-        videoUrl={reel.videoUrl}
-      />
-
 
       {/* Edit Reel Modal */}
       <EditReelModal
