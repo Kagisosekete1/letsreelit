@@ -244,13 +244,17 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const checkUserInteractions = async () => {
     if (!authUser) return;
 
-    const [{ data: likeData }, { data: saveData }] = await Promise.all([
+    const [{ data: likeData }, { data: saveData }, { data: repostData }, { count: repostCountData }] = await Promise.all([
       supabase.from('likes').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
       supabase.from('saved_reels').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
+      supabase.from('reposts').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
+      supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('reel_id', reel.id),
     ]);
 
     setIsLiked(!!likeData);
     setIsSaved(!!saveData);
+    setIsReposted(!!repostData);
+    setRepostCount(repostCountData || 0);
   };
 
   // Watch time tracking for monetization
