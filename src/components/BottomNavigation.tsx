@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Film, Search, Plus, MessageSquare, User, Heart, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Plus, User, Heart, Play } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
 interface BottomNavigationProps {
@@ -10,27 +9,19 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
-  const navigate = useNavigate();
   const counts = useNotificationCounts();
-  const hasUnreadInbox = counts.messages > 0;
   const hasUnreadActivity = counts.notifications > 0;
 
   const tabs = [
-    { id: 'home', icon: Film, label: 'Reels' },
+    { id: 'home', icon: Play, label: "Muv'z" },
     { id: 'tutorials', icon: Search, label: 'Search' },
+    { id: 'create', icon: Plus, label: 'Upload', special: true },
     { id: 'notifications', icon: Heart, label: 'Activity', badge: hasUnreadActivity },
-    { id: 'create', icon: Plus, label: 'Create', special: true },
-    { id: 'inbox', icon: MessageSquare, label: 'Inbox', badge: hasUnreadInbox },
-    { id: 'profile', icon: User, label: 'Me' },
-    { id: 'settings', icon: Settings, label: 'Settings', route: '/settings' },
+    { id: 'profile', icon: User, label: 'Profile' },
   ];
 
   const handleTabClick = (tab: typeof tabs[0]) => {
-    if (tab.route) {
-      navigate(tab.route);
-    } else {
-      onTabChange(tab.id);
-    }
+    onTabChange(tab.id);
   };
 
   return (

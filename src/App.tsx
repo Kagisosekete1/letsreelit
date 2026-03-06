@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import AdminPayouts from "./pages/AdminPayouts";
 import MonetizationAnalytics from "./pages/MonetizationAnalytics";
 import Settings from "./pages/Settings";
+import LiveDiscovery from "./pages/LiveDiscovery";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,11 @@ const AppRoutes = () => {
         <Route path="/settings" element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        } />
+        <Route path="/live" element={
+          <ProtectedRoute>
+            <LiveDiscovery />
           </ProtectedRoute>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

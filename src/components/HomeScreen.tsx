@@ -3,7 +3,8 @@ import { Screen } from '@/types';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import ReelCard from './ui/ReelCard';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Radio } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useReelPreloader } from '@/hooks/useReelPreloader';
 import { useFirstReelPreloader } from '@/hooks/useFirstReelPreloader';
 import { useVideoQuality } from '@/contexts/VideoQualityContext';
@@ -44,6 +45,7 @@ interface ReelData {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onRegisterPause, onRegisterResume, onOpenDesktopComments }) => {
   const { currentUser, authUser } = useUser();
+  const navigate = useNavigate();
   const [reels, setReels] = useState<ReelData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -384,7 +386,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
                   Following
                 </button>
               </div>
-              {/* Live button hidden - coming soon */}
+              {/* Live button */}
+              <button
+                onClick={() => navigate('/live')}
+                className="flex items-center gap-1 bg-destructive px-3 py-1.5 rounded-full"
+              >
+                <Radio className="w-3 h-3 text-white animate-pulse" />
+                <span className="text-white text-xs font-semibold">Live</span>
+              </button>
             </div>
           </div>
 
