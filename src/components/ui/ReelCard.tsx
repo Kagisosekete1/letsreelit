@@ -24,6 +24,7 @@ import { useOfflineVideoCache } from '@/hooks/useOfflineVideoCache';
 import VideoAnalyticsModal from '@/components/VideoAnalyticsModal';
 import { useWatchTimeTracker } from '@/hooks/useWatchTimeTracker';
 import VideoDebugOverlay from '@/components/ui/VideoDebugOverlay';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
