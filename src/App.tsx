@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import AdminPayouts from "./pages/AdminPayouts";
 import MonetizationAnalytics from "./pages/MonetizationAnalytics";
 import Settings from "./pages/Settings";
+import LiveDiscovery from "./pages/LiveDiscovery";
 
 const queryClient = new QueryClient();
 
