@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, User, Heart, Play } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
+
 interface BottomNavigationProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
