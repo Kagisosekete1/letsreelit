@@ -1346,6 +1346,20 @@ const ReelCard: React.FC<ReelCardProps> = ({
             </div>
           </button>
 
+          {/* Repost */}
+          <button
+            className="flex flex-col items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRepost();
+            }}
+          >
+            <div className={`${buttonSize} rounded-full flex items-center justify-center ${isReposted ? 'bg-green-500/30' : 'bg-black/20'}`}>
+              <Repeat2 className={`${iconSize} ${isReposted ? 'text-green-500' : 'text-white'}`} />
+            </div>
+            <span className="text-[10px] text-white mt-0.5">{repostCount > 0 ? repostCount : ''}</span>
+          </button>
+
           {/* Download for offline */}
           <button
             className="flex flex-col items-center"
