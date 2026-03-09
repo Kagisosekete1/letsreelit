@@ -204,8 +204,25 @@ const UserProfile = () => {
 
     if (reelsData) {
       setUserReels(reelsData);
-      // Filter tutorial reels
       setTutorialReels(reelsData.filter(r => (r as any).is_tutorial === true));
+    }
+
+    // Fetch reposts
+    const { data: repostData } = await supabase
+      .from('reposts')
+      .select('reel_id')
+      .eq('user_id', profileData.user_id)
+      .order('created_at', { ascending: false });
+
+    if (repostData && repostData.length > 0) {
+      const reelIds = repostData.map(r => r.reel_id);
+      const { data: repostedData } = await supabase
+        .from('reels')
+        .select('*')
+        .in('id', reelIds);
+      if (repostedData) setRepostedReels(repostedData);
+    } else {
+      setRepostedReels([]);
     }
 
     // Live follow/following counts (recalculated from follows table)
