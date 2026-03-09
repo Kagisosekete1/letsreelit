@@ -75,6 +75,7 @@ const Profile = () => {
       fetchUserReels();
       fetchSavedReels();
       fetchTutorialReels();
+      fetchRepostedReels();
       checkOnboardingStatus();
     }
   }, [authUser]);
