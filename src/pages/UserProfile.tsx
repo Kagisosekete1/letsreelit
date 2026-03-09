@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
+import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle, Repeat2 } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
@@ -430,8 +432,12 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pt-4 pb-20 h-full overflow-y-auto">
+    <div className="min-h-screen bg-background">
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <MobileViewWrapper>
+          <div className="relative h-full overflow-hidden bg-background flex flex-col">
+      <div className="pt-4 pb-20 lg:pb-4 flex-1 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}>
@@ -620,6 +626,9 @@ const UserProfile = () => {
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+          </div>
+        </MobileViewWrapper>
+      </div>
 
       {/* Followers/Following Modals */}
       <FollowersModal
