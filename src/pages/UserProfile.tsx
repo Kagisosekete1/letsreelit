@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle, Repeat2 } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import ChatModal from '@/components/ChatModal';
@@ -91,6 +91,7 @@ const UserProfile = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [contentTab, setContentTab] = useState('reels');
   const [tutorialReels, setTutorialReels] = useState<ReelData[]>([]);
+  const [repostedReels, setRepostedReels] = useState<ReelData[]>([]);
   
   const [user, setUser] = useState<UserProfileData | null>(null);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
@@ -203,8 +204,25 @@ const UserProfile = () => {
 
     if (reelsData) {
       setUserReels(reelsData);
-      // Filter tutorial reels
       setTutorialReels(reelsData.filter(r => (r as any).is_tutorial === true));
+    }
+
+    // Fetch reposts
+    const { data: repostData } = await supabase
+      .from('reposts')
+      .select('reel_id')
+      .eq('user_id', profileData.user_id)
+      .order('created_at', { ascending: false });
+
+    if (repostData && repostData.length > 0) {
+      const reelIds = repostData.map(r => r.reel_id);
+      const { data: repostedData } = await supabase
+        .from('reels')
+        .select('*')
+        .in('id', reelIds);
+      if (repostedData) setRepostedReels(repostedData);
+    } else {
+      setRepostedReels([]);
     }
 
     // Live follow/following counts (recalculated from follows table)
@@ -512,6 +530,15 @@ const UserProfile = () => {
             >
               <Video className="w-5 h-5" />
             </Button>
+            <Button
+              variant="ghost"
+              className={`flex-1 py-3 rounded-none ${
+                contentTab === 'reposts' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
+              }`}
+              onClick={() => setContentTab('reposts')}
+            >
+              <Repeat2 className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
@@ -552,6 +579,31 @@ const UserProfile = () => {
           ) : (
             <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
               {tutorialReels.map((reel, index) => (
+                <VideoThumbnail
+                  key={reel.id}
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  likesCount={reel.likes_count || 0}
+                  commentsCount={reel.comments_count || 0}
+                  showStats={true}
+                  onClick={() => setSelectedReelIndex(userReels.findIndex(r => r.id === reel.id))}
+                />
+              ))}
+            </div>
+          )
+        )}
+
+        {contentTab === 'reposts' && (
+          repostedReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No reposts yet</p>
+                <p className="text-sm">This user hasn't reposted any Muv'z</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {repostedReels.map((reel, index) => (
                 <VideoThumbnail
                   key={reel.id}
                   videoUrl={reel.video_url}

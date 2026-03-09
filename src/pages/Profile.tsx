@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users, Repeat2 } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
@@ -64,6 +64,7 @@ const Profile = () => {
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
+  const [repostedReels, setRepostedReels] = useState<ReelData[]>([]);
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
   const [reelsLoading, setReelsLoading] = useState(true);
@@ -74,6 +75,7 @@ const Profile = () => {
       fetchUserReels();
       fetchSavedReels();
       fetchTutorialReels();
+      fetchRepostedReels();
       checkOnboardingStatus();
     }
   }, [authUser]);
@@ -115,6 +117,18 @@ const Profile = () => {
     if (!authUser) return;
     const { data } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').eq('user_id', authUser.id).eq('is_tutorial', true).order('created_at', { ascending: false });
     if (data) setTutorialReels(data);
+  };
+
+  const fetchRepostedReels = async () => {
+    if (!authUser) return;
+    const { data: repostData } = await supabase.from('reposts').select('reel_id').eq('user_id', authUser.id).order('created_at', { ascending: false });
+    if (repostData && repostData.length > 0) {
+      const reelIds = repostData.map(r => r.reel_id);
+      const { data: reelsData } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').in('id', reelIds);
+      if (reelsData) setRepostedReels(reelsData);
+    } else {
+      setRepostedReels([]);
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -240,6 +254,7 @@ const Profile = () => {
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'reels' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('reels')}><Grid3X3 className="w-5 h-5" /></Button>
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'tutorials' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('tutorials')}><Video className="w-5 h-5" /></Button>
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'saved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('saved')}><Bookmark className="w-5 h-5" /></Button>
+            <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'reposts' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('reposts')}><Repeat2 className="w-5 h-5" /></Button>
           </div>
         </div>
 
@@ -254,6 +269,10 @@ const Profile = () => {
         {contentTab === 'saved' && (savedReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved Muv'z</p><p className="text-sm">Your saved Muv'z will appear here</p></div></div>
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{savedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} likesCount={reel.likes_count || 0} commentsCount={reel.comments_count || 0} showStats={true} onClick={() => handleReelClick(savedReels, index)} />)}</div>)}
+
+        {contentTab === 'reposts' && (repostedReels.length === 0 ? (
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No reposts yet</p><p className="text-sm">Muv'z you repost will appear here</p></div></div>
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{repostedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} likesCount={reel.likes_count || 0} commentsCount={reel.comments_count || 0} showStats={true} onClick={() => handleReelClick(repostedReels, index)} />)}</div>)}
         </div>
 
         {selectedReelIndex !== null && currentUser && <ProfileReelViewer reels={viewingReelsList} initialIndex={selectedReelIndex} onClose={() => setSelectedReelIndex(null)} userId={authUser?.id || ''} username={currentUser.username} displayName={currentUser.displayName} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} />}

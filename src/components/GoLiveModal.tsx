@@ -553,9 +553,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
 
-      // Attach to live video element
+      // Attach to live video element - MUTED to prevent echo (broadcaster should not hear themselves)
       if (liveVideoRef.current) {
         liveVideoRef.current.srcObject = mediaStream;
+        liveVideoRef.current.muted = true; // Prevent audio echo on broadcaster's device
         liveVideoRef.current.play().catch(console.log);
       }
 
@@ -689,7 +690,26 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     
     setStream(null);
     setIsLive(false);
-    setStep('ended');
+    
+    // Don't go to 'ended' screen - close immediately and clean up
+    recordedChunksRef.current = [];
+    reachedMilestones.current.clear();
+    setStep('setup');
+    setLiveTitle('');
+    setComments([]);
+    setAllComments([]);
+    setViewers(new Map());
+    setLikeCount(0);
+    setLiveDuration(0);
+    setSelectedAREffect(0);
+    setSelectedFilter(0);
+    
+    toast({
+      title: "Live ended",
+      description: "Your live stream has ended.",
+    });
+    
+    onClose();
   };
 
   const handleClose = () => {
