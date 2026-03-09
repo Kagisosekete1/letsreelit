@@ -254,6 +254,7 @@ const Profile = () => {
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'reels' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('reels')}><Grid3X3 className="w-5 h-5" /></Button>
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'tutorials' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('tutorials')}><Video className="w-5 h-5" /></Button>
             <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'saved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('saved')}><Bookmark className="w-5 h-5" /></Button>
+            <Button variant="ghost" className={`flex-1 py-3 rounded-none ${contentTab === 'reposts' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} onClick={() => setContentTab('reposts')}><Repeat2 className="w-5 h-5" /></Button>
           </div>
         </div>
 
