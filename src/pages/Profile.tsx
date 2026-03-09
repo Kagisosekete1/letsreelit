@@ -119,6 +119,18 @@ const Profile = () => {
     if (data) setTutorialReels(data);
   };
 
+  const fetchRepostedReels = async () => {
+    if (!authUser) return;
+    const { data: repostData } = await supabase.from('reposts').select('reel_id').eq('user_id', authUser.id).order('created_at', { ascending: false });
+    if (repostData && repostData.length > 0) {
+      const reelIds = repostData.map(r => r.reel_id);
+      const { data: reelsData } = await supabase.from('reels').select('id, title, description, video_url, thumbnail_url, views_count, likes_count, comments_count, shares_count, user_id').in('id', reelIds);
+      if (reelsData) setRepostedReels(reelsData);
+    } else {
+      setRepostedReels([]);
+    }
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     switch (tab) {
