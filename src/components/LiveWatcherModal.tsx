@@ -217,7 +217,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
+      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none lg:max-w-[400px] lg:h-[90vh] lg:rounded-[2rem]">
         <div className="relative h-full bg-black flex flex-col">
           {/* Video Area - placeholder for actual stream */}
           <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
