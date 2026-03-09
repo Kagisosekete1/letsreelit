@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users, Repeat2 } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
