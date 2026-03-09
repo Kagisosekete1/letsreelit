@@ -64,6 +64,7 @@ const Profile = () => {
   const [showOnboardingButton, setShowOnboardingButton] = useState(false);
   const [userReels, setUserReels] = useState<ReelData[]>([]);
   const [savedReels, setSavedReels] = useState<ReelData[]>([]);
+  const [repostedReels, setRepostedReels] = useState<ReelData[]>([]);
   const [selectedReelIndex, setSelectedReelIndex] = useState<number | null>(null);
   const [viewingReelsList, setViewingReelsList] = useState<ReelData[]>([]);
   const [reelsLoading, setReelsLoading] = useState(true);
