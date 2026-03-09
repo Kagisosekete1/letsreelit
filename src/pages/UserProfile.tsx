@@ -432,8 +432,12 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pt-4 pb-20 h-full overflow-y-auto">
+    <div className="min-h-screen bg-background">
+      <DesktopSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      <div className="lg:pl-[72px] xl:pl-[244px]">
+        <MobileViewWrapper>
+          <div className="relative h-full overflow-hidden bg-background flex flex-col">
+      <div className="pt-4 pb-20 lg:pb-4 flex-1 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 mb-4">
           <Button variant="ghost" size="sm" onClick={handleBack}>
