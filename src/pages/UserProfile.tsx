@@ -539,7 +539,7 @@ const UserProfile = () => {
             >
               <Repeat2 className="w-5 h-5" />
             </Button>
-        </div>
+          </div>
 
         {/* Reels Grid */}
         {contentTab === 'reels' && (
