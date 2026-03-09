@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import DesktopSidebar from '@/components/DesktopSidebar';
+import MobileViewWrapper from '@/components/MobileViewWrapper';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical, Grid3X3, Video, Bookmark, AlertCircle, Ban, MessageCircle, Repeat2 } from 'lucide-react';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
