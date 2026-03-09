@@ -48,11 +48,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
                 {tab.label}
               </span>
             )}
-            {/* Notification badge */}
+            {/* Notification badge - show count instead of dot */}
             {tab.badge && (
               <NotificationBadge 
-                className="absolute -top-0.5 -right-0.5" 
-                showDotOnly={true}
+                className="absolute -top-1 -right-1" 
+                showDotOnly={false}
               />
             )}
           </Button>
