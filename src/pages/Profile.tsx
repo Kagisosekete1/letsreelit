@@ -269,6 +269,10 @@ const Profile = () => {
         {contentTab === 'saved' && (savedReels.length === 0 ? (
           <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No saved Muv'z</p><p className="text-sm">Your saved Muv'z will appear here</p></div></div>
         ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{savedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} likesCount={reel.likes_count || 0} commentsCount={reel.comments_count || 0} showStats={true} onClick={() => handleReelClick(savedReels, index)} />)}</div>)}
+
+        {contentTab === 'reposts' && (repostedReels.length === 0 ? (
+          <div className="px-4 py-8"><div className="text-center text-muted-foreground"><p className="text-lg font-medium mb-2">No reposts yet</p><p className="text-sm">Muv'z you repost will appear here</p></div></div>
+        ) : <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">{repostedReels.map((reel, index) => <VideoThumbnail key={reel.id} videoUrl={reel.video_url} thumbnailUrl={reel.thumbnail_url} likesCount={reel.likes_count || 0} commentsCount={reel.comments_count || 0} showStats={true} onClick={() => handleReelClick(repostedReels, index)} />)}</div>)}
         </div>
 
         {selectedReelIndex !== null && currentUser && <ProfileReelViewer reels={viewingReelsList} initialIndex={selectedReelIndex} onClose={() => setSelectedReelIndex(null)} userId={authUser?.id || ''} username={currentUser.username} displayName={currentUser.displayName} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} />}
