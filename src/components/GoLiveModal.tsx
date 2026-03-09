@@ -553,9 +553,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
 
-      // Attach to live video element
+      // Attach to live video element - MUTED to prevent echo (broadcaster should not hear themselves)
       if (liveVideoRef.current) {
         liveVideoRef.current.srcObject = mediaStream;
+        liveVideoRef.current.muted = true; // Prevent audio echo on broadcaster's device
         liveVideoRef.current.play().catch(console.log);
       }
 
