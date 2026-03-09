@@ -626,6 +626,9 @@ const UserProfile = () => {
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+          </div>
+        </MobileViewWrapper>
+      </div>
 
       {/* Followers/Following Modals */}
       <FollowersModal
