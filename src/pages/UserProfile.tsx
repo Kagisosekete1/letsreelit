@@ -530,7 +530,15 @@ const UserProfile = () => {
             >
               <Video className="w-5 h-5" />
             </Button>
-          </div>
+            <Button
+              variant="ghost"
+              className={`flex-1 py-3 rounded-none ${
+                contentTab === 'reposts' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
+              }`}
+              onClick={() => setContentTab('reposts')}
+            >
+              <Repeat2 className="w-5 h-5" />
+            </Button>
         </div>
 
         {/* Reels Grid */}
