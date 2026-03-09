@@ -591,6 +591,31 @@ const UserProfile = () => {
             </div>
           )
         )}
+
+        {contentTab === 'reposts' && (
+          repostedReels.length === 0 ? (
+            <div className="px-4 py-8">
+              <div className="text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No reposts yet</p>
+                <p className="text-sm">This user hasn't reposted any Muv'z</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5 px-0.5 pt-0.5">
+              {repostedReels.map((reel, index) => (
+                <VideoThumbnail
+                  key={reel.id}
+                  videoUrl={reel.video_url}
+                  thumbnailUrl={reel.thumbnail_url}
+                  likesCount={reel.likes_count || 0}
+                  commentsCount={reel.comments_count || 0}
+                  showStats={true}
+                  onClick={() => setSelectedReelIndex(userReels.findIndex(r => r.id === reel.id))}
+                />
+              ))}
+            </div>
+          )
+        )}
       </div>
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
