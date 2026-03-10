@@ -371,6 +371,63 @@ export type Database = {
           },
         ]
       }
+      live_gifts: {
+        Row: {
+          coin_cost: number
+          created_at: string
+          gift_name: string
+          gift_type: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          session_id: string
+        }
+        Insert: {
+          coin_cost: number
+          created_at?: string
+          gift_name: string
+          gift_type: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          session_id: string
+        }
+        Update: {
+          coin_cost?: number
+          created_at?: string
+          gift_name?: string
+          gift_type?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
+      live_pinned_messages: {
+        Row: {
+          content: string
+          id: string
+          pinned_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          pinned_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          pinned_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       live_streams: {
         Row: {
           created_at: string | null
@@ -794,6 +851,36 @@ export type Database = {
           created_at?: string
           id?: string
           milestone?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

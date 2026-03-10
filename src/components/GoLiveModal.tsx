@@ -10,6 +10,10 @@ import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
 import ProfileLink from '@/components/ui/ProfileLink';
+import { useWebRTCBroadcaster } from '@/hooks/useWebRTCSignaling';
+import GiftAnimation from '@/components/live/GiftAnimation';
+import GiftLeaderboard from '@/components/live/GiftLeaderboard';
+import PinnedMessage from '@/components/live/PinnedMessage';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -97,8 +101,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reachedMilestones = useRef<Set<number>>(new Set());
+  const [giftAnimation, setGiftAnimation] = useState<{ id: number; emoji: string; name: string; senderName: string; animation: string } | null>(null);
+  const [giftLeaderboard, setGiftLeaderboard] = useState<{ username: string; totalCoins: number }[]>([]);
+  const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
 
   const viewerCount = viewers.size;
+
+  // WebRTC: broadcast local stream to viewers
+  useWebRTCBroadcaster(isLive ? liveSessionId : null, stream);
 
   // When opening the live modal, hard-stop any reel audio playing behind it.
   useEffect(() => {
@@ -226,6 +236,24 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
           }
         }, 100);
+      })
+      .on('broadcast', { event: 'gift' }, ({ payload }) => {
+        const g = payload as { senderName: string; emoji: string; name: string; animation: string; cost: number };
+        setGiftAnimation({ id: Date.now(), ...g });
+        setGiftLeaderboard(prev => {
+          const existing = prev.find(e => e.username === g.senderName);
+          if (existing) {
+            return prev.map(e => e.username === g.senderName ? { ...e, totalCoins: e.totalCoins + g.cost } : e)
+              .sort((a, b) => b.totalCoins - a.totalCoins);
+          }
+          return [...prev, { username: g.senderName, totalCoins: g.cost }].sort((a, b) => b.totalCoins - a.totalCoins);
+        });
+      })
+      .on('broadcast', { event: 'pin' }, ({ payload }) => {
+        setPinnedMsg(payload as { username: string; content: string });
+      })
+      .on('broadcast', { event: 'unpin' }, () => {
+        setPinnedMsg(null);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -1342,6 +1370,31 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               </div>
             )}
           </div>
+
+          {/* Pinned Message */}
+          {pinnedMsg && (
+            <div className="absolute top-28 left-0 right-0 z-10">
+              <PinnedMessage
+                username={pinnedMsg.username}
+                content={pinnedMsg.content}
+                canUnpin={true}
+                onUnpin={() => {
+                  setPinnedMsg(null);
+                  channelRef.current?.send({ type: 'broadcast', event: 'unpin', payload: {} });
+                }}
+              />
+            </div>
+          )}
+
+          {/* Gift Animation */}
+          <GiftAnimation trigger={giftAnimation} />
+
+          {/* Gift Leaderboard */}
+          {giftLeaderboard.length > 0 && (
+            <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
+              <GiftLeaderboard entries={giftLeaderboard} />
+            </div>
+          )}
 
           {/* Floating Hearts Animation */}
           <FloatingHearts trigger={likeTrigger} />
