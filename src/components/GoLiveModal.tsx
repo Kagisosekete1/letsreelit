@@ -10,6 +10,10 @@ import { supabase } from '@/integrations/supabase/client';
 import FloatingHearts from '@/components/ui/FloatingHearts';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
 import ProfileLink from '@/components/ui/ProfileLink';
+import { useWebRTCBroadcaster } from '@/hooks/useWebRTCSignaling';
+import GiftAnimation from '@/components/live/GiftAnimation';
+import GiftLeaderboard from '@/components/live/GiftLeaderboard';
+import PinnedMessage from '@/components/live/PinnedMessage';
 
 interface GoLiveModalProps {
   isOpen: boolean;
