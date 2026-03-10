@@ -101,8 +101,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reachedMilestones = useRef<Set<number>>(new Set());
+  const [giftAnimation, setGiftAnimation] = useState<{ id: number; emoji: string; name: string; senderName: string; animation: string } | null>(null);
+  const [giftLeaderboard, setGiftLeaderboard] = useState<{ username: string; totalCoins: number }[]>([]);
+  const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
 
   const viewerCount = viewers.size;
+
+  // WebRTC: broadcast local stream to viewers
+  useWebRTCBroadcaster(isLive ? liveSessionId : null, stream);
 
   // When opening the live modal, hard-stop any reel audio playing behind it.
   useEffect(() => {
