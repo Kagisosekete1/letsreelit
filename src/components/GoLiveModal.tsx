@@ -237,6 +237,24 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           }
         }, 100);
       })
+      .on('broadcast', { event: 'gift' }, ({ payload }) => {
+        const g = payload as { senderName: string; emoji: string; name: string; animation: string; cost: number };
+        setGiftAnimation({ id: Date.now(), ...g });
+        setGiftLeaderboard(prev => {
+          const existing = prev.find(e => e.username === g.senderName);
+          if (existing) {
+            return prev.map(e => e.username === g.senderName ? { ...e, totalCoins: e.totalCoins + g.cost } : e)
+              .sort((a, b) => b.totalCoins - a.totalCoins);
+          }
+          return [...prev, { username: g.senderName, totalCoins: g.cost }].sort((a, b) => b.totalCoins - a.totalCoins);
+        });
+      })
+      .on('broadcast', { event: 'pin' }, ({ payload }) => {
+        setPinnedMsg(payload as { username: string; content: string });
+      })
+      .on('broadcast', { event: 'unpin' }, () => {
+        setPinnedMsg(null);
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
