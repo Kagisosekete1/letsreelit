@@ -481,7 +481,7 @@ const Inbox = () => {
             ) : (
             <div className="space-y-2">
                 {filteredConversations.map((conv) => {
-                  let pressTimer: NodeJS.Timeout | null = null;
+                  let pressTimer: ReturnType<typeof setTimeout> | null = null;
                   
                   const handleLongPressStart = () => {
                     pressTimer = setTimeout(() => {

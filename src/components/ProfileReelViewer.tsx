@@ -46,7 +46,7 @@ const ProfileReelViewer: React.FC<ProfileReelViewerProps> = ({
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (authUser) {

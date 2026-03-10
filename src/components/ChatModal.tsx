@@ -38,7 +38,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [showDeleteConversation, setShowDeleteConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
