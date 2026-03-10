@@ -1371,6 +1371,31 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             )}
           </div>
 
+          {/* Pinned Message */}
+          {pinnedMsg && (
+            <div className="absolute top-28 left-0 right-0 z-10">
+              <PinnedMessage
+                username={pinnedMsg.username}
+                content={pinnedMsg.content}
+                canUnpin={true}
+                onUnpin={() => {
+                  setPinnedMsg(null);
+                  channelRef.current?.send({ type: 'broadcast', event: 'unpin', payload: {} });
+                }}
+              />
+            </div>
+          )}
+
+          {/* Gift Animation */}
+          <GiftAnimation trigger={giftAnimation} />
+
+          {/* Gift Leaderboard */}
+          {giftLeaderboard.length > 0 && (
+            <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
+              <GiftLeaderboard entries={giftLeaderboard} />
+            </div>
+          )}
+
           {/* Floating Hearts Animation */}
           <FloatingHearts trigger={likeTrigger} />
 
