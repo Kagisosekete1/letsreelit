@@ -360,6 +360,12 @@ const Activity = () => {
                               {notif.from_user?.display_name || 'Someone'}
                             </span>
                             {' '}{getNotificationAction(notif.type)}
+                            {notif.followStatus === 'mutual' && (
+                              <span className="ml-1 text-xs text-primary font-medium">• Mutual</span>
+                            )}
+                            {notif.followStatus === 'follows_you' && (
+                              <span className="ml-1 text-xs text-muted-foreground">• Follows you</span>
+                            )}
                           </p>
                           <span className="text-xs text-muted-foreground">{formatTime(notif.created_at)}</span>
                         </div>
