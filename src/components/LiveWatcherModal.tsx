@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Power, Gift, Pin, Coins } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Power, Gift, Pin, Coins, Timer, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -71,9 +71,15 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [giftAnimation, setGiftAnimation] = useState<AnimatedGiftEvent | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [pinnedMessage, setPinnedMessage] = useState<{ username: string; content: string } | null>(null);
+  const [liveEnded, setLiveEnded] = useState(false);
+  const [slowMode, setSlowMode] = useState(false);
+  const [slowModeCooldown, setSlowModeCooldown] = useState(0);
+  const [isFollower, setIsFollower] = useState(false);
+  const [totalGiftCoins, setTotalGiftCoins] = useState(0);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
 
@@ -96,6 +102,21 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     if (isOpen) forceCleanupAll();
   }, [isOpen, forceCleanupAll]);
 
+  // Check if viewer is a follower of the broadcaster
+  useEffect(() => {
+    if (!isOpen || !authUser || isOwner) return;
+    const checkFollow = async () => {
+      const { data } = await supabase
+        .from('follows')
+        .select('id')
+        .eq('follower_id', authUser.id)
+        .eq('following_id', liveStream.user_id)
+        .maybeSingle();
+      setIsFollower(!!data);
+    };
+    checkFollow();
+  }, [isOpen, authUser?.id, liveStream.user_id, isOwner]);
+
   // Load coin balance
   useEffect(() => {
     if (!isOpen || !authUser) return;
@@ -108,13 +129,31 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       if (data) {
         setCoinBalance(data.balance);
       } else {
-        // Create initial coin balance
         await supabase.from('user_coins').insert({ user_id: authUser.id, balance: 1000 });
         setCoinBalance(1000);
       }
     };
     loadCoins();
   }, [isOpen, authUser?.id]);
+
+  // Listen for live stream ending
+  useEffect(() => {
+    if (!isOpen || isOwner) return;
+    const channel = supabase
+      .channel(`live-end-watch:${liveStream.session_id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `session_id=eq.${liveStream.session_id}` },
+        (payload) => {
+          if (payload.new && (payload.new as any).is_active === false) {
+            setLiveEnded(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isOpen, liveStream.session_id, isOwner]);
 
   // Realtime channel for presence, chat, gifts, pins
   useEffect(() => {
@@ -135,12 +174,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
         setLikeTrigger(prev => prev + 1);
       })
       .on('broadcast', { event: 'comment' }, ({ payload }) => {
-        setComments(prev => [...prev.slice(-30), payload as Comment]);
+        setComments(prev => [...prev.slice(-50), payload as Comment]);
         setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
       })
       .on('broadcast', { event: 'gift' }, ({ payload }) => {
         const g = payload as { senderName: string; emoji: string; name: string; animation: string; cost: number };
         setGiftAnimation({ id: Date.now(), ...g });
+        setTotalGiftCoins(prev => prev + g.cost);
         // Update leaderboard
         setLeaderboard(prev => {
           const existing = prev.find(e => e.username === g.senderName);
@@ -157,6 +197,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       .on('broadcast', { event: 'unpin' }, () => {
         setPinnedMessage(null);
       })
+      .on('broadcast', { event: 'slow-mode' }, ({ payload }) => {
+        setSlowMode((payload as any).enabled);
+      })
+      .on('broadcast', { event: 'live-ended' }, () => {
+        setLiveEnded(true);
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
@@ -164,10 +210,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             avatarUrl: currentUser?.avatarUrl,
             online_at: new Date().toISOString(),
           });
-          toast({
-            title: 'Joined live',
-            description: `You're watching ${liveStream.broadcaster?.display_name || 'this live'}`,
-          });
+          if (!isOwner) {
+            toast({
+              title: 'Joined live',
+              description: `You're watching ${liveStream.broadcaster?.display_name || 'this live'}`,
+            });
+          }
         }
       });
 
@@ -178,17 +226,39 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     };
   }, [isOpen, liveStream.session_id, authUser?.id, isOwner]);
 
+  // Slow mode cooldown timer
+  useEffect(() => {
+    if (slowModeCooldown > 0) {
+      slowModeTimerRef.current = setInterval(() => {
+        setSlowModeCooldown(prev => {
+          if (prev <= 1) {
+            if (slowModeTimerRef.current) clearInterval(slowModeTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => { if (slowModeTimerRef.current) clearInterval(slowModeTimerRef.current); };
+    }
+  }, [slowModeCooldown]);
+
+  const canInteract = isOwner || isFollower;
+
   const handleLike = useCallback(() => {
-    if (!channelRef.current || hasLiked) return;
+    if (!channelRef.current || hasLiked || !canInteract) return;
     channelRef.current.send({ type: 'broadcast', event: 'like', payload: { userId: authUser?.id } });
     setHasLiked(true);
     setLikeCount(prev => prev + 1);
     setLikeTrigger(prev => prev + 1);
     setTimeout(() => setHasLiked(false), 2000);
-  }, [hasLiked, authUser?.id]);
+  }, [hasLiked, authUser?.id, canInteract]);
 
   const handleEmojiClick = useCallback((emoji: string) => {
-    if (!currentUser || !channelRef.current) return;
+    if (!currentUser || !channelRef.current || !canInteract) return;
+    if (slowMode && slowModeCooldown > 0 && !isOwner) {
+      toast({ title: `Slow mode: wait ${slowModeCooldown}s` });
+      return;
+    }
     const comment: Comment = {
       id: Date.now().toString(),
       username: currentUser.username,
@@ -197,12 +267,17 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       avatarUrl: currentUser.avatarUrl,
     };
     channelRef.current.send({ type: 'broadcast', event: 'comment', payload: comment });
-    setComments(prev => [...prev.slice(-30), comment]);
+    setComments(prev => [...prev.slice(-50), comment]);
     if (emoji === '❤️') handleLike();
-  }, [currentUser, handleLike]);
+    if (slowMode && !isOwner) setSlowModeCooldown(5);
+  }, [currentUser, handleLike, canInteract, slowMode, slowModeCooldown, isOwner]);
 
   const sendComment = useCallback(() => {
-    if (!newComment.trim() || !currentUser || !channelRef.current) return;
+    if (!newComment.trim() || !currentUser || !channelRef.current || !canInteract) return;
+    if (slowMode && slowModeCooldown > 0 && !isOwner) {
+      toast({ title: `Slow mode: wait ${slowModeCooldown}s` });
+      return;
+    }
     const comment: Comment = {
       id: Date.now().toString(),
       username: currentUser.username,
@@ -211,18 +286,18 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       avatarUrl: currentUser.avatarUrl,
     };
     channelRef.current.send({ type: 'broadcast', event: 'comment', payload: comment });
-    setComments(prev => [...prev.slice(-30), comment]);
+    setComments(prev => [...prev.slice(-50), comment]);
     setNewComment('');
-  }, [newComment, currentUser]);
+    if (slowMode && !isOwner) setSlowModeCooldown(5);
+  }, [newComment, currentUser, canInteract, slowMode, slowModeCooldown, isOwner]);
 
   const handleSendGift = useCallback(async (gift: GiftDefinition) => {
-    if (!authUser || !currentUser || !channelRef.current) return;
+    if (!authUser || !currentUser || !channelRef.current || !canInteract) return;
     if (coinBalance < gift.cost) {
       toast({ title: 'Not enough coins', variant: 'destructive' });
       return;
     }
 
-    // Deduct coins
     const newBalance = coinBalance - gift.cost;
     setCoinBalance(newBalance);
     await supabase.from('user_coins').update({
@@ -230,7 +305,6 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       total_spent: coinBalance - newBalance,
     }).eq('user_id', authUser.id);
 
-    // Record gift
     await supabase.from('live_gifts').insert({
       session_id: liveStream.session_id,
       sender_id: authUser.id,
@@ -240,7 +314,6 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       coin_cost: gift.cost,
     });
 
-    // Broadcast gift
     channelRef.current.send({
       type: 'broadcast',
       event: 'gift',
@@ -253,7 +326,6 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       },
     });
 
-    // Local animation
     setGiftAnimation({
       id: Date.now(),
       emoji: gift.emoji,
@@ -262,9 +334,19 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       animation: gift.animation,
     });
 
+    setTotalGiftCoins(prev => prev + gift.cost);
+    setLeaderboard(prev => {
+      const existing = prev.find(e => e.username === currentUser.username);
+      if (existing) {
+        return prev.map(e => e.username === currentUser.username ? { ...e, totalCoins: e.totalCoins + gift.cost } : e)
+          .sort((a, b) => b.totalCoins - a.totalCoins);
+      }
+      return [...prev, { username: currentUser.username, totalCoins: gift.cost }].sort((a, b) => b.totalCoins - a.totalCoins);
+    });
+
     setShowGiftPanel(false);
     toast({ title: `${gift.emoji} ${gift.name} sent!` });
-  }, [authUser, currentUser, coinBalance, liveStream]);
+  }, [authUser, currentUser, coinBalance, liveStream, canInteract]);
 
   const handlePinMessage = useCallback((comment: Comment) => {
     if (!isOwner || !channelRef.current) return;
@@ -282,6 +364,14 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     setPinnedMessage(null);
   }, []);
 
+  const toggleSlowMode = useCallback(() => {
+    if (!isOwner || !channelRef.current) return;
+    const newState = !slowMode;
+    setSlowMode(newState);
+    channelRef.current.send({ type: 'broadcast', event: 'slow-mode', payload: { enabled: newState } });
+    toast({ title: newState ? '🐢 Slow mode ON (5s)' : '⚡ Slow mode OFF' });
+  }, [isOwner, slowMode]);
+
   const handleClose = useCallback(() => {
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -294,6 +384,9 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     if (!isOwner || !liveStream.session_id || isEndingLive) return;
     setIsEndingLive(true);
     try {
+      // Broadcast live-ended event to all viewers
+      channelRef.current?.send({ type: 'broadcast', event: 'live-ended', payload: {} });
+
       await supabase.from('live_streams').update({
         is_active: false,
         ended_at: new Date().toISOString(),
@@ -311,20 +404,74 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   const hasVideo = remoteStream && connectionState === 'connected';
 
+  // Live ended screen for viewers
+  if (liveEnded && !isOwner) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="w-[90vw] max-w-[360px] rounded-2xl p-0 border-0">
+          <div className="bg-gradient-to-br from-background via-background to-pink-500/5 p-6 rounded-2xl">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-600/20 flex items-center justify-center">
+                <Radio className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">Live Has Ended</h2>
+              <p className="text-muted-foreground text-sm mb-1">
+                {liveStream.broadcaster?.display_name || 'The broadcaster'} has ended the live stream.
+              </p>
+              <p className="text-muted-foreground text-xs mb-6">
+                Thanks for watching!
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                <div className="bg-secondary/50 rounded-xl p-3 text-center">
+                  <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
+                    <Heart className="w-4 h-4 fill-pink-500" />
+                    {likeCount}
+                  </div>
+                  <span className="text-xs text-muted-foreground">Likes</span>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-3 text-center">
+                  <div className="text-lg font-bold text-yellow-500 flex items-center justify-center gap-1">
+                    <Coins className="w-4 h-4" />
+                    {totalGiftCoins}
+                  </div>
+                  <span className="text-xs text-muted-foreground">Coins Gifted</span>
+                </div>
+              </div>
+
+              {leaderboard.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1">
+                    <Trophy className="w-3 h-3" /> Top Gifters
+                  </p>
+                  <GiftLeaderboard entries={leaderboard} />
+                </div>
+              )}
+
+              <Button className="w-full rounded-xl" onClick={handleClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none lg:max-w-[400px] lg:h-[90vh] lg:rounded-[2rem]">
-        <div className="relative h-full bg-black flex flex-col">
+      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[900px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
+        {/* Main video + chat area */}
+        <div className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0">
           {/* Video Area */}
-          <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden">
+          <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden min-h-0">
             {/* Remote WebRTC video */}
             {!isOwner && (
               <video
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className={`absolute inset-0 w-full h-full object-cover ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
-                style={{ transform: 'scaleX(-1)' }}
+                className={`absolute inset-0 w-full h-full object-contain ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
 
@@ -335,14 +482,14 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
                   <img
                     src={liveStream.broadcaster?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=120&h=120&fit=crop&crop=face'}
                     alt={liveStream.broadcaster?.username}
-                    className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-pink-500"
+                    className="w-20 h-20 rounded-full mx-auto mb-3 border-4 border-pink-500"
                   />
                 </ProfileLink>
                 <ProfileLink username={liveStream.broadcaster?.username || ''}>
-                  <p className="text-white text-lg font-semibold">
+                  <p className="text-white text-base font-semibold">
                     {liveStream.broadcaster?.display_name || 'Live Stream'}
                   </p>
-                  <p className="text-white/60 text-sm">@{liveStream.broadcaster?.username}</p>
+                  <p className="text-white/60 text-xs">@{liveStream.broadcaster?.username}</p>
                 </ProfileLink>
                 {!isOwner && connectionState !== 'connected' && (
                   <p className="text-white/40 text-xs mt-2">
@@ -353,57 +500,69 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             )}
 
             {/* Top stats bar */}
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-              <div className="flex items-center gap-2">
-                <div className="bg-pink-500 px-3 py-1 rounded-full flex items-center gap-1">
+            <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+              <div className="flex items-center gap-1.5">
+                <div className="bg-pink-500 px-2.5 py-1 rounded-full flex items-center gap-1">
                   <Radio className="w-3 h-3 text-white animate-pulse" />
-                  <span className="text-white text-sm font-semibold">LIVE</span>
+                  <span className="text-white text-xs font-semibold">LIVE</span>
                 </div>
-                <div className="bg-black/50 px-3 py-1 rounded-full flex items-center gap-1">
+                <div className="bg-black/50 px-2 py-1 rounded-full flex items-center gap-1">
                   <Users className="w-3 h-3 text-white" />
-                  <span className="text-white text-sm">{viewerCount}</span>
+                  <span className="text-white text-xs">{viewerCount}</span>
                 </div>
-                <div className="bg-black/50 px-3 py-1 rounded-full flex items-center gap-1">
+                <div className="bg-black/50 px-2 py-1 rounded-full flex items-center gap-1">
                   <Heart className="w-3 h-3 text-white" />
-                  <span className="text-white text-sm">{likeCount}</span>
+                  <span className="text-white text-xs">{likeCount}</span>
                 </div>
+                {slowMode && (
+                  <div className="bg-yellow-500/80 px-2 py-1 rounded-full flex items-center gap-1">
+                    <Timer className="w-3 h-3 text-black" />
+                    <span className="text-black text-xs font-medium">Slow</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {isOwner && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="bg-red-500/80 text-white hover:bg-red-600 rounded-full"
-                    onClick={handleEndLive}
-                    disabled={isEndingLive}
-                  >
-                    <Power className="w-4 h-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`${slowMode ? 'bg-yellow-500/80 text-black' : 'bg-black/50 text-white'} hover:bg-yellow-500 rounded-full h-8 w-8 p-0`}
+                      onClick={toggleSlowMode}
+                      title="Toggle slow mode"
+                    >
+                      <Timer className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="bg-red-500/80 text-white hover:bg-red-600 rounded-full h-8 w-8 p-0"
+                      onClick={handleEndLive}
+                      disabled={isEndingLive}
+                    >
+                      <Power className="w-4 h-4" />
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="bg-black/50 text-white hover:bg-black/70 rounded-full"
+                  className="bg-black/50 text-white hover:bg-black/70 rounded-full h-8 w-8 p-0"
                   onClick={handleClose}
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Stream Title + Leaderboard */}
-            <div className="absolute top-16 left-4 right-4 z-10 space-y-2">
-              <p className="text-white font-semibold text-center">{liveStream.title}</p>
-              {leaderboard.length > 0 && (
-                <div className="flex justify-center">
-                  <GiftLeaderboard entries={leaderboard} />
-                </div>
-              )}
+            {/* Stream Title */}
+            <div className="absolute top-12 left-3 right-3 z-10">
+              <p className="text-white font-medium text-sm text-center truncate">{liveStream.title}</p>
             </div>
 
             {/* Pinned Message */}
             {pinnedMessage && (
-              <div className="absolute top-28 left-0 right-0 z-10">
+              <div className="absolute top-20 left-0 right-0 z-10">
                 <PinnedMessage
                   username={pinnedMessage.username}
                   content={pinnedMessage.content}
@@ -420,32 +579,30 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             <FloatingHearts trigger={likeTrigger} />
           </div>
 
-          {/* Comments Section */}
-          <div className="h-52 bg-gradient-to-t from-black via-black/90 to-transparent absolute bottom-36 left-0 right-0 px-4 py-2 overflow-hidden">
-            <div className="space-y-1.5 max-h-full overflow-y-auto scrollbar-hide">
+          {/* Comments Section - fixed height, not overlapping video */}
+          <div className="h-36 lg:h-44 bg-black/95 px-3 py-2 overflow-hidden flex-shrink-0">
+            <div className="space-y-1 max-h-full overflow-y-auto scrollbar-hide">
               {comments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="flex items-start gap-2 animate-fade-in group"
+                  className="flex items-start gap-1.5 animate-fade-in group"
                   onDoubleClick={() => handlePinMessage(comment)}
                 >
                   <ProfileLink username={comment.username}>
                     <img
                       src={comment.avatarUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'}
                       alt={comment.username}
-                      className="w-6 h-6 rounded-full flex-shrink-0"
+                      className="w-5 h-5 rounded-full flex-shrink-0"
                     />
                   </ProfileLink>
                   <div className="flex-1 min-w-0">
-                    <ProfileLink username={comment.username}>
-                      <span className="text-pink-400 text-xs font-semibold">@{comment.username}</span>
-                    </ProfileLink>
-                    <p className="text-white text-sm">{comment.text}</p>
+                    <span className="text-pink-400 text-[11px] font-semibold">@{comment.username} </span>
+                    <span className="text-white text-xs">{comment.text}</span>
                   </div>
                   {isOwner && (
                     <button
                       onClick={() => handlePinMessage(comment)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white flex-shrink-0"
                     >
                       <Pin className="w-3 h-3" />
                     </button>
@@ -465,58 +622,95 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           />
 
           {/* Interaction Bar */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm">
-            {/* Quick emoji reactions */}
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleEmojiClick(emoji)}
-                  className="flex-shrink-0 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-lg transition-all hover:scale-110 active:scale-95"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+          <div className="p-3 bg-black/90 flex-shrink-0">
+            {/* Quick emoji reactions - only for followers */}
+            {canInteract && (
+              <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 scrollbar-hide">
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleEmojiClick(emoji)}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-sm transition-all hover:scale-110 active:scale-95"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2">
+            {!canInteract && !isOwner && (
+              <p className="text-white/40 text-xs text-center mb-2">Follow to chat and react</p>
+            )}
+
+            <div className="flex items-center gap-1.5">
               <Input
-                placeholder="Say something..."
+                placeholder={canInteract ? (slowModeCooldown > 0 ? `Wait ${slowModeCooldown}s...` : "Say something...") : "Follow to chat..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendComment()}
-                className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-full h-9 text-sm"
+                disabled={!canInteract || (slowMode && slowModeCooldown > 0 && !isOwner)}
+                className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-full h-8 text-xs"
               />
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/10 h-9 w-9" onClick={sendComment}>
-                <Send className="w-4 h-4" />
+              <Button size="icon" variant="ghost" className="text-white hover:bg-white/10 h-8 w-8" onClick={sendComment} disabled={!canInteract}>
+                <Send className="w-3.5 h-3.5" />
               </Button>
-              {!isOwner && (
+              {!isOwner && canInteract && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="text-yellow-400 hover:bg-white/10 h-9 w-9 relative"
+                  className="text-yellow-400 hover:bg-white/10 h-8 w-8 relative"
                   onClick={() => setShowGiftPanel(!showGiftPanel)}
                 >
-                  <Gift className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  <Gift className="w-4 h-4" />
+                  <span className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">
                     {coinBalance > 999 ? '1k' : coinBalance}
                   </span>
                 </Button>
               )}
-              <Button
-                size="icon"
-                variant="ghost"
-                className={`${hasLiked ? 'text-pink-500' : 'text-white'} hover:bg-white/10 h-9 w-9 relative`}
-                onClick={handleLike}
-              >
-                <Heart className="w-5 h-5" fill={hasLiked ? 'currentColor' : 'none'} />
-                {likeCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                    {likeCount > 99 ? '99+' : likeCount}
-                  </span>
-                )}
-              </Button>
+              {canInteract && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`${hasLiked ? 'text-pink-500' : 'text-white'} hover:bg-white/10 h-8 w-8`}
+                  onClick={handleLike}
+                >
+                  <Heart className="w-4 h-4" fill={hasLiked ? 'currentColor' : 'none'} />
+                </Button>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* Desktop sidebar - gift leaderboard */}
+        <div className="hidden lg:flex flex-col w-[260px] bg-background border-l border-border flex-shrink-0">
+          <div className="p-4 border-b border-border">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-500" />
+              Gift Leaderboard
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total: <span className="text-yellow-500 font-medium">{totalGiftCoins}</span> coins
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {leaderboard.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No gifts yet</p>
+            ) : (
+              leaderboard.map((entry, i) => (
+                <div key={entry.username} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30">
+                  <span className="text-sm font-bold w-5 text-center">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">@{entry.username}</p>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <Coins className="w-3 h-3 text-yellow-500" />
+                    <span className="text-xs font-medium text-yellow-500">{entry.totalCoins}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </DialogContent>
