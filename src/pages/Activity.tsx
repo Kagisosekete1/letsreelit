@@ -239,8 +239,8 @@ const Activity = () => {
 
   // Deduplicate and filter notifications based on search
   const processedNotifications = useMemo(() => {
-    // First deduplicate
-    const deduplicated = deduplicateNotifications(notifications);
+    // First deduplicate - cast back to our enriched type
+    const deduplicated = deduplicateNotifications(notifications) as Notification[];
     
     // Then filter by search
     if (!searchQuery.trim()) return deduplicated;
