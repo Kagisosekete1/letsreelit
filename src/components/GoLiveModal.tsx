@@ -1234,7 +1234,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               ref={liveVideoRef}
               autoPlay
               playsInline
-              muted={false}
+              muted
               className="w-full h-full object-cover"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
