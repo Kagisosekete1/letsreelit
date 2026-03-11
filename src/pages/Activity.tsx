@@ -70,9 +70,27 @@ const Activity = () => {
         .select('user_id, username, display_name, avatar_url')
         .in('user_id', userIds);
 
+      // Check follow relationships for follow-type notifications
+      const followNotifUserIds = [...new Set(notifs.filter(n => n.type === 'follow').map(n => n.from_user_id))];
+      let followBackMap = new Map<string, boolean>();
+      
+      if (followNotifUserIds.length > 0) {
+        // Check which of these users we follow back
+        const { data: followBacks } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', authUser.id)
+          .in('following_id', followNotifUserIds);
+        
+        followBacks?.forEach(f => followBackMap.set(f.following_id, true));
+      }
+
       const enrichedNotifs = notifs.map(n => ({
         ...n,
-        from_user: profiles?.find(p => p.user_id === n.from_user_id)
+        from_user: profiles?.find(p => p.user_id === n.from_user_id),
+        followStatus: n.type === 'follow' 
+          ? (followBackMap.has(n.from_user_id) ? 'mutual' as const : 'follows_you' as const) 
+          : null,
       }));
       setNotifications(enrichedNotifs);
     }
