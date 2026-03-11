@@ -31,6 +31,7 @@ interface Notification {
     display_name: string;
     avatar_url: string | null;
   };
+  followStatus?: 'follows_you' | 'mutual' | null;
 }
 
 type ViewState = 
