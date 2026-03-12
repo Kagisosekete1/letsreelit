@@ -4,27 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import HomeScreen from '@/components/HomeScreen';
-import SplashScreen from '@/components/SplashScreen';
 import CreateReelModal from '@/components/CreateReelModal';
 import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
 
 import DesktopCommentsPanel from '@/components/DesktopCommentsPanel';
 import { Screen } from '@/types';
 
-const SPLASH_SHOWN_KEY = 'splashShown';
 const APP_INITIALIZED_KEY = 'muvit_app_initialized';
 
 const Index = () => {
   const isNative = Capacitor.isNativePlatform();
   const [activeTab, setActiveTab] = useState('home');
-  const [showSplash, setShowSplash] = useState(() => {
-    // On native builds, rely ONLY on the native launch screen (avoid double splash).
-    if (isNative) return false;
-    // Check if app has been initialized this session - skip splash for internal navigation
-    if (sessionStorage.getItem(APP_INITIALIZED_KEY)) return false;
-    // Only show splash once per session (web)
-    return !sessionStorage.getItem(SPLASH_SHOWN_KEY);
-  });
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   
