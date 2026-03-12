@@ -30,8 +30,7 @@ const Index = () => {
   useEffect(() => {
     // Mark app as initialized for this session
     sessionStorage.setItem(APP_INITIALIZED_KEY, 'true');
-    }
-  }, [showSplash, isNative]);
+  }, []);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
