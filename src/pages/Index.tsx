@@ -30,14 +30,6 @@ const Index = () => {
   useEffect(() => {
     // Mark app as initialized for this session
     sessionStorage.setItem(APP_INITIALIZED_KEY, 'true');
-    
-    if (isNative) return;
-    if (showSplash) {
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-        sessionStorage.setItem(SPLASH_SHOWN_KEY, 'true');
-      }, 2000);
-      return () => clearTimeout(timer);
     }
   }, [showSplash, isNative]);
 
