@@ -94,6 +94,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
+  const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('contain');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]); // Store ALL comments for scroll history
   const commentsContainerRef = useRef<HTMLDivElement>(null);
@@ -891,7 +892,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     playsInline
                     muted
                     webkit-playsinline="true"
-                    className="w-full h-full object-contain bg-black"
+                    className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
                     style={{ 
                       transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
                       WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
@@ -1068,7 +1069,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-contain bg-black"
+                  className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
                   style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
@@ -1235,7 +1236,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               autoPlay
               playsInline
               muted
-              className="w-full h-full object-contain bg-black"
+              className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
             {/* AR Effect Overlay during live */}
@@ -1447,6 +1448,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 title="Switch Camera"
               >
                 <SwitchCamera className="w-6 h-6 text-white" />
+              </Button>
+              {/* Camera fit toggle */}
+              <Button
+                variant="ghost"
+                size="lg"
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${cameraFit === 'cover' ? 'bg-primary/50 ring-2 ring-primary' : 'bg-white/10 hover:bg-white/20'}`}
+                onClick={() => setCameraFit(prev => prev === 'contain' ? 'cover' : 'contain')}
+                title={cameraFit === 'contain' ? 'Fill screen' : 'Fit to screen'}
+              >
+                <span className="text-xs text-white font-bold">{cameraFit === 'contain' ? 'FIT' : 'FILL'}</span>
               </Button>
               {/* AR Effects Button during live */}
               <Button
