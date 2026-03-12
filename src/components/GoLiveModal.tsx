@@ -1069,7 +1069,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-contain bg-black"
+                  className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
                   style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
