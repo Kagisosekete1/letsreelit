@@ -94,7 +94,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
-  const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('contain');
+  const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('cover');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]); // Store ALL comments for scroll history
   const commentsContainerRef = useRef<HTMLDivElement>(null);
