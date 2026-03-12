@@ -892,7 +892,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     playsInline
                     muted
                     webkit-playsinline="true"
-                    className="w-full h-full object-contain bg-black"
+                    className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
                     style={{ 
                       transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
                       WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
