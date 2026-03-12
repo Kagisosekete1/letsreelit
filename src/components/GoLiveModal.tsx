@@ -891,7 +891,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     playsInline
                     muted
                     webkit-playsinline="true"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain bg-black"
                     style={{ 
                       transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
                       WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
@@ -1068,7 +1068,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain bg-black"
                   style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
@@ -1235,7 +1235,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               autoPlay
               playsInline
               muted
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
             {/* AR Effect Overlay during live */}
