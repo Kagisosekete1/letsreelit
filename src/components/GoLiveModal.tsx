@@ -895,7 +895,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     style={{ 
                       transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
                       WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
-                    }
+                    }}
                   />
                   {/* AR Effect Overlay */}
                   {AR_EFFECTS[selectedAREffect].overlay && (
