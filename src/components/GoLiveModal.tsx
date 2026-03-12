@@ -1449,6 +1449,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               >
                 <SwitchCamera className="w-6 h-6 text-white" />
               </Button>
+              {/* Camera fit toggle */}
+              <Button
+                variant="ghost"
+                size="lg"
+                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${cameraFit === 'cover' ? 'bg-primary/50 ring-2 ring-primary' : 'bg-white/10 hover:bg-white/20'}`}
+                onClick={() => setCameraFit(prev => prev === 'contain' ? 'cover' : 'contain')}
+                title={cameraFit === 'contain' ? 'Fill screen' : 'Fit to screen'}
+              >
+                <span className="text-xs text-white font-bold">{cameraFit === 'contain' ? 'FIT' : 'FILL'}</span>
+              </Button>
               {/* AR Effects Button during live */}
               <Button
                 variant="ghost"

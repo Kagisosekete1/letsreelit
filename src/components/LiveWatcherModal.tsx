@@ -408,48 +408,51 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   if (liveEnded && !isOwner) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="w-[90vw] max-w-[360px] rounded-2xl p-0 border-0">
-          <div className="bg-gradient-to-br from-background via-background to-pink-500/5 p-6 rounded-2xl">
-            <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-600/20 flex items-center justify-center">
-                <Radio className="w-10 h-10 text-muted-foreground" />
+        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[480px] lg:h-auto lg:rounded-2xl overflow-hidden">
+          <div className="flex flex-col items-center justify-center h-full bg-black p-6">
+            <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Power className="w-12 h-12 text-destructive" />
+            </div>
+            <h2 className="text-white text-2xl font-bold mb-2">Live Has Ended</h2>
+            <p className="text-white/60 text-sm mb-1 text-center">
+              {liveStream.broadcaster?.display_name || 'The broadcaster'} has ended this live stream.
+            </p>
+            <p className="text-white/40 text-xs mb-8 text-center">
+              Thanks for watching! You can close this and find another live.
+            </p>
+
+            <div className="flex gap-3 w-full max-w-xs mb-6">
+              <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
+                  <Heart className="w-4 h-4 fill-pink-500" />
+                  {likeCount}
+                </div>
+                <span className="text-xs text-white/40">Likes</span>
               </div>
-              <h2 className="text-xl font-bold mb-2">Live Has Ended</h2>
-              <p className="text-muted-foreground text-sm mb-1">
-                {liveStream.broadcaster?.display_name || 'The broadcaster'} has ended the live stream.
-              </p>
-              <p className="text-muted-foreground text-xs mb-6">
-                Thanks for watching!
-              </p>
-
-              <div className="grid grid-cols-2 gap-2 mb-6">
-                <div className="bg-secondary/50 rounded-xl p-3 text-center">
-                  <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
-                    <Heart className="w-4 h-4 fill-pink-500" />
-                    {likeCount}
-                  </div>
-                  <span className="text-xs text-muted-foreground">Likes</span>
+              <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                <div className="text-lg font-bold text-yellow-500 flex items-center justify-center gap-1">
+                  <Coins className="w-4 h-4" />
+                  {totalGiftCoins}
                 </div>
-                <div className="bg-secondary/50 rounded-xl p-3 text-center">
-                  <div className="text-lg font-bold text-yellow-500 flex items-center justify-center gap-1">
-                    <Coins className="w-4 h-4" />
-                    {totalGiftCoins}
-                  </div>
-                  <span className="text-xs text-muted-foreground">Coins Gifted</span>
-                </div>
+                <span className="text-xs text-white/40">Coins Gifted</span>
               </div>
+            </div>
 
-              {leaderboard.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1">
-                    <Trophy className="w-3 h-3" /> Top Gifters
-                  </p>
-                  <GiftLeaderboard entries={leaderboard} />
-                </div>
-              )}
+            {leaderboard.length > 0 && (
+              <div className="w-full max-w-xs mb-6">
+                <p className="text-xs text-white/40 mb-2 flex items-center justify-center gap-1">
+                  <Trophy className="w-3 h-3" /> Top Gifters
+                </p>
+                <GiftLeaderboard entries={leaderboard} />
+              </div>
+            )}
 
-              <Button className="w-full rounded-xl" onClick={handleClose}>
+            <div className="flex gap-3 w-full max-w-xs">
+              <Button variant="outline" className="flex-1 rounded-xl border-white/20 text-white hover:bg-white/10" onClick={handleClose}>
                 Close
+              </Button>
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={() => { handleClose(); window.location.href = '/live'; }}>
+                Find Another Live
               </Button>
             </div>
           </div>
