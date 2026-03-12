@@ -111,9 +111,6 @@ const Index = () => {
     setDesktopCommentsOwnerId(null);
   };
 
-  if (showSplash) {
-    return <div className="h-screen w-full"><SplashScreen /></div>;
-  }
 
   return (
     <div className="min-h-screen bg-background">
