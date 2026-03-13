@@ -1529,6 +1529,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               </div>
             )}
           </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
