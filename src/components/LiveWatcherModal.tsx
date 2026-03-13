@@ -406,7 +406,20 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   const hasVideo = remoteStream && connectionState === 'connected';
 
-  // Live ended screen for viewers
+  // Touch-to-toggle comments visibility (3s hold)
+  const handleTouchStart = useCallback(() => {
+    touchTimerRef.current = setTimeout(() => {
+      setCommentsVisible(prev => !prev);
+    }, 3000);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  }, []);
+
   if (liveEnded && !isOwner) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
