@@ -886,6 +886,31 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // DESKTOP BLOCK - can only watch, not broadcast
+  if (!isMobile && step === 'setup') {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-[360px] rounded-2xl p-6">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <Monitor className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-bold">Mobile Only</h2>
+            <p className="text-sm text-muted-foreground">
+              Going live is only available on mobile devices. Please use your phone to start a live stream.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              You can still watch live streams on desktop.
+            </p>
+            <Button variant="outline" className="w-full rounded-xl" onClick={handleClose}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   // SETUP SCREEN
   if (step === 'setup') {
     return (
