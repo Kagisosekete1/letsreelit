@@ -1056,11 +1056,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'countdown') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
-          <div className="relative h-full bg-black">
+        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
+          <div className="relative h-full w-full flex items-center justify-center bg-black">
+            <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
             {/* Camera Preview during countdown */}
             <div 
-              className="w-full h-full"
+              className="absolute inset-0"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
               {stream ? (
@@ -1069,7 +1070,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
+                  className="w-full h-full object-cover"
                   style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
