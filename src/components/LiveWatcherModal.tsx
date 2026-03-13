@@ -637,8 +637,9 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
               <div ref={commentsEndRef} />
             </div>
           </div>
+          )}
 
-          {/* Gift Panel */}
+
           <GiftPanel
             isOpen={showGiftPanel}
             onClose={() => setShowGiftPanel(false)}
