@@ -76,10 +76,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [slowModeCooldown, setSlowModeCooldown] = useState(0);
   const [isFollower, setIsFollower] = useState(false);
   const [totalGiftCoins, setTotalGiftCoins] = useState(0);
+  const [commentsVisible, setCommentsVisible] = useState(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
 
@@ -404,7 +406,20 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   const hasVideo = remoteStream && connectionState === 'connected';
 
-  // Live ended screen for viewers
+  // Touch-to-toggle comments visibility (3s hold)
+  const handleTouchStart = useCallback(() => {
+    touchTimerRef.current = setTimeout(() => {
+      setCommentsVisible(prev => !prev);
+    }, 3000);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  }, []);
+
   if (liveEnded && !isOwner) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -465,7 +480,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[900px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
         {/* Main video + chat area */}
-        <div className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0">
+        <div 
+          className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+        >
           {/* Video Area */}
           <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden min-h-0">
             {/* Remote WebRTC video */}
@@ -582,7 +603,8 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             <FloatingHearts trigger={likeTrigger} />
           </div>
 
-          {/* Comments Section - fixed height, not overlapping video */}
+          {/* Comments Section - toggleable via long press */}
+          {commentsVisible && (
           <div className="h-36 lg:h-44 bg-black/95 px-3 py-2 overflow-hidden flex-shrink-0">
             <div className="space-y-1 max-h-full overflow-y-auto scrollbar-hide">
               {comments.map((comment) => (
@@ -615,8 +637,9 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
               <div ref={commentsEndRef} />
             </div>
           </div>
+          )}
 
-          {/* Gift Panel */}
+
           <GiftPanel
             isOpen={showGiftPanel}
             onClose={() => setShowGiftPanel(false)}
