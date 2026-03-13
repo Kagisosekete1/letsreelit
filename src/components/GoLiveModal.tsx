@@ -693,6 +693,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleEndLive = async () => {
+    // Broadcast live-ended event to all viewers FIRST
+    if (channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'live-ended', payload: {} });
+      // Small delay to ensure broadcast is sent before cleanup
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
     // Stop recording
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
@@ -724,7 +731,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setStream(null);
     setIsLive(false);
     
-    // Don't go to 'ended' screen - close immediately and clean up
     recordedChunksRef.current = [];
     reachedMilestones.current.clear();
     setStep('setup');
@@ -744,6 +750,20 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     
     onClose();
   };
+
+  // Touch-to-toggle comments visibility (3s hold)
+  const handleTouchStart = useCallback(() => {
+    touchTimerRef.current = setTimeout(() => {
+      setCommentsVisible(prev => !prev);
+    }, 3000);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  }, []);
 
   const handleClose = () => {
     if (stream) {
