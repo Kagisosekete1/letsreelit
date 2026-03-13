@@ -1107,6 +1107,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             >
               <X className="w-6 h-6" />
             </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
