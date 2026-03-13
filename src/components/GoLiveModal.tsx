@@ -1272,14 +1272,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
-        <div className="relative h-full w-full flex items-center justify-center bg-black">
-          {/* Portrait container - 9:16 aspect ratio, centered */}
-          <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
+      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+        <div 
+          className="relative h-full w-full bg-black"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+        >
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
-          {/* Video Preview - camera feed with beauty filter and AR effects */}
+          {/* Video Preview - camera feed fills entire screen */}
           <div 
             className="absolute inset-0"
             style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
@@ -1292,142 +1296,115 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="w-full h-full object-cover"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
-            {/* AR Effect Overlay during live */}
             {AR_EFFECTS[selectedAREffect].overlay && (
               <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
-                <span className="text-7xl animate-bounce drop-shadow-lg">
+                <span className="text-5xl animate-bounce drop-shadow-lg">
                   {AR_EFFECTS[selectedAREffect].overlay}
                 </span>
               </div>
             )}
           </div>
           
-          {/* Gradient overlays for modern look */}
+          {/* Gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
 
-          {/* Top Bar with glass effect */}
-          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/50 to-transparent z-10">
+          {/* Top Bar - compact */}
+          <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {/* Live badge with glow */}
+              <div className="flex items-center gap-1.5">
                 <div className="relative">
                   <div className="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-50 animate-pulse" />
-                  <div className="relative bg-gradient-to-r from-pink-500 to-red-500 px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    <span className="text-white text-sm font-bold tracking-wide">LIVE</span>
+                  <div className="relative bg-gradient-to-r from-pink-500 to-red-500 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    <span className="text-white text-xs font-bold">LIVE</span>
                   </div>
                 </div>
-                
-                {/* Stats pills */}
-                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                  <Users className="w-3.5 h-3.5 text-white" />
-                  <span className="text-white text-sm font-medium">{viewerCount}</span>
+                <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                  <Users className="w-3 h-3 text-white" />
+                  <span className="text-white text-xs font-medium">{viewerCount}</span>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                  <span className="text-white text-sm font-medium">{formatDuration(liveDuration)}</span>
+                <div className="bg-white/10 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                  <span className="text-white text-xs font-medium">{formatDuration(liveDuration)}</span>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                {/* END LIVE BUTTON - Prominent */}
-                <Button
-                  className="bg-red-500 hover:bg-red-600 text-white rounded-full px-4 h-10 flex items-center gap-2 font-semibold"
-                  onClick={handleEndLive}
-                >
-                  <Power className="w-4 h-4" />
-                  End Live
-                </Button>
-              </div>
+              <Button
+                className="bg-red-500 hover:bg-red-600 text-white rounded-full px-3 h-8 flex items-center gap-1.5 font-semibold text-xs"
+                onClick={handleEndLive}
+              >
+                <Power className="w-3.5 h-3.5" />
+                End
+              </Button>
             </div>
             
-            {/* Title with subtle background */}
-            <div className="mt-3 bg-white/5 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/5">
-              <p className="text-white font-semibold text-lg">{liveTitle}</p>
+            <div className="mt-2 bg-white/5 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/5">
+              <p className="text-white font-medium text-sm truncate">{liveTitle}</p>
             </div>
           </div>
 
-          {/* Viewer avatars with better styling */}
+          {/* Viewer avatars */}
           {viewerCount > 0 && (
-            <div className="absolute top-32 left-4 flex -space-x-2 z-10">
+            <div className="absolute top-24 left-3 flex -space-x-1.5 z-10">
               {Array.from(viewers.values()).slice(0, 5).map((viewer, idx) => (
                 <div
                   key={viewer.oderId}
-                  className="w-9 h-9 rounded-full border-2 border-pink-500/50 bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center overflow-hidden shadow-lg"
+                  className="w-7 h-7 rounded-full border-2 border-pink-500/50 bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center overflow-hidden shadow-lg"
                   style={{ zIndex: 5 - idx }}
                 >
                   {viewer.avatarUrl ? (
                     <img src={viewer.avatarUrl} alt={viewer.username} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-white text-xs font-bold">{viewer.username[0]?.toUpperCase()}</span>
+                    <span className="text-white text-[10px] font-bold">{viewer.username[0]?.toUpperCase()}</span>
                   )}
                 </div>
               ))}
               {viewerCount > 5 && (
-                <div className="w-9 h-9 rounded-full border-2 border-white/20 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">+{viewerCount - 5}</span>
+                <div className="w-7 h-7 rounded-full border-2 border-white/20 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold">+{viewerCount - 5}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Comments Section with scrollable history - like TikTok/Instagram */}
-          <div 
-            ref={commentsContainerRef}
-            className="absolute bottom-44 left-0 right-20 max-h-60 overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
-            style={{ scrollBehavior: 'smooth' }}
-          >
-            {allComments.length === 0 ? (
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
-                <span className="text-white/70 text-sm">✨ Waiting for viewers to join...</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Scroll hint at top */}
-                {allComments.length > 6 && (
-                  <button 
-                    className="w-full text-center text-white/50 text-xs py-1 hover:text-white/80 transition-colors"
-                    onClick={() => {
-                      if (commentsContainerRef.current) {
-                        commentsContainerRef.current.scrollTop = 0;
-                      }
-                    }}
-                  >
-                    ↑ Scroll up to see {allComments.length - 6} older comments
-                  </button>
-                )}
-                {allComments.map((comment, idx) => (
-                  <div 
-                    key={comment.id} 
-                    className="bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/5 flex items-start gap-2 animate-in slide-in-from-left duration-300"
-                    style={{ animationDelay: `${Math.min(idx, 6) * 50}ms` }}
-                  >
-                    {comment.avatarUrl ? (
-                      <ProfileLink username={comment.username}>
-                        <img src={comment.avatarUrl} alt="" className="w-6 h-6 rounded-full border border-white/20" />
-                      </ProfileLink>
-                    ) : (
-                      <ProfileLink username={comment.username}>
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">{comment.username[0]?.toUpperCase()}</span>
+          {/* Comments Section - toggleable via long press */}
+          {commentsVisible && (
+            <div 
+              ref={commentsContainerRef}
+              className="absolute bottom-32 left-0 right-16 max-h-40 overflow-y-auto px-3 scrollbar-hide"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {allComments.length === 0 ? (
+                <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10">
+                  <span className="text-white/70 text-xs">✨ Waiting for viewers...</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {allComments.map((comment) => (
+                    <div 
+                      key={comment.id} 
+                      className="bg-white/10 backdrop-blur-md rounded-xl px-2.5 py-1.5 border border-white/5 flex items-start gap-1.5"
+                    >
+                      {comment.avatarUrl ? (
+                        <img src={comment.avatarUrl} alt="" className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-[8px] font-bold">{comment.username[0]?.toUpperCase()}</span>
                         </div>
-                      </ProfileLink>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <ProfileLink username={comment.username}>
-                        <span className="text-pink-400 font-semibold text-sm">@{comment.username}</span>
-                      </ProfileLink>
-                      <p className="text-white/90 text-sm break-words">{comment.text}</p>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-pink-400 font-semibold text-[11px]">@{comment.username} </span>
+                        <span className="text-white/90 text-xs break-words">{comment.text}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Pinned Message */}
           {pinnedMsg && (
-            <div className="absolute top-28 left-0 right-0 z-10">
+            <div className="absolute top-[6.5rem] left-0 right-0 z-10">
               <PinnedMessage
                 username={pinnedMsg.username}
                 content={pinnedMsg.content}
@@ -1440,136 +1417,107 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Gift Animation */}
           <GiftAnimation trigger={giftAnimation} />
 
-          {/* Gift Leaderboard */}
           {giftLeaderboard.length > 0 && (
-            <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
+            <div className="absolute top-[6.5rem] left-3 right-3 z-10 flex justify-center">
               <GiftLeaderboard entries={giftLeaderboard} />
             </div>
           )}
 
-          {/* Floating Hearts Animation */}
           <FloatingHearts trigger={likeTrigger} />
 
-          {/* Bottom Controls with glass morphism */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
-            {/* Comment Input with modern styling */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex-1 relative">
-                <Input
-                  placeholder="Say something..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendComment()}
-                  className="w-full bg-white/10 backdrop-blur-md border-white/10 text-white placeholder:text-white/50 rounded-full pl-4 pr-12 py-3 focus:ring-2 focus:ring-pink-500/50"
-                />
-              </div>
-              <Button
-                size="icon"
-                className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 w-11 h-11 shadow-lg"
-                onClick={sendComment}
-              >
-                <Send className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Control Buttons with glass effect */}
-            <div className="flex items-center justify-center gap-3">
+          {/* Bottom Controls - compact, no comment input for broadcaster */}
+          <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
+            {/* Control Buttons - smaller */}
+            <div className="flex items-center justify-center gap-2.5">
               <Button
                 variant="ghost"
-                size="lg"
-                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${isMuted ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
+                size="icon"
+                className={`rounded-full w-10 h-10 backdrop-blur-md border border-white/10 transition-all ${isMuted ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={toggleMute}
               >
-                {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
+                {isMuted ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-white" />}
               </Button>
               <Button
                 variant="ghost"
-                size="lg"
-                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${!isCameraOn ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
+                size="icon"
+                className={`rounded-full w-10 h-10 backdrop-blur-md border border-white/10 transition-all ${!isCameraOn ? 'bg-red-500/80 hover:bg-red-600/80' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={toggleCamera}
               >
-                {isCameraOn ? <Camera className="w-6 h-6 text-white" /> : <CameraOff className="w-6 h-6 text-white" />}
+                {isCameraOn ? <Camera className="w-4 h-4 text-white" /> : <CameraOff className="w-4 h-4 text-white" />}
               </Button>
               <Button
                 variant="ghost"
-                size="lg"
-                className="rounded-full w-14 h-14 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
+                size="icon"
+                className="rounded-full w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10"
                 onClick={flipCamera}
-                title="Switch Camera"
               >
-                <SwitchCamera className="w-6 h-6 text-white" />
+                <SwitchCamera className="w-4 h-4 text-white" />
               </Button>
-              {/* AR Effects Button during live */}
               <Button
                 variant="ghost"
-                size="lg"
-                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${showAREffects ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
+                size="icon"
+                className={`rounded-full w-10 h-10 backdrop-blur-md border border-white/10 transition-all ${showAREffects ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={() => { setShowAREffects(!showAREffects); setShowFilters(false); }}
-                title="AR Effects"
               >
-                <span className="text-2xl">🎭</span>
+                <span className="text-base">🎭</span>
               </Button>
-              {/* Beauty Filters Button during live */}
               <Button
                 variant="ghost"
-                size="lg"
-                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${showFilters ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
+                size="icon"
+                className={`rounded-full w-10 h-10 backdrop-blur-md border border-white/10 transition-all ${showFilters ? 'bg-pink-500/50 ring-2 ring-pink-400' : 'bg-white/10 hover:bg-white/20'}`}
                 onClick={() => { setShowFilters(!showFilters); setShowAREffects(false); }}
-                title="Beauty Filters"
               >
-                <Sparkles className="w-6 h-6 text-white" />
+                <Sparkles className="w-4 h-4 text-white" />
               </Button>
             </div>
             
-            {/* AR Effects Panel during live */}
+            {/* AR Effects Panel */}
             {showAREffects && (
-              <div className="mt-3 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
+              <div className="mt-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                <p className="text-white text-[10px] font-medium mb-1.5 text-center">🎭 AR Effects</p>
                 <div className="flex gap-1 overflow-x-auto pb-1">
                   {AR_EFFECTS.map((effect, index) => (
                     <button
                       key={effect.name}
                       onClick={() => setSelectedAREffect(index)}
-                      className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                      className={`flex flex-col items-center min-w-[40px] p-1 rounded-lg transition-all ${
                         selectedAREffect === index 
                           ? 'bg-pink-500/50 ring-1 ring-pink-400' 
                           : 'bg-white/10 hover:bg-white/20'
                       }`}
                     >
-                      <span className="text-lg">{effect.emoji}</span>
-                      <span className="text-[10px] text-white/80">{effect.name}</span>
+                      <span className="text-sm">{effect.emoji}</span>
+                      <span className="text-[8px] text-white/80">{effect.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
             
-            {/* Beauty Filters Panel during live */}
+            {/* Beauty Filters Panel */}
             {showFilters && (
-              <div className="mt-3 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
+              <div className="mt-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                <p className="text-white text-[10px] font-medium mb-1.5 text-center">✨ Beauty Filters</p>
                 <div className="flex gap-1 overflow-x-auto pb-1">
                   {BEAUTY_FILTERS.map((filter, index) => (
                     <button
                       key={filter.name}
                       onClick={() => setSelectedFilter(index)}
-                      className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                      className={`flex flex-col items-center min-w-[40px] p-1 rounded-lg transition-all ${
                         selectedFilter === index 
                           ? 'bg-pink-500/50 ring-1 ring-pink-400' 
                           : 'bg-white/10 hover:bg-white/20'
                       }`}
                     >
-                      <span className="text-lg">{filter.icon}</span>
-                      <span className="text-[10px] text-white/80">{filter.name}</span>
+                      <span className="text-sm">{filter.icon}</span>
+                      <span className="text-[8px] text-white/80">{filter.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
-          </div>
           </div>
         </div>
       </DialogContent>
