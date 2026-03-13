@@ -480,7 +480,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[900px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
         {/* Main video + chat area */}
-        <div className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0">
+        <div 
+          className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+        >
           {/* Video Area */}
           <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden min-h-0">
             {/* Remote WebRTC video */}
