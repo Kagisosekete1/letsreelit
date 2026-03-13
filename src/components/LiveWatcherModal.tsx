@@ -603,7 +603,8 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             <FloatingHearts trigger={likeTrigger} />
           </div>
 
-          {/* Comments Section - fixed height, not overlapping video */}
+          {/* Comments Section - toggleable via long press */}
+          {commentsVisible && (
           <div className="h-36 lg:h-44 bg-black/95 px-3 py-2 overflow-hidden flex-shrink-0">
             <div className="space-y-1 max-h-full overflow-y-auto scrollbar-hide">
               {comments.map((comment) => (
