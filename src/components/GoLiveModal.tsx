@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2, SwitchCamera, Sparkles } from 'lucide-react';
+import { X, Heart, Send, Users, Radio, Mic, MicOff, Camera, CameraOff, RotateCcw, MessageCircle, Power, Trash2, SwitchCamera, Sparkles, Monitor } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
 import { supabase } from '@/integrations/supabase/client';
