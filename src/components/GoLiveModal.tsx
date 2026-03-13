@@ -1056,11 +1056,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'countdown') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
-          <div className="relative h-full bg-black">
+        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
+          <div className="relative h-full w-full flex items-center justify-center bg-black">
+            <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
             {/* Camera Preview during countdown */}
             <div 
-              className="w-full h-full"
+              className="absolute inset-0"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
               {stream ? (
@@ -1069,7 +1070,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
+                  className="w-full h-full object-cover"
                   style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                 />
               ) : (
@@ -1106,6 +1107,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             >
               <X className="w-6 h-6" />
             </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1221,14 +1223,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
-        <div className="relative h-full bg-gradient-to-b from-black via-black to-purple-950/30">
+      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
+        <div className="relative h-full w-full flex items-center justify-center bg-black">
+          {/* Portrait container - 9:16 aspect ratio, centered */}
+          <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
           {/* Video Preview - camera feed with beauty filter and AR effects */}
           <div 
-            className="w-full h-full relative"
+            className="absolute inset-0"
             style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
           >
             <video
@@ -1236,7 +1240,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               autoPlay
               playsInline
               muted
-              className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
+              className="w-full h-full object-cover"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
             {/* AR Effect Overlay during live */}
@@ -1449,16 +1453,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               >
                 <SwitchCamera className="w-6 h-6 text-white" />
               </Button>
-              {/* Camera fit toggle */}
-              <Button
-                variant="ghost"
-                size="lg"
-                className={`rounded-full w-14 h-14 backdrop-blur-md border border-white/10 transition-all ${cameraFit === 'cover' ? 'bg-primary/50 ring-2 ring-primary' : 'bg-white/10 hover:bg-white/20'}`}
-                onClick={() => setCameraFit(prev => prev === 'contain' ? 'cover' : 'contain')}
-                title={cameraFit === 'contain' ? 'Fill screen' : 'Fit to screen'}
-              >
-                <span className="text-xs text-white font-bold">{cameraFit === 'contain' ? 'FIT' : 'FILL'}</span>
-              </Button>
               {/* AR Effects Button during live */}
               <Button
                 variant="ghost"
@@ -1526,6 +1520,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </DialogContent>
