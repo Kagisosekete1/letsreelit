@@ -1105,9 +1105,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'countdown') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
-          <div className="relative h-full w-full flex items-center justify-center bg-black">
-            <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
+        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+          <div className="relative h-full w-full bg-black">
+            <div className="relative w-full h-full">
             {/* Camera Preview during countdown */}
             <div 
               className="absolute inset-0"
