@@ -1221,14 +1221,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none">
-        <div className="relative h-full bg-gradient-to-b from-black via-black to-purple-950/30">
+      <DialogContent className="max-w-full h-screen p-0 border-0 rounded-none bg-black">
+        <div className="relative h-full w-full flex items-center justify-center bg-black">
+          {/* Portrait container - 9:16 aspect ratio, centered */}
+          <div className="relative w-full h-full max-w-[420px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '100vh' }}>
           {/* Confetti Burst for milestones */}
           <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
           {/* Video Preview - camera feed with beauty filter and AR effects */}
           <div 
-            className="w-full h-full relative"
+            className="absolute inset-0"
             style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
           >
             <video
@@ -1236,7 +1238,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               autoPlay
               playsInline
               muted
-              className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
+              className="w-full h-full object-cover"
               style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
             {/* AR Effect Overlay during live */}
