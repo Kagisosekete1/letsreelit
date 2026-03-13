@@ -70,6 +70,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
   const { currentUser, authUser } = useUser();
   const { forceCleanupAll } = useAudio();
+  const isMobile = useIsMobile();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
@@ -97,7 +98,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [showAREffects, setShowAREffects] = useState(false);
   const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('cover');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
-  const [allComments, setAllComments] = useState<Comment[]>([]); // Store ALL comments for scroll history
+  const [allComments, setAllComments] = useState<Comment[]>([]);
+  const [commentsVisible, setCommentsVisible] = useState(true);
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
