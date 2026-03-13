@@ -76,10 +76,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [slowModeCooldown, setSlowModeCooldown] = useState(0);
   const [isFollower, setIsFollower] = useState(false);
   const [totalGiftCoins, setTotalGiftCoins] = useState(0);
+  const [commentsVisible, setCommentsVisible] = useState(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
 
