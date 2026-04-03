@@ -478,7 +478,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[900px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
+      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[420px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
         {/* Main video + chat area */}
         <div 
           className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0"
