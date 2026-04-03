@@ -816,9 +816,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: { ideal: newFacingMode },
-          width: { ideal: 1080 }, 
-          height: { ideal: 1920 } 
-        },
+          width: { ideal: 480 }, 
+          height: { ideal: 854 },
+          zoom: 1,
+          resizeMode: 'none',
+        } as any,
         audio: step === 'live',
       });
       setStream(newStream);
