@@ -599,6 +599,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       };
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Force minimum zoom
+      const vTrack = mediaStream.getVideoTracks()[0];
+      if (vTrack) {
+        try {
+          const caps = vTrack.getCapabilities?.() as any;
+          if (caps?.zoom) await vTrack.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] } as any);
+        } catch (e) { console.log('Zoom reset:', e); }
+      }
+
       setStream(mediaStream);
 
       // Attach to live video element - MUTED to prevent echo (broadcaster should not hear themselves)
