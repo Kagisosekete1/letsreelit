@@ -349,7 +349,7 @@ const LiveDiscovery = () => {
         {/* Desktop: Reel-style vertical scroll layout */}
         <div className="hidden lg:block">
           <div className="min-h-[100dvh] bg-black flex items-center justify-center">
-            <div className="w-[768px] h-[95vh] max-h-[920px] rounded-[2.5rem] border border-border/30 relative bg-black overflow-hidden">
+            <div className="w-[420px] h-[95vh] max-h-[920px] rounded-[2.5rem] border border-border/30 relative bg-black overflow-hidden">
               {/* Header overlay */}
               <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
                 <Button 

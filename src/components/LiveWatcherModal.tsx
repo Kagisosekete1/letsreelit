@@ -478,7 +478,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[900px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
+      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[420px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
         {/* Main video + chat area */}
         <div 
           className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0"
@@ -707,38 +707,19 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           </div>
         </div>
 
-        {/* Desktop sidebar - gift leaderboard */}
-        <div className="hidden lg:flex flex-col w-[260px] bg-background border-l border-border flex-shrink-0">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              Gift Leaderboard
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total: <span className="text-yellow-500 font-medium">{totalGiftCoins}</span> coins
-            </p>
+        {/* Gift leaderboard inline for desktop - compact */}
+        {leaderboard.length > 0 && (
+          <div className="hidden lg:block bg-background border-t border-border p-2 flex-shrink-0">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              <Trophy className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+              {leaderboard.slice(0, 3).map((entry, i) => (
+                <span key={entry.username} className="text-[10px] text-muted-foreground whitespace-nowrap">
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} @{entry.username} ({entry.totalCoins})
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {leaderboard.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">No gifts yet</p>
-            ) : (
-              leaderboard.map((entry, i) => (
-                <div key={entry.username} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30">
-                  <span className="text-sm font-bold w-5 text-center">
-                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">@{entry.username}</p>
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    <Coins className="w-3 h-3 text-yellow-500" />
-                    <span className="text-xs font-medium text-yellow-500">{entry.totalCoins}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
