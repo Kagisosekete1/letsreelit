@@ -844,6 +844,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         } as any,
         audio: step === 'live',
       });
+      // Force minimum zoom on new stream
+      const vt = newStream.getVideoTracks()[0];
+      if (vt) {
+        try {
+          const c = vt.getCapabilities?.() as any;
+          if (c?.zoom) await vt.applyConstraints({ advanced: [{ zoom: c.zoom.min }] } as any);
+        } catch (e) { console.log('Zoom reset:', e); }
+      }
+
       setStream(newStream);
       setCurrentFacingMode(newFacingMode);
       
