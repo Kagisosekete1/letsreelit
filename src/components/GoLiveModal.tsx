@@ -459,9 +459,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const mobileConstraints: MediaStreamConstraints = {
         video: {
           facingMode: currentFacingMode,
-          width: { ideal: 720, max: 1280 },
-          height: { ideal: 1280, max: 1920 },
-        },
+          width: { ideal: 480 },
+          height: { ideal: 854 },
+          zoom: 1,
+          resizeMode: 'none',
+        } as any,
         audio: false,
       };
 
