@@ -480,6 +480,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         });
       }
       
+      // Force minimum zoom on the camera track
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (videoTrack) {
+        try {
+          const capabilities = videoTrack.getCapabilities?.() as any;
+          if (capabilities?.zoom) {
+            await videoTrack.applyConstraints({ advanced: [{ zoom: capabilities.zoom.min }] } as any);
+          }
+        } catch (e) { console.log('Zoom reset not supported:', e); }
+      }
+
       setStream(mediaStream);
       setPermissionStatus('granted');
       
