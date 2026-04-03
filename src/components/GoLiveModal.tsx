@@ -459,9 +459,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const mobileConstraints: MediaStreamConstraints = {
         video: {
           facingMode: currentFacingMode,
-          width: { ideal: 720, max: 1280 },
-          height: { ideal: 1280, max: 1920 },
-        },
+          width: { ideal: 480 },
+          height: { ideal: 854 },
+          zoom: 1,
+          resizeMode: 'none',
+        } as any,
         audio: false,
       };
 
@@ -478,6 +480,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         });
       }
       
+      // Force minimum zoom on the camera track
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (videoTrack) {
+        try {
+          const capabilities = videoTrack.getCapabilities?.() as any;
+          if (capabilities?.zoom) {
+            await videoTrack.applyConstraints({ advanced: [{ zoom: capabilities.zoom.min }] } as any);
+          }
+        } catch (e) { console.log('Zoom reset not supported:', e); }
+      }
+
       setStream(mediaStream);
       setPermissionStatus('granted');
       
@@ -572,10 +585,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
+          width: { ideal: 480 },
+          height: { ideal: 854 },
           frameRate: { ideal: 30, max: 30 },
-        },
+          zoom: 1,
+          resizeMode: 'none',
+        } as any,
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -584,6 +599,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       };
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Force minimum zoom
+      const vTrack = mediaStream.getVideoTracks()[0];
+      if (vTrack) {
+        try {
+          const caps = vTrack.getCapabilities?.() as any;
+          if (caps?.zoom) await vTrack.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] } as any);
+        } catch (e) { console.log('Zoom reset:', e); }
+      }
+
       setStream(mediaStream);
 
       // Attach to live video element - MUTED to prevent echo (broadcaster should not hear themselves)
@@ -812,11 +837,22 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: { ideal: newFacingMode },
-          width: { ideal: 1080 }, 
-          height: { ideal: 1920 } 
-        },
+          width: { ideal: 480 }, 
+          height: { ideal: 854 },
+          zoom: 1,
+          resizeMode: 'none',
+        } as any,
         audio: step === 'live',
       });
+      // Force minimum zoom on new stream
+      const vt = newStream.getVideoTracks()[0];
+      if (vt) {
+        try {
+          const c = vt.getCapabilities?.() as any;
+          if (c?.zoom) await vt.applyConstraints({ advanced: [{ zoom: c.zoom.min }] } as any);
+        } catch (e) { console.log('Zoom reset:', e); }
+      }
+
       setStream(newStream);
       setCurrentFacingMode(newFacingMode);
       
