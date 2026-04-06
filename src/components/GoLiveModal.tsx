@@ -367,9 +367,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return rankedDevice?.deviceId ?? null;
   };
 
-  const applyWidestAvailableZoom = async (
+  const applyZoomLevel = async (
     videoTrack: MediaStreamTrack,
-    facingMode: 'user' | 'environment'
+    level: number // 0-4, where 0 = widest
   ) => {
     try {
       const capabilities = videoTrack.getCapabilities?.() as MediaTrackCapabilities & {
@@ -380,13 +380,29 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      const targetZoom = facingMode === 'environment'
-        ? Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.min, 1))
-        : capabilities.zoom.min;
+      const min = capabilities.zoom.min;
+      const max = Math.min(capabilities.zoom.max || 1, min * 5); // cap at 5x the min
+      const step = (max - min) / 4;
+      const targetZoom = min + (step * level);
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
-      console.log('Zoom reset not supported:', error);
+      console.log('Zoom not supported:', error);
+    }
+  };
+
+  const applyWidestAvailableZoom = async (
+    videoTrack: MediaStreamTrack,
+    _facingMode: 'user' | 'environment'
+  ) => {
+    await applyZoomLevel(videoTrack, zoomLevel);
+  };
+
+  const handleZoomChange = async (newLevel: number) => {
+    setZoomLevel(newLevel);
+    const videoTrack = stream?.getVideoTracks()[0];
+    if (videoTrack) {
+      await applyZoomLevel(videoTrack, newLevel);
     }
   };
 
