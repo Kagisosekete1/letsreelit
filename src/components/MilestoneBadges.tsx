@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import ConfettiBurst from '@/components/ui/ConfettiBurst';
@@ -15,10 +15,12 @@ import {
   Zap,
   Crown,
   Diamond,
-  Gem
+  Gem,
+  Download
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface Badge {
   type: 'likes' | 'views' | 'followers' | 'uploads';
@@ -101,11 +103,13 @@ const formatMilestone = (num: number): string => {
 
 const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, userId }) => {
   const { authUser, currentUser } = useUser();
+  const { toast } = useToast();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [achievedCount, setAchievedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [activeCategory, setActiveCategory] = useState<'likes' | 'views' | 'followers' | 'uploads'>('likes');
   const [userStats, setUserStats] = useState({ totalLikes: 0, totalViews: 0, followers: 0, uploads: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Confetti burst trigger (increment to play)
   const [confettiTrigger, setConfettiTrigger] = useState(0);
@@ -266,6 +270,145 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     return Math.min(((current - prev) / (next - prev)) * 100, 100);
   };
 
+  const downloadAchievementImage = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const w = 1080;
+    const h = 1920;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#1a1a2e');
+    grad.addColorStop(0.5, '#16213e');
+    grad.addColorStop(1, '#0f3460');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Decorative circles
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = '#e94560';
+    ctx.beginPath();
+    ctx.arc(w * 0.8, h * 0.15, 200, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(w * 0.2, h * 0.85, 250, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // User avatar
+    const avatarUrl = currentUser?.avatarUrl;
+    if (avatarUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject();
+          img.src = avatarUrl;
+        });
+        
+        const avatarSize = 200;
+        const avatarX = (w - avatarSize) / 2;
+        const avatarY = 280;
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+        ctx.restore();
+        
+        // Avatar ring
+        ctx.strokeStyle = '#e94560';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      } catch {
+        // Skip avatar if loading fails
+      }
+    }
+
+    // Username
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`@${currentUser?.username || 'user'}`, w / 2, 550);
+
+    // Achievement title
+    ctx.font = 'bold 64px sans-serif';
+    const achieveGrad = ctx.createLinearGradient(w * 0.2, 640, w * 0.8, 640);
+    achieveGrad.addColorStop(0, '#e94560');
+    achieveGrad.addColorStop(1, '#ff6b9d');
+    ctx.fillStyle = achieveGrad;
+    ctx.fillText('🏆 ACHIEVEMENTS', w / 2, 680);
+
+    // Stats
+    ctx.font = '36px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${achievedCount} Badges Unlocked`, w / 2, 780);
+
+    // Category stats
+    const stats = [
+      { label: '❤️ Likes', value: formatMilestone(userStats.totalLikes) },
+      { label: '👁️ Views', value: formatMilestone(userStats.totalViews) },
+      { label: '👥 Followers', value: formatMilestone(userStats.followers) },
+      { label: '🎬 Uploads', value: formatMilestone(userStats.uploads) },
+    ];
+
+    stats.forEach((stat, i) => {
+      const statY = 900 + i * 120;
+      const statX = w / 2;
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      const rectW = 600;
+      const rectH = 90;
+      const rx = statX - rectW / 2;
+      ctx.beginPath();
+      ctx.roundRect(rx, statY - 50, rectW, rectH, 20);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '30px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(stat.label, rx + 30, statY);
+      ctx.font = 'bold 34px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(stat.value, rx + rectW - 30, statY);
+    });
+
+    ctx.textAlign = 'center';
+
+    // Muv'it logo at the bottom
+    ctx.font = 'bold 56px sans-serif';
+    const logoGrad = ctx.createLinearGradient(w * 0.3, h - 200, w * 0.7, h - 200);
+    logoGrad.addColorStop(0, '#e94560');
+    logoGrad.addColorStop(1, '#ff6b9d');
+    ctx.fillStyle = logoGrad;
+    ctx.fillText("Muv'it", w / 2, h - 180);
+
+    ctx.font = '24px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Share your moves with the world', w / 2, h - 130);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `muvit-achievements-${currentUser?.username || 'user'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    toast({
+      title: '🎉 Achievement card downloaded!',
+      description: 'Share it on social media',
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden bg-background border-border">
@@ -408,10 +551,25 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
             })}
           </div>
 
+          {/* Download Achievement Image */}
+          {achievedCount > 0 && (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl mt-3 gap-2"
+              onClick={downloadAchievementImage}
+            >
+              <Download className="w-4 h-4" />
+              Download Achievement Card
+            </Button>
+          )}
+
           {/* Footer */}
           <p className="text-xs text-muted-foreground text-center mt-5 pb-2">
             Keep creating to unlock more achievements
           </p>
+
+          {/* Hidden canvas for image generation */}
+          <canvas ref={canvasRef} className="hidden" />
         </div>
       </DialogContent>
     </Dialog>

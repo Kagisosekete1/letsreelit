@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
-import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users, Repeat2 } from 'lucide-react';
+import { Settings, Grid3X3, Video, Bookmark, ArrowLeft, Trophy, Sparkles, BarChart3, Users, Repeat2, Clapperboard } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import VideoThumbnail from '@/components/ui/VideoThumbnail';
 import { useUser } from '@/contexts/UserContext';
@@ -225,6 +225,9 @@ const Profile = () => {
               <Button className="flex-1 rounded-xl" onClick={() => setIsShareOpen(true)}>Share Profile</Button>
               <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setBadgesModal(true)}>
                 <Trophy className="w-5 h-5 text-primary" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-xl" onClick={() => navigate('/studio')}>
+                <Clapperboard className="w-5 h-5 text-primary" />
               </Button>
             </div>
             

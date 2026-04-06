@@ -15,7 +15,8 @@ import {
   LogOut,
   BarChart3,
   Settings,
-  Users
+  Users,
+  Clapperboard
 } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
@@ -103,6 +104,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const handleDashboardFromMore = () => {
     setMoreOpen(false);
     navigate('/monetization-analytics');
+  };
+
+  const handleStudioFromMore = () => {
+    setMoreOpen(false);
+    navigate('/studio');
   };
 
   const isActive = (itemId: string, path?: string) => {
@@ -241,6 +247,16 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
               >
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
+              </Button>
+
+              {/* Muv'it Studio */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={handleStudioFromMore}
+              >
+                <Clapperboard className="w-5 h-5" />
+                <span>Muv'it Studio</span>
               </Button>
 
               {/* Switch Accounts */}

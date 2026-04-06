@@ -97,6 +97,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('cover');
+  const [zoomLevel, setZoomLevel] = useState(0); // 0 = widest, 4 = most zoomed
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -366,9 +367,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return rankedDevice?.deviceId ?? null;
   };
 
-  const applyWidestAvailableZoom = async (
+  const applyZoomLevel = async (
     videoTrack: MediaStreamTrack,
-    facingMode: 'user' | 'environment'
+    level: number // 0-4, where 0 = widest
   ) => {
     try {
       const capabilities = videoTrack.getCapabilities?.() as MediaTrackCapabilities & {
@@ -379,13 +380,29 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      const targetZoom = facingMode === 'environment'
-        ? Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.min, 1))
-        : capabilities.zoom.min;
+      const min = capabilities.zoom.min;
+      const max = Math.min(capabilities.zoom.max || 1, min * 5); // cap at 5x the min
+      const step = (max - min) / 4;
+      const targetZoom = min + (step * level);
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
-      console.log('Zoom reset not supported:', error);
+      console.log('Zoom not supported:', error);
+    }
+  };
+
+  const applyWidestAvailableZoom = async (
+    videoTrack: MediaStreamTrack,
+    _facingMode: 'user' | 'environment'
+  ) => {
+    await applyZoomLevel(videoTrack, zoomLevel);
+  };
+
+  const handleZoomChange = async (newLevel: number) => {
+    setZoomLevel(newLevel);
+    const videoTrack = stream?.getVideoTracks()[0];
+    if (videoTrack) {
+      await applyZoomLevel(videoTrack, newLevel);
     }
   };
 
@@ -1511,6 +1528,24 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             )}
 
             <FloatingHearts trigger={likeTrigger} />
+
+            {/* Zoom Control - right side */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 bg-black/40 backdrop-blur-md rounded-full p-1.5 border border-white/10">
+              <span className="text-[9px] text-white/70 font-medium">🔍</span>
+              {[0, 1, 2, 3, 4].map((level) => (
+                <button
+                  key={level}
+                  onClick={() => handleZoomChange(level)}
+                  className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
+                    zoomLevel === level
+                      ? 'bg-white text-black shadow-lg scale-110'
+                      : 'bg-white/15 text-white/80 hover:bg-white/25'
+                  }`}
+                >
+                  {level === 0 ? '0.5' : level === 1 ? '1×' : level === 2 ? '2×' : level === 3 ? '3×' : '5×'}
+                </button>
+              ))}
+            </div>
 
             {/* Bottom Controls - compact, no comment input for broadcaster */}
             <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
