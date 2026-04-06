@@ -15,7 +15,8 @@ import {
   LogOut,
   BarChart3,
   Settings,
-  Users
+  Users,
+  Clapperboard
 } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
