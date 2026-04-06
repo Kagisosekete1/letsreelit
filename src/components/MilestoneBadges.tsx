@@ -412,10 +412,25 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
             })}
           </div>
 
+          {/* Download Achievement Image */}
+          {achievedCount > 0 && (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl mt-3 gap-2"
+              onClick={downloadAchievementImage}
+            >
+              <Download className="w-4 h-4" />
+              Download Achievement Card
+            </Button>
+          )}
+
           {/* Footer */}
           <p className="text-xs text-muted-foreground text-center mt-5 pb-2">
             Keep creating to unlock more achievements
           </p>
+
+          {/* Hidden canvas for image generation */}
+          <canvas ref={canvasRef} className="hidden" />
         </div>
       </DialogContent>
     </Dialog>
