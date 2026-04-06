@@ -1529,6 +1529,24 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
             <FloatingHearts trigger={likeTrigger} />
 
+            {/* Zoom Control - right side */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 bg-black/40 backdrop-blur-md rounded-full p-1.5 border border-white/10">
+              <span className="text-[9px] text-white/70 font-medium">🔍</span>
+              {[0, 1, 2, 3, 4].map((level) => (
+                <button
+                  key={level}
+                  onClick={() => handleZoomChange(level)}
+                  className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
+                    zoomLevel === level
+                      ? 'bg-white text-black shadow-lg scale-110'
+                      : 'bg-white/15 text-white/80 hover:bg-white/25'
+                  }`}
+                >
+                  {level === 0 ? '0.5' : level === 1 ? '1×' : level === 2 ? '2×' : level === 3 ? '3×' : '5×'}
+                </button>
+              ))}
+            </div>
+
             {/* Bottom Controls - compact, no comment input for broadcaster */}
             <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
             {/* Control Buttons - smaller */}
