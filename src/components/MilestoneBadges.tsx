@@ -103,11 +103,13 @@ const formatMilestone = (num: number): string => {
 
 const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, userId }) => {
   const { authUser, currentUser } = useUser();
+  const { toast } = useToast();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [achievedCount, setAchievedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [activeCategory, setActiveCategory] = useState<'likes' | 'views' | 'followers' | 'uploads'>('likes');
   const [userStats, setUserStats] = useState({ totalLikes: 0, totalViews: 0, followers: 0, uploads: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Confetti burst trigger (increment to play)
   const [confettiTrigger, setConfettiTrigger] = useState(0);
