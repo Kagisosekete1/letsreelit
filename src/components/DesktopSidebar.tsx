@@ -105,6 +105,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
     navigate('/monetization-analytics');
   };
 
+  const handleStudioFromMore = () => {
+    setMoreOpen(false);
+    navigate('/studio');
+  };
+
   const isActive = (itemId: string, path?: string) => {
     if (path) {
       return location.pathname === path;
