@@ -249,6 +249,16 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
                 <span>Dashboard</span>
               </Button>
 
+              {/* Muv'it Studio */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={handleStudioFromMore}
+              >
+                <Clapperboard className="w-5 h-5" />
+                <span>Muv'it Studio</span>
+              </Button>
+
               {/* Switch Accounts */}
               <Button
                 variant="ghost"
