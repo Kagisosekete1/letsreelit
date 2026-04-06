@@ -226,6 +226,9 @@ const Profile = () => {
               <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setBadgesModal(true)}>
                 <Trophy className="w-5 h-5 text-primary" />
               </Button>
+              <Button variant="outline" size="icon" className="rounded-xl" onClick={() => navigate('/studio')}>
+                <Clapperboard className="w-5 h-5 text-primary" />
+              </Button>
             </div>
             
             {/* Creator Progress Widget */}
