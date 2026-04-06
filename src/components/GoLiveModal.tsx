@@ -111,6 +111,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
 
   const viewerCount = viewers.size;
+  const portraitStageStyle: React.CSSProperties = {
+    width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
+  };
 
   // WebRTC: broadcast local stream to viewers
   useWebRTCBroadcaster(isLive ? liveSessionId : null, stream);
@@ -324,6 +327,119 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const scoreCameraDevice = (label: string, facingMode: 'user' | 'environment') => {
+    const normalizedLabel = label.toLowerCase();
+
+    if (facingMode === 'user') {
+      return [
+        /front|user|face|selfie|truedepth/.test(normalizedLabel) ? 100 : 0,
+        /back|rear|environment/.test(normalizedLabel) ? -100 : 0,
+      ].reduce((total, score) => total + score, 0);
+    }
+
+    return [
+      /back|rear|environment/.test(normalizedLabel) ? 100 : 0,
+      /ultra|wide|0\.5|main/.test(normalizedLabel) ? 40 : 0,
+      /tele|zoom|macro/.test(normalizedLabel) ? -60 : 0,
+      /front|user|face|selfie|truedepth/.test(normalizedLabel) ? -120 : 0,
+    ].reduce((total, score) => total + score, 0);
+  };
+
+  const getPreferredCameraDeviceId = async (facingMode: 'user' | 'environment') => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return null;
+    }
+
+    const videoDevices = (await navigator.mediaDevices.enumerateDevices()).filter(
+      (device) => device.kind === 'videoinput'
+    );
+
+    const labelledDevices = videoDevices.filter((device) => device.label.trim().length > 0);
+    if (!labelledDevices.length) {
+      return null;
+    }
+
+    const rankedDevice = [...labelledDevices].sort(
+      (first, second) => scoreCameraDevice(second.label, facingMode) - scoreCameraDevice(first.label, facingMode)
+    )[0];
+
+    return rankedDevice?.deviceId ?? null;
+  };
+
+  const applyWidestAvailableZoom = async (
+    videoTrack: MediaStreamTrack,
+    facingMode: 'user' | 'environment'
+  ) => {
+    try {
+      const capabilities = videoTrack.getCapabilities?.() as MediaTrackCapabilities & {
+        zoom?: { min?: number; max?: number };
+      };
+
+      if (!capabilities?.zoom || typeof capabilities.zoom.min !== 'number') {
+        return;
+      }
+
+      const targetZoom = facingMode === 'environment'
+        ? Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.min, 1))
+        : capabilities.zoom.min;
+
+      await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
+    } catch (error) {
+      console.log('Zoom reset not supported:', error);
+    }
+  };
+
+  const getCameraStream = async ({
+    facingMode,
+    withAudio,
+  }: {
+    facingMode: 'user' | 'environment';
+    withAudio: boolean;
+  }) => {
+    const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
+    const baseVideoConstraints: MediaTrackConstraints = {
+      ...(preferredDeviceId
+        ? { deviceId: { exact: preferredDeviceId } }
+        : { facingMode: { ideal: facingMode } }),
+      aspectRatio: { ideal: 9 / 16 },
+      width: { ideal: 720, max: 1080 },
+      height: { ideal: 1280, max: 1920 },
+      frameRate: { ideal: 30, max: 30 },
+    };
+
+    const audioConstraints = withAudio
+      ? {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      : false;
+
+    let mediaStream: MediaStream;
+
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: baseVideoConstraints,
+        audio: audioConstraints,
+      });
+    } catch (constraintError) {
+      console.log('Falling back to simpler camera constraints...', constraintError);
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: preferredDeviceId
+          ? { deviceId: { exact: preferredDeviceId } }
+          : { facingMode: { ideal: facingMode } },
+        audio: audioConstraints,
+      });
+    }
+
+    const videoTrack = mediaStream.getVideoTracks()[0];
+    if (videoTrack) {
+      await applyWidestAvailableZoom(videoTrack, facingMode);
+    }
+
+    return mediaStream;
+  };
+
   // Check and request permissions
   const checkPermissions = async () => {
     try {
@@ -455,41 +571,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         setStream(null);
       }
 
-      // Mobile-optimized constraints - start simple, then upgrade
-      const mobileConstraints: MediaStreamConstraints = {
-        video: {
-          facingMode: currentFacingMode,
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          zoom: 1,
-          resizeMode: 'none',
-        } as any,
-        audio: false,
-      };
-
-      let mediaStream: MediaStream;
-      
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia(mobileConstraints);
-      } catch (constraintError) {
-        // Fallback to simplest possible constraints
-        console.log('Trying simpler constraints...');
-        mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: currentFacingMode },
-          audio: false 
-        });
-      }
-      
-      // Force minimum zoom on the camera track
-      const videoTrack = mediaStream.getVideoTracks()[0];
-      if (videoTrack) {
-        try {
-          const capabilities = videoTrack.getCapabilities?.() as any;
-          if (capabilities?.zoom) {
-            await videoTrack.applyConstraints({ advanced: [{ zoom: capabilities.zoom.min }] } as any);
-          }
-        } catch (e) { console.log('Zoom reset not supported:', e); }
-      }
+      const mediaStream = await getCameraStream({
+        facingMode: currentFacingMode,
+        withAudio: false,
+      });
 
       setStream(mediaStream);
       setPermissionStatus('granted');
@@ -581,33 +666,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         stream.getTracks().forEach(track => track.stop());
       }
 
-      // Start full camera with audio for live (mobile-friendly portrait constraints)
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          frameRate: { ideal: 30, max: 30 },
-          zoom: 1,
-          resizeMode: 'none',
-        } as any,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      };
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      // Force minimum zoom
-      const vTrack = mediaStream.getVideoTracks()[0];
-      if (vTrack) {
-        try {
-          const caps = vTrack.getCapabilities?.() as any;
-          if (caps?.zoom) await vTrack.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] } as any);
-        } catch (e) { console.log('Zoom reset:', e); }
-      }
+      const mediaStream = await getCameraStream({
+        facingMode: currentFacingMode,
+        withAudio: true,
+      });
 
       setStream(mediaStream);
 
@@ -834,24 +896,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     
     try {
       const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: { ideal: newFacingMode },
-          width: { ideal: 480 }, 
-          height: { ideal: 854 },
-          zoom: 1,
-          resizeMode: 'none',
-        } as any,
-        audio: step === 'live',
+      const newStream = await getCameraStream({
+        facingMode: newFacingMode,
+        withAudio: step === 'live',
       });
-      // Force minimum zoom on new stream
-      const vt = newStream.getVideoTracks()[0];
-      if (vt) {
-        try {
-          const c = vt.getCapabilities?.() as any;
-          if (c?.zoom) await vt.applyConstraints({ advanced: [{ zoom: c.zoom.min }] } as any);
-        } catch (e) { console.log('Zoom reset:', e); }
-      }
 
       setStream(newStream);
       setCurrentFacingMode(newFacingMode);
@@ -1142,8 +1190,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
-          <div className="relative h-full w-full bg-black">
-            <div className="relative w-full h-full">
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
+            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
             {/* Camera Preview during countdown */}
             <div 
               className="absolute inset-0"
@@ -1310,42 +1358,43 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
         <div 
-          className="relative h-full w-full bg-black"
+          className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleTouchStart}
           onMouseUp={handleTouchEnd}
         >
-          {/* Confetti Burst for milestones */}
-          <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
+          <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+            {/* Confetti Burst for milestones */}
+            <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
-          {/* Video Preview - camera feed fills entire screen */}
-          <div 
-            className="absolute inset-0"
-            style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
-          >
-            <video
-              ref={liveVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
-            />
-            {AR_EFFECTS[selectedAREffect].overlay && (
-              <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
-                <span className="text-5xl animate-bounce drop-shadow-lg">
-                  {AR_EFFECTS[selectedAREffect].overlay}
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {/* Gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+            {/* Video Preview - centered portrait stage */}
+            <div 
+              className="absolute inset-0"
+              style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
+            >
+              <video
+                ref={liveVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+              />
+              {AR_EFFECTS[selectedAREffect].overlay && (
+                <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
+                  <span className="text-5xl animate-bounce drop-shadow-lg">
+                    {AR_EFFECTS[selectedAREffect].overlay}
+                  </span>
+                </div>
+              )}
+            </div>
 
-          {/* Top Bar - compact */}
-          <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10">
+            {/* Gradient overlays */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+
+            {/* Top Bar - compact */}
+            <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <div className="relative">
@@ -1378,9 +1427,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Viewer avatars */}
-          {viewerCount > 0 && (
-            <div className="absolute top-24 left-3 flex -space-x-1.5 z-10">
+            {/* Viewer avatars */}
+            {viewerCount > 0 && (
+              <div className="absolute top-24 left-3 flex -space-x-1.5 z-10">
               {Array.from(viewers.values()).slice(0, 5).map((viewer, idx) => (
                 <div
                   key={viewer.oderId}
@@ -1399,72 +1448,72 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   <span className="text-white text-[10px] font-bold">+{viewerCount - 5}</span>
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* Comments Section - toggleable via long press */}
-          {commentsVisible && (
-            <div 
-              ref={commentsContainerRef}
-              className="absolute bottom-32 left-0 right-16 max-h-40 overflow-y-auto px-3 scrollbar-hide"
-              style={{ scrollBehavior: 'smooth' }}
-            >
-              {allComments.length === 0 ? (
-                <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10">
-                  <span className="text-white/70 text-xs">✨ Waiting for viewers...</span>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {allComments.map((comment) => (
-                    <div 
-                      key={comment.id} 
-                      className="bg-white/10 backdrop-blur-md rounded-xl px-2.5 py-1.5 border border-white/5 flex items-start gap-1.5"
-                    >
-                      {comment.avatarUrl ? (
-                        <img src={comment.avatarUrl} alt="" className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-[8px] font-bold">{comment.username[0]?.toUpperCase()}</span>
+            {/* Comments Section - toggleable via long press */}
+            {commentsVisible && (
+              <div 
+                ref={commentsContainerRef}
+                className="absolute bottom-32 left-0 right-16 max-h-40 overflow-y-auto px-3 scrollbar-hide"
+                style={{ scrollBehavior: 'smooth' }}
+              >
+                {allComments.length === 0 ? (
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10">
+                    <span className="text-white/70 text-xs">✨ Waiting for viewers...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {allComments.map((comment) => (
+                      <div 
+                        key={comment.id} 
+                        className="bg-white/10 backdrop-blur-md rounded-xl px-2.5 py-1.5 border border-white/5 flex items-start gap-1.5"
+                      >
+                        {comment.avatarUrl ? (
+                          <img src={comment.avatarUrl} alt="" className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-[8px] font-bold">{comment.username[0]?.toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-pink-400 font-semibold text-[11px]">@{comment.username} </span>
+                          <span className="text-white/90 text-xs break-words">{comment.text}</span>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <span className="text-pink-400 font-semibold text-[11px]">@{comment.username} </span>
-                        <span className="text-white/90 text-xs break-words">{comment.text}</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* Pinned Message */}
-          {pinnedMsg && (
-            <div className="absolute top-[6.5rem] left-0 right-0 z-10">
-              <PinnedMessage
-                username={pinnedMsg.username}
-                content={pinnedMsg.content}
-                canUnpin={true}
-                onUnpin={() => {
-                  setPinnedMsg(null);
-                  channelRef.current?.send({ type: 'broadcast', event: 'unpin', payload: {} });
-                }}
-              />
-            </div>
-          )}
+            {/* Pinned Message */}
+            {pinnedMsg && (
+              <div className="absolute top-[6.5rem] left-0 right-0 z-10">
+                <PinnedMessage
+                  username={pinnedMsg.username}
+                  content={pinnedMsg.content}
+                  canUnpin={true}
+                  onUnpin={() => {
+                    setPinnedMsg(null);
+                    channelRef.current?.send({ type: 'broadcast', event: 'unpin', payload: {} });
+                  }}
+                />
+              </div>
+            )}
 
-          <GiftAnimation trigger={giftAnimation} />
+            <GiftAnimation trigger={giftAnimation} />
 
-          {giftLeaderboard.length > 0 && (
-            <div className="absolute top-[6.5rem] left-3 right-3 z-10 flex justify-center">
-              <GiftLeaderboard entries={giftLeaderboard} />
-            </div>
-          )}
+            {giftLeaderboard.length > 0 && (
+              <div className="absolute top-[6.5rem] left-3 right-3 z-10 flex justify-center">
+                <GiftLeaderboard entries={giftLeaderboard} />
+              </div>
+            )}
 
-          <FloatingHearts trigger={likeTrigger} />
+            <FloatingHearts trigger={likeTrigger} />
 
-          {/* Bottom Controls - compact, no comment input for broadcaster */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
+            {/* Bottom Controls - compact, no comment input for broadcaster */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
             {/* Control Buttons - smaller */}
             <div className="flex items-center justify-center gap-2.5">
               <Button
@@ -1554,6 +1603,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </DialogContent>
