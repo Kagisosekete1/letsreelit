@@ -274,8 +274,8 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const w = 1080;
-    const h = 1920;
+    const w = 1000;
+    const h = 1000;
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
@@ -293,15 +293,16 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     ctx.globalAlpha = 0.08;
     ctx.fillStyle = '#e94560';
     ctx.beginPath();
-    ctx.arc(w * 0.8, h * 0.15, 200, 0, Math.PI * 2);
+    ctx.arc(w * 0.85, h * 0.15, 150, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(w * 0.2, h * 0.85, 250, 0, Math.PI * 2);
+    ctx.arc(w * 0.15, h * 0.85, 180, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
     // User avatar
     const avatarUrl = currentUser?.avatarUrl;
+    let avatarY = 100;
     if (avatarUrl) {
       try {
         const img = new Image();
@@ -312,9 +313,8 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
           img.src = avatarUrl;
         });
         
-        const avatarSize = 200;
+        const avatarSize = 160;
         const avatarX = (w - avatarSize) / 2;
-        const avatarY = 280;
         
         ctx.save();
         ctx.beginPath();
@@ -337,24 +337,24 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
 
     // Username
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px sans-serif';
+    ctx.font = 'bold 36px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`@${currentUser?.username || 'user'}`, w / 2, 550);
+    ctx.fillText(`@${currentUser?.username || 'user'}`, w / 2, 310);
 
     // Achievement title
-    ctx.font = 'bold 64px sans-serif';
-    const achieveGrad = ctx.createLinearGradient(w * 0.2, 640, w * 0.8, 640);
+    ctx.font = 'bold 48px sans-serif';
+    const achieveGrad = ctx.createLinearGradient(w * 0.2, 380, w * 0.8, 380);
     achieveGrad.addColorStop(0, '#e94560');
     achieveGrad.addColorStop(1, '#ff6b9d');
     ctx.fillStyle = achieveGrad;
-    ctx.fillText('🏆 ACHIEVEMENTS', w / 2, 680);
+    ctx.fillText('🏆 ACHIEVEMENTS', w / 2, 390);
 
     // Stats
-    ctx.font = '36px sans-serif';
+    ctx.font = '28px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${achievedCount} Badges Unlocked`, w / 2, 780);
+    ctx.fillText(`${achievedCount} Badges Unlocked`, w / 2, 450);
 
-    // Category stats
+    // Category stats - 2x2 grid for square layout
     const stats = [
       { label: '❤️ Likes', value: formatMilestone(userStats.totalLikes) },
       { label: '👁️ Views', value: formatMilestone(userStats.totalViews) },
@@ -362,40 +362,45 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
       { label: '🎬 Uploads', value: formatMilestone(userStats.uploads) },
     ];
 
+    const gridStartY = 500;
+    const cellW = 400;
+    const cellH = 80;
+    const gapX = 40;
+    const gapY = 20;
+
     stats.forEach((stat, i) => {
-      const statY = 900 + i * 120;
-      const statX = w / 2;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const cellX = (w - (cellW * 2 + gapX)) / 2 + col * (cellW + gapX);
+      const cellY = gridStartY + row * (cellH + gapY);
       
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      const rectW = 600;
-      const rectH = 90;
-      const rx = statX - rectW / 2;
       ctx.beginPath();
-      ctx.roundRect(rx, statY - 50, rectW, rectH, 20);
+      ctx.roundRect(cellX, cellY, cellW, cellH, 16);
       ctx.fill();
       
       ctx.fillStyle = '#ffffff';
-      ctx.font = '30px sans-serif';
+      ctx.font = '24px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(stat.label, rx + 30, statY);
-      ctx.font = 'bold 34px sans-serif';
+      ctx.fillText(stat.label, cellX + 20, cellY + 48);
+      ctx.font = 'bold 28px sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(stat.value, rx + rectW - 30, statY);
+      ctx.fillText(stat.value, cellX + cellW - 20, cellY + 48);
     });
 
     ctx.textAlign = 'center';
 
     // Muv'it logo at the bottom
-    ctx.font = 'bold 56px sans-serif';
-    const logoGrad = ctx.createLinearGradient(w * 0.3, h - 200, w * 0.7, h - 200);
+    ctx.font = 'bold 44px sans-serif';
+    const logoGrad = ctx.createLinearGradient(w * 0.3, h - 120, w * 0.7, h - 120);
     logoGrad.addColorStop(0, '#e94560');
     logoGrad.addColorStop(1, '#ff6b9d');
     ctx.fillStyle = logoGrad;
-    ctx.fillText("Muv'it", w / 2, h - 180);
+    ctx.fillText("Muv'it", w / 2, h - 100);
 
-    ctx.font = '24px sans-serif';
+    ctx.font = '20px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText('Share your moves with the world', w / 2, h - 130);
+    ctx.fillText('Share your moves with the world', w / 2, h - 60);
 
     // Download
     const link = document.createElement('a');
