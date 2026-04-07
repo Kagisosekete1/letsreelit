@@ -1016,186 +1016,194 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'setup') {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="w-[90vw] max-w-[320px] sm:max-w-[360px] rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold">Go Live</h2>
-          </div>
-
-          <div className="space-y-3">
-            <Input
-              placeholder="Add a title for your live..."
-              value={liveTitle}
-              onChange={(e) => setLiveTitle(e.target.value)}
-              className="rounded-xl text-sm"
-            />
-
-            {/* Camera Preview with Beauty Filter and AR Effects - Full screen preview like pro apps */}
-            <div 
-              className="aspect-[9/16] max-h-[50vh] bg-black rounded-xl overflow-hidden relative"
-              style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
-            >
-              {stream ? (
-                <>
-                  <video
-                    ref={previewVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    webkit-playsinline="true"
-                    className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
-                    style={{ 
-                      transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
-                      WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
-                    }}
-                  />
-                  {/* AR Effect Overlay */}
-                  {AR_EFFECTS[selectedAREffect].overlay && (
-                    <div className="absolute inset-0 flex items-start justify-center pt-8 pointer-events-none">
-                      <span className="text-6xl animate-bounce drop-shadow-lg">
-                        {AR_EFFECTS[selectedAREffect].overlay}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : permissionStatus === 'denied' ? (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/20 to-red-950/30">
-                  <div className="text-center px-4">
-                    <Camera className="w-10 h-10 text-red-400 mx-auto mb-2" />
-                    <p className="text-base font-semibold mb-1 text-red-400">Permission Denied</p>
-                    <p className="text-muted-foreground text-xs mb-2">Camera access was blocked</p>
-                    <p className="text-xs text-muted-foreground">Please enable it in your browser settings:</p>
-                    <p className="text-xs text-pink-400 mt-1">Settings → Privacy → Camera & Microphone</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-3"
-                      onClick={requestAllPermissions}
-                    >
-                      Try Again
-                    </Button>
-                  </div>
+        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
+            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black flex flex-col" style={portraitStageStyle}>
+              {/* Header */}
+              <div className="relative z-10 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold text-white">Go Live</h2>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full w-8 h-8" onClick={handleClose}>
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-900/10 to-purple-900/10">
-                  <div className="text-center px-4">
-                    <div className="relative">
-                      <Camera className="w-12 h-12 text-pink-500 mx-auto mb-3" />
-                      <Mic className="w-6 h-6 text-purple-500 absolute -right-1 -bottom-1" />
-                    </div>
-                    <p className="text-base font-semibold mb-1">Enable Camera & Mic</p>
-                    <p className="text-muted-foreground text-xs mb-3">Allow access to go live with your followers</p>
-                    <Button 
-                      className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-                      onClick={requestAllPermissions}
-                    >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Allow Permissions
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              {/* Preview indicator + controls */}
-              {stream && (
-                <>
-                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
-                    <Radio className="w-3 h-3 text-pink-500" />
-                    <span className="text-white text-xs font-medium">Preview</span>
-                  </div>
-                  <div className="absolute top-2 right-2 flex items-center gap-1">
-                    {/* AR Effects Button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showAREffects ? 'ring-2 ring-pink-400' : ''}`}
-                      onClick={() => { setShowAREffects(!showAREffects); setShowFilters(false); }}
-                    >
-                      <span className="text-sm">🎭</span>
-                    </Button>
-                    {/* Beauty Filters Button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showFilters ? 'ring-2 ring-pink-400' : ''}`}
-                      onClick={() => { setShowFilters(!showFilters); setShowAREffects(false); }}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
-                      onClick={flipCamera}
-                    >
-                      <SwitchCamera className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* AR Effects Panel */}
-                  {showAREffects && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                      <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
-                      <div className="flex gap-1 overflow-x-auto pb-1">
-                        {AR_EFFECTS.map((effect, index) => (
-                          <button
-                            key={effect.name}
-                            onClick={() => setSelectedAREffect(index)}
-                            className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
-                              selectedAREffect === index 
-                                ? 'bg-pink-500/50 ring-1 ring-pink-400' 
-                                : 'bg-white/10 hover:bg-white/20'
-                            }`}
-                          >
-                            <span className="text-lg">{effect.emoji}</span>
-                            <span className="text-[10px] text-white/80">{effect.name}</span>
-                          </button>
-                        ))}
+                <Input
+                  placeholder="Add a title for your live..."
+                  value={liveTitle}
+                  onChange={(e) => setLiveTitle(e.target.value)}
+                  className="rounded-xl text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                />
+              </div>
+
+              {/* Camera Preview - fills remaining space */}
+              <div 
+                className="flex-1 mx-3 rounded-xl overflow-hidden relative"
+                style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
+              >
+                {stream ? (
+                  <>
+                    <video
+                      ref={previewVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      webkit-playsinline="true"
+                      className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
+                      style={{ 
+                        transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
+                        WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
+                      }}
+                    />
+                    {/* AR Effect Overlay */}
+                    {AR_EFFECTS[selectedAREffect].overlay && (
+                      <div className="absolute inset-0 flex items-start justify-center pt-8 pointer-events-none">
+                        <span className="text-6xl animate-bounce drop-shadow-lg">
+                          {AR_EFFECTS[selectedAREffect].overlay}
+                        </span>
                       </div>
+                    )}
+                  </>
+                ) : permissionStatus === 'denied' ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/20 to-red-950/30">
+                    <div className="text-center px-4">
+                      <Camera className="w-10 h-10 text-red-400 mx-auto mb-2" />
+                      <p className="text-base font-semibold mb-1 text-red-400">Permission Denied</p>
+                      <p className="text-white/60 text-xs mb-2">Camera access was blocked</p>
+                      <p className="text-xs text-white/50">Please enable it in your browser settings:</p>
+                      <p className="text-xs text-pink-400 mt-1">Settings → Privacy → Camera & Microphone</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-3"
+                        onClick={requestAllPermissions}
+                      >
+                        Try Again
+                      </Button>
                     </div>
-                  )}
-                  
-                  {/* Beauty Filters Panel */}
-                  {showFilters && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                      <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
-                      <div className="flex gap-1 overflow-x-auto pb-1">
-                        {BEAUTY_FILTERS.map((filter, index) => (
-                          <button
-                            key={filter.name}
-                            onClick={() => setSelectedFilter(index)}
-                            className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
-                              selectedFilter === index 
-                                ? 'bg-pink-500/50 ring-1 ring-pink-400' 
-                                : 'bg-white/10 hover:bg-white/20'
-                            }`}
-                          >
-                            <span className="text-lg">{filter.icon}</span>
-                            <span className="text-[10px] text-white/80">{filter.name}</span>
-                          </button>
-                        ))}
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-900/10 to-purple-900/10">
+                    <div className="text-center px-4">
+                      <div className="relative">
+                        <Camera className="w-12 h-12 text-pink-500 mx-auto mb-3" />
+                        <Mic className="w-6 h-6 text-purple-500 absolute -right-1 -bottom-1" />
                       </div>
+                      <p className="text-base font-semibold mb-1 text-white">Enable Camera & Mic</p>
+                      <p className="text-white/60 text-xs mb-3">Allow access to go live with your followers</p>
+                      <Button 
+                        className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                        onClick={requestAllPermissions}
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Allow Permissions
+                      </Button>
                     </div>
-                  )}
-                </>
-              )}
+                  </div>
+                )}
+                
+                {/* Preview indicator + controls */}
+                {stream && (
+                  <>
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <Radio className="w-3 h-3 text-pink-500" />
+                      <span className="text-white text-xs font-medium">Preview</span>
+                    </div>
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showAREffects ? 'ring-2 ring-pink-400' : ''}`}
+                        onClick={() => { setShowAREffects(!showAREffects); setShowFilters(false); }}
+                      >
+                        <span className="text-sm">🎭</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8 ${showFilters ? 'ring-2 ring-pink-400' : ''}`}
+                        onClick={() => { setShowFilters(!showFilters); setShowAREffects(false); }}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 rounded-full w-8 h-8"
+                        onClick={flipCamera}
+                      >
+                        <SwitchCamera className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* AR Effects Panel */}
+                    {showAREffects && (
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                        <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
+                        <div className="flex gap-1 overflow-x-auto pb-1">
+                          {AR_EFFECTS.map((effect, index) => (
+                            <button
+                              key={effect.name}
+                              onClick={() => setSelectedAREffect(index)}
+                              className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                                selectedAREffect === index 
+                                  ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                                  : 'bg-white/10 hover:bg-white/20'
+                              }`}
+                            >
+                              <span className="text-lg">{effect.emoji}</span>
+                              <span className="text-[10px] text-white/80">{effect.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Beauty Filters Panel */}
+                    {showFilters && (
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                        <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
+                        <div className="flex gap-1 overflow-x-auto pb-1">
+                          {BEAUTY_FILTERS.map((filter, index) => (
+                            <button
+                              key={filter.name}
+                              onClick={() => setSelectedFilter(index)}
+                              className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                                selectedFilter === index 
+                                  ? 'bg-pink-500/50 ring-1 ring-pink-400' 
+                                  : 'bg-white/10 hover:bg-white/20'
+                              }`}
+                            >
+                              <span className="text-lg">{filter.icon}</span>
+                              <span className="text-[10px] text-white/80">{filter.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Bottom buttons */}
+              <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-2">
+                <Button 
+                  className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 h-10"
+                  onClick={handleGoLive}
+                  disabled={!liveTitle.trim()}
+                >
+                  <Radio className="w-4 h-4 mr-2" />
+                  Go Live
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="w-full rounded-xl h-9 border-white/20 text-white hover:bg-white/10"
+                  onClick={handleClose}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-
-            <Button 
-              className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 h-10"
-              onClick={handleGoLive}
-              disabled={!liveTitle.trim()}
-            >
-              <Radio className="w-4 h-4 mr-2" />
-              Go Live
-            </Button>
-            
-            <Button 
-              variant="outline"
-              className="w-full rounded-xl h-9"
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
