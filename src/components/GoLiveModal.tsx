@@ -42,6 +42,10 @@ interface CameraInspection {
   score: number;
 }
 
+type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
+  resizeMode?: string;
+};
+
 // Beauty filters for live camera
 const BEAUTY_FILTERS = [
   { name: 'None', class: '', icon: '✨' },
@@ -368,14 +372,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     let probeStream: MediaStream | null = null;
 
     try {
-      probeStream = await navigator.mediaDevices.getUserMedia({
-        video: {
+      const probeConstraints: ExtendedMediaTrackConstraints = {
           deviceId: { exact: device.deviceId },
           width: { ideal: 1280, max: 1920 },
           height: { ideal: 720, max: 1920 },
           frameRate: { ideal: 24, max: 30 },
-          resizeMode: 'none' as any,
-        },
+          resizeMode: 'none',
+        };
+
+      probeStream = await navigator.mediaDevices.getUserMedia({
+        video: probeConstraints,
         audio: false,
       });
 
@@ -551,12 +557,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     zoomOverrideLevel?: number;
   }) => {
     const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
-    const baseVideoConstraints: MediaTrackConstraints = {
+    const baseVideoConstraints: ExtendedMediaTrackConstraints = {
       ...(preferredDeviceId
         ? { deviceId: { exact: preferredDeviceId } }
         : { facingMode: { ideal: facingMode } }),
       aspectRatio: { ideal: 9 / 16 },
-      resizeMode: 'none' as any,
+      resizeMode: 'none',
       width: { ideal: 720, max: 1080 },
       height: { ideal: 1280, max: 1920 },
       frameRate: { ideal: 30, max: 30 },
