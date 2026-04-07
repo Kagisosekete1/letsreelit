@@ -274,8 +274,8 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const w = 1080;
-    const h = 1920;
+    const w = 1000;
+    const h = 1000;
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');

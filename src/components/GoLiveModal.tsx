@@ -1542,7 +1542,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                       : 'bg-white/15 text-white/80 hover:bg-white/25'
                   }`}
                 >
-                  {level === 0 ? '0.5' : level === 1 ? '1×' : level === 2 ? '2×' : level === 3 ? '3×' : '5×'}
+                  {level === 0 ? '0.5' : `-${level}`}
                 </button>
               ))}
             </div>
