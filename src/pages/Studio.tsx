@@ -9,7 +9,8 @@ import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, LineChart, Line } from 'recharts';
+import ReelPerformanceDialog from '@/components/studio/ReelPerformanceDialog';
 
 interface ReelStats {
   id: string;
@@ -25,12 +26,13 @@ interface ReelStats {
 const Studio = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { authUser, currentUser } = useUser();
+  const { authUser } = useUser();
   const [activeTab, setActiveTab] = useState('studio');
   const [reels, setReels] = useState<ReelStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [uploadingThumbnail, setUploadingThumbnail] = useState<string | null>(null);
+  const [selectedReelId, setSelectedReelId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [overviewStats, setOverviewStats] = useState({
     totalViews: 0,
@@ -40,6 +42,7 @@ const Studio = () => {
     totalReels: 0,
     totalWatchHours: 0,
   });
+  const selectedReel = reels.find((reel) => reel.id === selectedReelId) ?? null;
 
   useEffect(() => {
     if (authUser) {
@@ -319,16 +322,31 @@ const Studio = () => {
                 ) : (
                   <div className="space-y-2">
                     {reels.map((reel) => (
-                      <div key={reel.id} className="flex items-center gap-3 p-2.5 bg-secondary/30 rounded-xl border border-border/50">
-                        <div 
+                      <div
+                        key={reel.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedReelId(reel.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedReelId(reel.id);
+                          }
+                        }}
+                        className="flex items-center gap-3 p-2.5 bg-secondary/30 rounded-xl border border-border/50 cursor-pointer transition-colors hover:bg-secondary/50"
+                      >
+                        <button
+                          type="button"
                           className="w-14 h-20 rounded-lg bg-muted overflow-hidden flex-shrink-0 relative group cursor-pointer"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation();
                             setUploadingThumbnail(reel.id);
                             fileInputRef.current?.click();
                           }}
+                          aria-label={`Upload thumbnail for ${reel.title}`}
                         >
                           {reel.thumbnail_url ? (
-                            <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                            <img src={reel.thumbnail_url} alt={`Thumbnail for ${reel.title}`} loading="lazy" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Video className="w-5 h-5 text-muted-foreground" />
@@ -343,7 +361,7 @@ const Studio = () => {
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             </div>
                           )}
-                        </div>
+                        </button>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{reel.title}</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -360,12 +378,20 @@ const Studio = () => {
                               <MessageCircle className="w-3 h-3" /> {formatNumber(reel.comments_count || 0)}
                             </span>
                           </div>
+                          <p className="mt-1.5 text-[10px] text-muted-foreground">Tap for detailed analytics</p>
                         </div>
+                        <BarChart3 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+              <ReelPerformanceDialog
+                isOpen={Boolean(selectedReel)}
+                onClose={() => setSelectedReelId(null)}
+                reel={selectedReel}
+                allReels={reels}
+              />
             </div>
             <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
           </div>

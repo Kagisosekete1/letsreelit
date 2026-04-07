@@ -15,6 +15,7 @@ import { useWebRTCBroadcaster } from '@/hooks/useWebRTCSignaling';
 import GiftAnimation from '@/components/live/GiftAnimation';
 import GiftLeaderboard from '@/components/live/GiftLeaderboard';
 import PinnedMessage from '@/components/live/PinnedMessage';
+import LiveZoomControl from '@/components/live/LiveZoomControl';
 
 interface GoLiveModalProps {
   isOpen: boolean;
@@ -34,6 +35,16 @@ interface Viewer {
   username: string;
   avatarUrl?: string;
 }
+
+interface CameraInspection {
+  deviceId: string;
+  label: string;
+  score: number;
+}
+
+type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
+  resizeMode?: string;
+};
 
 // Beauty filters for live camera
 const BEAUTY_FILTERS = [
@@ -96,8 +107,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
-  const [cameraFit, setCameraFit] = useState<'contain' | 'cover'>('cover');
-  const [zoomLevel, setZoomLevel] = useState(0); // 0 = widest, 4 = most zoomed
+  const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -107,6 +117,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const recordedChunksRef = useRef<Blob[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reachedMilestones = useRef<Set<number>>(new Set());
+  const preferredCameraIdsRef = useRef<Record<'user' | 'environment', string | null>>({
+    user: null,
+    environment: null,
+  });
   const [giftAnimation, setGiftAnimation] = useState<{ id: number; emoji: string; name: string; senderName: string; animation: string } | null>(null);
   const [giftLeaderboard, setGiftLeaderboard] = useState<{ username: string; totalCoins: number }[]>([]);
   const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
@@ -114,6 +128,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const viewerCount = viewers.size;
   const portraitStageStyle: React.CSSProperties = {
     width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
+  };
+  const cameraObjectFitClass = zoomLevel >= 3 ? 'object-contain' : 'object-cover';
+  const cameraVideoStyle: React.CSSProperties = {
+    transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
+    WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
   };
 
   // WebRTC: broadcast local stream to viewers
@@ -346,7 +365,69 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     ].reduce((total, score) => total + score, 0);
   };
 
+  const inspectCameraDevice = async (
+    device: MediaDeviceInfo,
+    facingMode: 'user' | 'environment'
+  ): Promise<CameraInspection | null> => {
+    let probeStream: MediaStream | null = null;
+
+    try {
+      const probeConstraints: ExtendedMediaTrackConstraints = {
+          deviceId: { exact: device.deviceId },
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1920 },
+          frameRate: { ideal: 24, max: 30 },
+          resizeMode: 'none',
+        };
+
+      probeStream = await navigator.mediaDevices.getUserMedia({
+        video: probeConstraints,
+        audio: false,
+      });
+
+      const track = probeStream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & {
+        zoom?: { min?: number; max?: number };
+      };
+      const label = track.label || device.label;
+      const facingBonus =
+        settings.facingMode === facingMode
+          ? 160
+          : settings.facingMode && settings.facingMode !== facingMode
+            ? -160
+            : 0;
+      const zoomBonus =
+        facingMode === 'environment' && typeof capabilities.zoom?.min === 'number'
+          ? Math.max(0, Math.round((1 - capabilities.zoom.min) * 200))
+          : 0;
+
+      return {
+        deviceId: device.deviceId,
+        label,
+        score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus,
+      };
+    } catch {
+      if (!device.label.trim()) {
+        return null;
+      }
+
+      return {
+        deviceId: device.deviceId,
+        label: device.label,
+        score: scoreCameraDevice(device.label, facingMode),
+      };
+    } finally {
+      probeStream?.getTracks().forEach((track) => track.stop());
+    }
+  };
+
   const getPreferredCameraDeviceId = async (facingMode: 'user' | 'environment') => {
+    const cachedDeviceId = preferredCameraIdsRef.current[facingMode];
+    if (cachedDeviceId) {
+      return cachedDeviceId;
+    }
+
     if (!navigator.mediaDevices?.enumerateDevices) {
       return null;
     }
@@ -355,21 +436,43 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       (device) => device.kind === 'videoinput'
     );
 
-    const labelledDevices = videoDevices.filter((device) => device.label.trim().length > 0);
-    if (!labelledDevices.length) {
+    if (!videoDevices.length) {
       return null;
     }
 
-    const rankedDevice = [...labelledDevices].sort(
+    const hasLabels = videoDevices.some((device) => device.label.trim().length > 0);
+    if (!hasLabels) {
+      return null;
+    }
+
+    let rankedDevice: CameraInspection | null = null;
+
+    for (const device of videoDevices) {
+      const inspection = await inspectCameraDevice(device, facingMode);
+      if (!inspection) continue;
+
+      if (!rankedDevice || inspection.score > rankedDevice.score) {
+        rankedDevice = inspection;
+      }
+    }
+
+    if (rankedDevice?.deviceId) {
+      preferredCameraIdsRef.current[facingMode] = rankedDevice.deviceId;
+      return rankedDevice.deviceId;
+    }
+
+    const fallbackDevice = [...videoDevices].sort(
       (first, second) => scoreCameraDevice(second.label, facingMode) - scoreCameraDevice(first.label, facingMode)
     )[0];
 
-    return rankedDevice?.deviceId ?? null;
+    preferredCameraIdsRef.current[facingMode] = fallbackDevice?.deviceId ?? null;
+
+    return fallbackDevice?.deviceId ?? null;
   };
 
   const applyZoomLevel = async (
     videoTrack: MediaStreamTrack,
-    level: number // 0-4, where 0 = widest
+    level: number // 0-4, where 4 = widest
   ) => {
     try {
       const capabilities = videoTrack.getCapabilities?.() as MediaTrackCapabilities & {
@@ -383,7 +486,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const min = capabilities.zoom.min;
       const max = Math.min(capabilities.zoom.max || 1, min * 5); // cap at 5x the min
       const step = (max - min) / 4;
-      const targetZoom = min + (step * level);
+      const normalizedLevel = 4 - level;
+      const targetZoom = min + (step * normalizedLevel);
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
@@ -393,14 +497,51 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const applyWidestAvailableZoom = async (
     videoTrack: MediaStreamTrack,
-    _facingMode: 'user' | 'environment'
+    _facingMode: 'user' | 'environment',
+    level = zoomLevel
   ) => {
-    await applyZoomLevel(videoTrack, zoomLevel);
+    await applyZoomLevel(videoTrack, level);
   };
 
   const handleZoomChange = async (newLevel: number) => {
     setZoomLevel(newLevel);
+
+    if (!stream) {
+      return;
+    }
+
+    const withAudio = step === 'live';
     const videoTrack = stream?.getVideoTracks()[0];
+    const currentDeviceId = videoTrack?.getSettings().deviceId;
+
+    if (currentFacingMode === 'environment' && newLevel >= 3) {
+      const preferredDeviceId = await getPreferredCameraDeviceId('environment');
+
+      if (preferredDeviceId && preferredDeviceId !== currentDeviceId) {
+        try {
+          const replacementStream = await getCameraStream({
+            facingMode: currentFacingMode,
+            withAudio,
+            zoomOverrideLevel: newLevel,
+          });
+
+          stream.getTracks().forEach((track) => track.stop());
+          setStream(replacementStream);
+
+          const targetVideo = step === 'live' ? liveVideoRef.current : previewVideoRef.current;
+          if (targetVideo) {
+            targetVideo.srcObject = replacementStream;
+            targetVideo.muted = true;
+            targetVideo.play().catch(() => undefined);
+          }
+
+          return;
+        } catch (error) {
+          console.log('Wider lens switch not available:', error);
+        }
+      }
+    }
+
     if (videoTrack) {
       await applyZoomLevel(videoTrack, newLevel);
     }
@@ -409,16 +550,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const getCameraStream = async ({
     facingMode,
     withAudio,
+    zoomOverrideLevel = zoomLevel,
   }: {
     facingMode: 'user' | 'environment';
     withAudio: boolean;
+    zoomOverrideLevel?: number;
   }) => {
     const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
-    const baseVideoConstraints: MediaTrackConstraints = {
+    const baseVideoConstraints: ExtendedMediaTrackConstraints = {
       ...(preferredDeviceId
         ? { deviceId: { exact: preferredDeviceId } }
         : { facingMode: { ideal: facingMode } }),
       aspectRatio: { ideal: 9 / 16 },
+      resizeMode: 'none',
       width: { ideal: 720, max: 1080 },
       height: { ideal: 1280, max: 1920 },
       frameRate: { ideal: 30, max: 30 },
@@ -451,7 +595,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     const videoTrack = mediaStream.getVideoTracks()[0];
     if (videoTrack) {
-      await applyWidestAvailableZoom(videoTrack, facingMode);
+      await applyWidestAvailableZoom(videoTrack, facingMode, zoomOverrideLevel);
     }
 
     return mediaStream;
@@ -846,6 +990,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setLiveDuration(0);
     setSelectedAREffect(0);
     setSelectedFilter(0);
+      setZoomLevel(4);
     
     toast({
       title: "Live ended",
@@ -885,6 +1030,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setLiveDuration(0);
     setSelectedAREffect(0); // Reset AR effect
     setSelectedFilter(0); // Reset filter
+    setZoomLevel(4);
     onClose();
   };
 
@@ -1018,28 +1164,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
-            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black flex flex-col" style={portraitStageStyle}>
-              {/* Header */}
-              <div className="relative z-10 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold text-white">Go Live</h2>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full w-8 h-8" onClick={handleClose}>
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-                <Input
-                  placeholder="Add a title for your live..."
-                  value={liveTitle}
-                  onChange={(e) => setLiveTitle(e.target.value)}
-                  className="rounded-xl text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                />
-              </div>
-
-              {/* Camera Preview - fills remaining space */}
-              <div 
-                className="flex-1 mx-3 rounded-xl overflow-hidden relative"
-                style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
-              >
+            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+              <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
                 {stream ? (
                   <>
                     <video
@@ -1048,11 +1174,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                       playsInline
                       muted
                       webkit-playsinline="true"
-                      className={`w-full h-full ${cameraFit === 'contain' ? 'object-contain' : 'object-cover'} bg-black`}
-                      style={{ 
-                        transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
-                        WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none'
-                      }}
+                      className={`w-full h-full ${cameraObjectFitClass} bg-black`}
+                      style={cameraVideoStyle}
                     />
                     {/* AR Effect Overlay */}
                     {AR_EFFECTS[selectedAREffect].overlay && (
@@ -1100,15 +1223,31 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   </div>
                 )}
-                
-                {/* Preview indicator + controls */}
+              </div>
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40 pointer-events-none" />
+
+              <div className="absolute top-0 left-0 right-0 z-10 p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-white">Go Live</h2>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full w-8 h-8" onClick={handleClose}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+                <Input
+                  placeholder="Add a title for your live..."
+                  value={liveTitle}
+                  onChange={(e) => setLiveTitle(e.target.value)}
+                  className="rounded-xl text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                />
+
                 {stream && (
-                  <>
-                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
                       <Radio className="w-3 h-3 text-pink-500" />
                       <span className="text-white text-xs font-medium">Preview</span>
                     </div>
-                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1134,58 +1273,63 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                         <SwitchCamera className="w-4 h-4" />
                       </Button>
                     </div>
-                    
-                    {/* AR Effects Panel */}
-                    {showAREffects && (
-                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                        <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
-                        <div className="flex gap-1 overflow-x-auto pb-1">
-                          {AR_EFFECTS.map((effect, index) => (
-                            <button
-                              key={effect.name}
-                              onClick={() => setSelectedAREffect(index)}
-                              className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
-                                selectedAREffect === index 
-                                  ? 'bg-pink-500/50 ring-1 ring-pink-400' 
-                                  : 'bg-white/10 hover:bg-white/20'
-                              }`}
-                            >
-                              <span className="text-lg">{effect.emoji}</span>
-                              <span className="text-[10px] text-white/80">{effect.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Beauty Filters Panel */}
-                    {showFilters && (
-                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md rounded-xl p-2">
-                        <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
-                        <div className="flex gap-1 overflow-x-auto pb-1">
-                          {BEAUTY_FILTERS.map((filter, index) => (
-                            <button
-                              key={filter.name}
-                              onClick={() => setSelectedFilter(index)}
-                              className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
-                                selectedFilter === index 
-                                  ? 'bg-pink-500/50 ring-1 ring-pink-400' 
-                                  : 'bg-white/10 hover:bg-white/20'
-                              }`}
-                            >
-                              <span className="text-lg">{filter.icon}</span>
-                              <span className="text-[10px] text-white/80">{filter.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
               </div>
 
-              {/* Bottom buttons */}
-              <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-2">
+              {stream && showAREffects && (
+                <div className="absolute bottom-24 left-2 right-2 z-10 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                  <p className="text-white text-xs font-medium mb-2 text-center">🎭 AR Effects</p>
+                  <div className="flex gap-1 overflow-x-auto pb-1">
+                    {AR_EFFECTS.map((effect, index) => (
+                      <button
+                        key={effect.name}
+                        onClick={() => setSelectedAREffect(index)}
+                        className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                          selectedAREffect === index
+                            ? 'bg-pink-500/50 ring-1 ring-pink-400'
+                            : 'bg-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        <span className="text-lg">{effect.emoji}</span>
+                        <span className="text-[10px] text-white/80">{effect.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {stream && showFilters && (
+                <div className="absolute bottom-24 left-2 right-2 z-10 bg-black/70 backdrop-blur-md rounded-xl p-2">
+                  <p className="text-white text-xs font-medium mb-2 text-center">✨ Beauty Filters</p>
+                  <div className="flex gap-1 overflow-x-auto pb-1">
+                    {BEAUTY_FILTERS.map((filter, index) => (
+                      <button
+                        key={filter.name}
+                        onClick={() => setSelectedFilter(index)}
+                        className={`flex flex-col items-center min-w-[48px] p-1.5 rounded-lg transition-all ${
+                          selectedFilter === index
+                            ? 'bg-pink-500/50 ring-1 ring-pink-400'
+                            : 'bg-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        <span className="text-lg">{filter.icon}</span>
+                        <span className="text-[10px] text-white/80">{filter.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {stream && (
+                <LiveZoomControl
+                  zoomLevel={zoomLevel}
+                  onChange={handleZoomChange}
+                  className="absolute right-2 top-1/2 z-20 -translate-y-1/2"
+                />
+              )}
+
+              <div className="absolute bottom-0 left-0 right-0 z-10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-2 bg-gradient-to-t from-black via-black/85 to-transparent">
                 <Button 
                   className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 h-10"
                   onClick={handleGoLive}
@@ -1228,8 +1372,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
-                  style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                  className={`w-full h-full ${cameraObjectFitClass} bg-black`}
+                  style={cameraVideoStyle}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-500/20 to-purple-600/20">
@@ -1403,8 +1547,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
-                style={{ transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                className={`w-full h-full ${cameraObjectFitClass} bg-black`}
+                style={cameraVideoStyle}
               />
               {AR_EFFECTS[selectedAREffect].overlay && (
                 <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
@@ -1537,23 +1681,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
             <FloatingHearts trigger={likeTrigger} />
 
-            {/* Zoom Control - right side */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 bg-black/40 backdrop-blur-md rounded-full p-1.5 border border-white/10">
-              <span className="text-[9px] text-white/70 font-medium">🔍</span>
-              {[0, 1, 2, 3, 4].map((level) => (
-                <button
-                  key={level}
-                  onClick={() => handleZoomChange(level)}
-                  className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
-                    zoomLevel === level
-                      ? 'bg-white text-black shadow-lg scale-110'
-                      : 'bg-white/15 text-white/80 hover:bg-white/25'
-                  }`}
-                >
-                  {level === 0 ? '0.5' : `-${level}`}
-                </button>
-              ))}
-            </div>
+            <LiveZoomControl
+              zoomLevel={zoomLevel}
+              onChange={handleZoomChange}
+              className="absolute right-2 top-1/2 z-20 -translate-y-1/2"
+            />
 
             {/* Bottom Controls - compact, no comment input for broadcaster */}
             <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
