@@ -108,6 +108,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
+  const [isLandscapeCameraFeed, setIsLandscapeCameraFeed] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -129,11 +130,87 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const portraitStageStyle: React.CSSProperties = {
     width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
   };
-  const cameraObjectFitClass = zoomLevel >= 3 ? 'object-contain' : 'object-cover';
+  const isRotatedPortraitCamera = isMobile && isLandscapeCameraFeed;
+  const cameraViewportStyle: React.CSSProperties = isRotatedPortraitCamera
+    ? {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: '177.7778%',
+        height: '56.25%',
+        transform: 'translate(-50%, -50%) rotate(90deg)',
+        WebkitTransform: 'translate(-50%, -50%) rotate(90deg)',
+        transformOrigin: 'center center',
+        WebkitTransformOrigin: 'center center',
+      }
+    : {
+        position: 'absolute',
+        inset: 0,
+      };
   const cameraVideoStyle: React.CSSProperties = {
     transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
   };
+
+  const updateCameraFeedOrientation = useCallback(
+    (videoElement: HTMLVideoElement | null, mediaStream: MediaStream | null) => {
+      if (!isMobile || !mediaStream) {
+        setIsLandscapeCameraFeed(false);
+        return;
+      }
+
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      const settings = videoTrack?.getSettings();
+      const sourceWidth = videoElement?.videoWidth || settings?.width || 0;
+      const sourceHeight = videoElement?.videoHeight || settings?.height || 0;
+
+      if (!sourceWidth || !sourceHeight) {
+        setIsLandscapeCameraFeed(false);
+        return;
+      }
+
+      setIsLandscapeCameraFeed(sourceWidth > sourceHeight);
+    },
+    [isMobile],
+  );
+
+  const attachStreamToVideoElement = useCallback(
+    async (videoElement: HTMLVideoElement | null, mediaStream: MediaStream) => {
+      if (!videoElement) {
+        return;
+      }
+
+      videoElement.srcObject = mediaStream;
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.setAttribute('webkit-playsinline', 'true');
+      videoElement.muted = true;
+
+      videoElement.onloadedmetadata = async () => {
+        updateCameraFeedOrientation(videoElement, mediaStream);
+
+        try {
+          await videoElement.play();
+        } catch (error) {
+          console.log('Video play error:', error);
+        }
+      };
+
+      updateCameraFeedOrientation(videoElement, mediaStream);
+
+      try {
+        await videoElement.play();
+      } catch (error) {
+        console.log('Video play error:', error);
+
+        setTimeout(() => {
+          videoElement.play().catch((retryError) => {
+            console.log('Video play retry error:', retryError);
+          });
+        }, 100);
+      }
+    },
+    [updateCameraFeedOrientation],
+  );
 
   // WebRTC: broadcast local stream to viewers
   useWebRTCBroadcaster(isLive ? liveSessionId : null, stream);
@@ -305,41 +382,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // Attach stream to video when step changes to live
   useEffect(() => {
     if (step === 'live' && stream && liveVideoRef.current) {
-      liveVideoRef.current.srcObject = stream;
-      liveVideoRef.current.play().catch((err) => {
-        console.log('Video play error:', err);
-      });
+      attachStreamToVideoElement(liveVideoRef.current, stream);
     }
-  }, [step, stream]);
+  }, [attachStreamToVideoElement, step, stream]);
 
   // Attach stream to preview video - ensure it works on mobile
   useEffect(() => {
     if ((step === 'setup' || step === 'countdown') && stream && previewVideoRef.current) {
-      const video = previewVideoRef.current;
-      video.srcObject = stream;
-      video.setAttribute('playsinline', 'true');
-      video.setAttribute('webkit-playsinline', 'true');
-      video.muted = true;
-      
-      const playVideo = async () => {
-        try {
-          await video.play();
-        } catch (err) {
-          console.log('Preview video play error:', err);
-          // Retry after a short delay (mobile browsers sometimes need this)
-          setTimeout(async () => {
-            try {
-              await video.play();
-            } catch (retryErr) {
-              console.log('Preview video retry error:', retryErr);
-            }
-          }, 100);
-        }
-      };
-      
-      playVideo();
+      attachStreamToVideoElement(previewVideoRef.current, stream);
     }
-  }, [step, stream]);
+  }, [attachStreamToVideoElement, step, stream]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -530,9 +582,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
           const targetVideo = step === 'live' ? liveVideoRef.current : previewVideoRef.current;
           if (targetVideo) {
-            targetVideo.srcObject = replacementStream;
-            targetVideo.muted = true;
-            targetVideo.play().catch(() => undefined);
+            await attachStreamToVideoElement(targetVideo, replacementStream);
           }
 
           return;
@@ -561,10 +611,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ...(preferredDeviceId
         ? { deviceId: { exact: preferredDeviceId } }
         : { facingMode: { ideal: facingMode } }),
-      aspectRatio: { ideal: 9 / 16 },
+      aspectRatio: { ideal: isMobile ? 16 / 9 : 9 / 16 },
       resizeMode: 'none',
-      width: { ideal: 720, max: 1080 },
-      height: { ideal: 1280, max: 1920 },
+      width: { ideal: isMobile ? 1920 : 720, max: isMobile ? 2560 : 1080 },
+      height: { ideal: isMobile ? 1080 : 1280, max: isMobile ? 1440 : 1920 },
       frameRate: { ideal: 30, max: 30 },
     };
 
@@ -739,31 +789,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       setStream(mediaStream);
       setPermissionStatus('granted');
-      
-      // Ensure video element is ready for mobile
-      if (previewVideoRef.current) {
-        const video = previewVideoRef.current;
-        video.srcObject = mediaStream;
-        video.muted = true;
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('webkit-playsinline', 'true');
-        
-        // Wait for loadedmetadata before playing
-        video.onloadedmetadata = async () => {
-          try {
-            await video.play();
-          } catch (playError) {
-            console.log('Play error on loadedmetadata:', playError);
-          }
-        };
-        
-        // Also try immediate play
-        try {
-          await video.play();
-        } catch (playErr) {
-          console.log('Immediate play error (will retry on loadedmetadata):', playErr);
-        }
-      }
+
+      await attachStreamToVideoElement(previewVideoRef.current, mediaStream);
     } catch (error: any) {
       console.error('Camera preview error:', error);
       
@@ -822,24 +849,38 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const startActualLive = async () => {
     try {
-      // Stop preview stream first
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      const mediaStream = await getCameraStream({
-        facingMode: currentFacingMode,
-        withAudio: true,
+      const previewVideoTrack = stream?.getVideoTracks()[0] ?? null;
+      const microphoneStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
 
-      setStream(mediaStream);
+      let liveVideoTrack = previewVideoTrack;
 
-      // Attach to live video element - MUTED to prevent echo (broadcaster should not hear themselves)
-      if (liveVideoRef.current) {
-        liveVideoRef.current.srcObject = mediaStream;
-        liveVideoRef.current.muted = true; // Prevent audio echo on broadcaster's device
-        liveVideoRef.current.play().catch(console.log);
+      if (!liveVideoTrack) {
+        const fallbackCameraStream = await getCameraStream({
+          facingMode: currentFacingMode,
+          withAudio: false,
+        });
+
+        liveVideoTrack = fallbackCameraStream.getVideoTracks()[0] ?? null;
       }
+
+      if (!liveVideoTrack) {
+        microphoneStream.getTracks().forEach((track) => track.stop());
+        throw new Error('No video track available for live stream');
+      }
+
+      const mediaStream = new MediaStream([
+        liveVideoTrack,
+        ...microphoneStream.getAudioTracks(),
+      ]);
+
+      setStream(mediaStream);
 
       // Start recording
       let mimeType = 'video/webm';
@@ -990,7 +1031,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setLiveDuration(0);
     setSelectedAREffect(0);
     setSelectedFilter(0);
-      setZoomLevel(4);
+    setZoomLevel(4);
+    setIsLandscapeCameraFeed(false);
     
     toast({
       title: "Live ended",
@@ -1031,6 +1073,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setSelectedAREffect(0); // Reset AR effect
     setSelectedFilter(0); // Reset filter
     setZoomLevel(4);
+    setIsLandscapeCameraFeed(false);
     onClose();
   };
 
@@ -1068,9 +1111,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       setCurrentFacingMode(newFacingMode);
       
       if (step === 'live' && liveVideoRef.current) {
-        liveVideoRef.current.srcObject = newStream;
-      } else if (step === 'setup' && previewVideoRef.current) {
-        previewVideoRef.current.srcObject = newStream;
+        await attachStreamToVideoElement(liveVideoRef.current, newStream);
+      } else if ((step === 'setup' || step === 'countdown') && previewVideoRef.current) {
+        await attachStreamToVideoElement(previewVideoRef.current, newStream);
       }
       
       toast({
@@ -1168,15 +1211,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
                 {stream ? (
                   <>
-                    <video
-                      ref={previewVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      webkit-playsinline="true"
-                      className={`w-full h-full ${cameraObjectFitClass} bg-black`}
-                      style={cameraVideoStyle}
-                    />
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div style={cameraViewportStyle}>
+                        <video
+                          ref={previewVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          webkit-playsinline="true"
+                          className="w-full h-full object-cover bg-black"
+                          style={cameraVideoStyle}
+                        />
+                      </div>
+                    </div>
                     {/* AR Effect Overlay */}
                     {AR_EFFECTS[selectedAREffect].overlay && (
                       <div className="absolute inset-0 flex items-start justify-center pt-8 pointer-events-none">
@@ -1367,14 +1414,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
               {stream ? (
-                <video
-                  ref={previewVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full ${cameraObjectFitClass} bg-black`}
-                  style={cameraVideoStyle}
-                />
+                <div className="absolute inset-0 overflow-hidden">
+                  <div style={cameraViewportStyle}>
+                    <video
+                      ref={previewVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover bg-black"
+                      style={cameraVideoStyle}
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-500/20 to-purple-600/20">
                   <Camera className="w-20 h-20 text-white/50" />
@@ -1542,14 +1593,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="absolute inset-0"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
-              <video
-                ref={liveVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full ${cameraObjectFitClass} bg-black`}
-                style={cameraVideoStyle}
-              />
+              <div className="absolute inset-0 overflow-hidden">
+                <div style={cameraViewportStyle}>
+                  <video
+                    ref={liveVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover bg-black"
+                    style={cameraVideoStyle}
+                  />
+                </div>
+              </div>
               {AR_EFFECTS[selectedAREffect].overlay && (
                 <div className="absolute inset-0 flex items-start justify-center pt-16 pointer-events-none">
                   <span className="text-5xl animate-bounce drop-shadow-lg">
