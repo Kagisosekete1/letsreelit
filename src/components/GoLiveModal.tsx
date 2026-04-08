@@ -108,6 +108,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
+  const [isLandscapeCameraFeed, setIsLandscapeCameraFeed] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -129,11 +130,87 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const portraitStageStyle: React.CSSProperties = {
     width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
   };
-  const cameraObjectFitClass = zoomLevel >= 3 ? 'object-contain' : 'object-cover';
+  const isRotatedPortraitCamera = isMobile && isLandscapeCameraFeed;
+  const cameraViewportStyle: React.CSSProperties = isRotatedPortraitCamera
+    ? {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: '177.7778%',
+        height: '56.25%',
+        transform: 'translate(-50%, -50%) rotate(90deg)',
+        WebkitTransform: 'translate(-50%, -50%) rotate(90deg)',
+        transformOrigin: 'center center',
+        WebkitTransformOrigin: 'center center',
+      }
+    : {
+        position: 'absolute',
+        inset: 0,
+      };
   const cameraVideoStyle: React.CSSProperties = {
     transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
   };
+
+  const updateCameraFeedOrientation = useCallback(
+    (videoElement: HTMLVideoElement | null, mediaStream: MediaStream | null) => {
+      if (!isMobile || !mediaStream) {
+        setIsLandscapeCameraFeed(false);
+        return;
+      }
+
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      const settings = videoTrack?.getSettings();
+      const sourceWidth = videoElement?.videoWidth || settings?.width || 0;
+      const sourceHeight = videoElement?.videoHeight || settings?.height || 0;
+
+      if (!sourceWidth || !sourceHeight) {
+        setIsLandscapeCameraFeed(false);
+        return;
+      }
+
+      setIsLandscapeCameraFeed(sourceWidth > sourceHeight);
+    },
+    [isMobile],
+  );
+
+  const attachStreamToVideoElement = useCallback(
+    async (videoElement: HTMLVideoElement | null, mediaStream: MediaStream) => {
+      if (!videoElement) {
+        return;
+      }
+
+      videoElement.srcObject = mediaStream;
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.setAttribute('webkit-playsinline', 'true');
+      videoElement.muted = true;
+
+      videoElement.onloadedmetadata = async () => {
+        updateCameraFeedOrientation(videoElement, mediaStream);
+
+        try {
+          await videoElement.play();
+        } catch (error) {
+          console.log('Video play error:', error);
+        }
+      };
+
+      updateCameraFeedOrientation(videoElement, mediaStream);
+
+      try {
+        await videoElement.play();
+      } catch (error) {
+        console.log('Video play error:', error);
+
+        setTimeout(() => {
+          videoElement.play().catch((retryError) => {
+            console.log('Video play retry error:', retryError);
+          });
+        }, 100);
+      }
+    },
+    [updateCameraFeedOrientation],
+  );
 
   // WebRTC: broadcast local stream to viewers
   useWebRTCBroadcaster(isLive ? liveSessionId : null, stream);
@@ -305,41 +382,16 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // Attach stream to video when step changes to live
   useEffect(() => {
     if (step === 'live' && stream && liveVideoRef.current) {
-      liveVideoRef.current.srcObject = stream;
-      liveVideoRef.current.play().catch((err) => {
-        console.log('Video play error:', err);
-      });
+      attachStreamToVideoElement(liveVideoRef.current, stream);
     }
-  }, [step, stream]);
+  }, [attachStreamToVideoElement, step, stream]);
 
   // Attach stream to preview video - ensure it works on mobile
   useEffect(() => {
     if ((step === 'setup' || step === 'countdown') && stream && previewVideoRef.current) {
-      const video = previewVideoRef.current;
-      video.srcObject = stream;
-      video.setAttribute('playsinline', 'true');
-      video.setAttribute('webkit-playsinline', 'true');
-      video.muted = true;
-      
-      const playVideo = async () => {
-        try {
-          await video.play();
-        } catch (err) {
-          console.log('Preview video play error:', err);
-          // Retry after a short delay (mobile browsers sometimes need this)
-          setTimeout(async () => {
-            try {
-              await video.play();
-            } catch (retryErr) {
-              console.log('Preview video retry error:', retryErr);
-            }
-          }, 100);
-        }
-      };
-      
-      playVideo();
+      attachStreamToVideoElement(previewVideoRef.current, stream);
     }
-  }, [step, stream]);
+  }, [attachStreamToVideoElement, step, stream]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
