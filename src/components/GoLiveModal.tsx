@@ -108,7 +108,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
-  const [isLandscapeCameraFeed, setIsLandscapeCameraFeed] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -130,49 +129,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const portraitStageStyle: React.CSSProperties = {
     width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
   };
-  const isRotatedPortraitCamera = isMobile && isLandscapeCameraFeed;
-  const cameraViewportStyle: React.CSSProperties = isRotatedPortraitCamera
-    ? {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        width: '177.7778%',
-        height: '56.25%',
-        transform: 'translate(-50%, -50%) rotate(90deg)',
-        WebkitTransform: 'translate(-50%, -50%) rotate(90deg)',
-        transformOrigin: 'center center',
-        WebkitTransformOrigin: 'center center',
-      }
-    : {
-        position: 'absolute',
-        inset: 0,
-      };
+  const cameraViewportStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+  };
   const cameraVideoStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center center',
     transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
   };
-
-  const updateCameraFeedOrientation = useCallback(
-    (videoElement: HTMLVideoElement | null, mediaStream: MediaStream | null) => {
-      if (!isMobile || !mediaStream) {
-        setIsLandscapeCameraFeed(false);
-        return;
-      }
-
-      const videoTrack = mediaStream.getVideoTracks()[0];
-      const settings = videoTrack?.getSettings();
-      const sourceWidth = videoElement?.videoWidth || settings?.width || 0;
-      const sourceHeight = videoElement?.videoHeight || settings?.height || 0;
-
-      if (!sourceWidth || !sourceHeight) {
-        setIsLandscapeCameraFeed(false);
-        return;
-      }
-
-      setIsLandscapeCameraFeed(sourceWidth > sourceHeight);
-    },
-    [isMobile],
-  );
 
   const attachStreamToVideoElement = useCallback(
     async (videoElement: HTMLVideoElement | null, mediaStream: MediaStream) => {
@@ -186,16 +154,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       videoElement.muted = true;
 
       videoElement.onloadedmetadata = async () => {
-        updateCameraFeedOrientation(videoElement, mediaStream);
-
         try {
           await videoElement.play();
         } catch (error) {
           console.log('Video play error:', error);
         }
       };
-
-      updateCameraFeedOrientation(videoElement, mediaStream);
 
       try {
         await videoElement.play();
@@ -209,7 +173,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         }, 100);
       }
     },
-    [updateCameraFeedOrientation],
+    [],
   );
 
   // WebRTC: broadcast local stream to viewers
@@ -409,11 +373,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ].reduce((total, score) => total + score, 0);
     }
 
+    const isUltraWide = /ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|0\.5|0,5|\buw\b/.test(normalizedLabel);
+    const isMainWide = /\bmain\b|\bwide\b|1x|standard|dual\s+wide/.test(normalizedLabel);
+    const isMultiLensRear = /triple|dual|multi/.test(normalizedLabel);
+    const isTeleOrMacro = /tele|zoom|macro|portrait|depth/.test(normalizedLabel);
+
     return [
-      /back|rear|environment/.test(normalizedLabel) ? 100 : 0,
-      /ultra|wide|0\.5|main/.test(normalizedLabel) ? 40 : 0,
-      /tele|zoom|macro/.test(normalizedLabel) ? -60 : 0,
-      /front|user|face|selfie|truedepth/.test(normalizedLabel) ? -120 : 0,
+      /back|rear|environment|world/.test(normalizedLabel) ? 140 : 0,
+      isUltraWide ? 260 : 0,
+      isMainWide ? 90 : 0,
+      isMultiLensRear ? 40 : 0,
+      isTeleOrMacro ? -220 : 0,
+      /front|user|face|selfie|truedepth/.test(normalizedLabel) ? -220 : 0,
     ].reduce((total, score) => total + score, 0);
   };
 
@@ -425,12 +396,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     try {
       const probeConstraints: ExtendedMediaTrackConstraints = {
-          deviceId: { exact: device.deviceId },
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1920 },
-          frameRate: { ideal: 24, max: 30 },
-          resizeMode: 'none',
-        };
+        deviceId: { exact: device.deviceId },
+        facingMode: { ideal: facingMode },
+        width: { ideal: 720, max: 1280 },
+        height: { ideal: 1280, max: 1920 },
+        frameRate: { ideal: 24, max: 30 },
+        resizeMode: 'none',
+      };
 
       probeStream = await navigator.mediaDevices.getUserMedia({
         video: probeConstraints,
@@ -449,10 +421,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           : settings.facingMode && settings.facingMode !== facingMode
             ? -160
             : 0;
-      const zoomBonus =
-        facingMode === 'environment' && typeof capabilities.zoom?.min === 'number'
-          ? Math.max(0, Math.round((1 - capabilities.zoom.min) * 200))
-          : 0;
+      const zoomBonus = (() => {
+        if (facingMode !== 'environment' || typeof capabilities.zoom?.min !== 'number') {
+          return 0;
+        }
+
+        if (capabilities.zoom.min < 1) {
+          return 420;
+        }
+
+        if (capabilities.zoom.min === 1) {
+          return 80;
+        }
+
+        return -40;
+      })();
 
       return {
         deviceId: device.deviceId,
@@ -611,10 +594,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ...(preferredDeviceId
         ? { deviceId: { exact: preferredDeviceId } }
         : { facingMode: { ideal: facingMode } }),
-      aspectRatio: { ideal: isMobile ? 16 / 9 : 9 / 16 },
+      aspectRatio: { ideal: 9 / 16 },
       resizeMode: 'none',
-      width: { ideal: isMobile ? 1920 : 720, max: isMobile ? 2560 : 1080 },
-      height: { ideal: isMobile ? 1080 : 1280, max: isMobile ? 1440 : 1920 },
+      width: { ideal: isMobile ? 1080 : 720, max: isMobile ? 1440 : 1080 },
+      height: { ideal: isMobile ? 1920 : 1280, max: isMobile ? 2560 : 1920 },
       frameRate: { ideal: 30, max: 30 },
     };
 
@@ -1032,7 +1015,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setSelectedAREffect(0);
     setSelectedFilter(0);
     setZoomLevel(4);
-    setIsLandscapeCameraFeed(false);
     
     toast({
       title: "Live ended",
@@ -1073,7 +1055,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setSelectedAREffect(0); // Reset AR effect
     setSelectedFilter(0); // Reset filter
     setZoomLevel(4);
-    setIsLandscapeCameraFeed(false);
     onClose();
   };
 
