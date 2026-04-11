@@ -101,7 +101,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState(0);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
-  const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('user');
+  const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('environment');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
@@ -132,11 +132,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'black',
   };
   const cameraVideoStyle: React.CSSProperties = {
     width: '100%',
     height: '100%',
-    objectFit: 'cover',
+    objectFit: 'contain',
     objectPosition: 'center center',
     transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
@@ -507,7 +511,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const applyZoomLevel = async (
     videoTrack: MediaStreamTrack,
-    level: number // 0-4, where 4 = widest
+    level: number, // 0-4, where 4 = widest
+    facingMode: 'user' | 'environment' = currentFacingMode,
   ) => {
     try {
       const capabilities = videoTrack.getCapabilities?.() as MediaTrackCapabilities & {
@@ -518,11 +523,20 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      const min = capabilities.zoom.min;
-      const max = Math.min(capabilities.zoom.max || 1, min * 5); // cap at 5x the min
-      const step = (max - min) / 4;
-      const normalizedLevel = 4 - level;
-      const targetZoom = min + (step * normalizedLevel);
+      const hardwareMin = capabilities.zoom.min;
+      const hardwareMax = capabilities.zoom.max ?? hardwareMin;
+      const widestZoom = Math.min(hardwareMin, hardwareMax);
+      const portraitNaturalZoom = widestZoom < 1
+        ? Math.min(hardwareMax, 1)
+        : Math.min(hardwareMax, widestZoom);
+      const closestAllowedZoom = Math.max(widestZoom, portraitNaturalZoom);
+      const clampedLevel = Math.max(0, Math.min(4, level));
+      const normalizedLevel = (4 - clampedLevel) / 4;
+      const targetZoom = widestZoom + ((closestAllowedZoom - widestZoom) * normalizedLevel);
+
+      if (facingMode === 'environment' && targetZoom > 1) {
+        return;
+      }
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
@@ -532,10 +546,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const applyWidestAvailableZoom = async (
     videoTrack: MediaStreamTrack,
-    _facingMode: 'user' | 'environment',
+    facingMode: 'user' | 'environment',
     level = zoomLevel
   ) => {
-    await applyZoomLevel(videoTrack, level);
+    await applyZoomLevel(videoTrack, level, facingMode);
   };
 
   const handleZoomChange = async (newLevel: number) => {
@@ -576,7 +590,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
 
     if (videoTrack) {
-      await applyZoomLevel(videoTrack, newLevel);
+      await applyZoomLevel(videoTrack, newLevel, currentFacingMode);
     }
   };
 
@@ -596,8 +610,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         : { facingMode: { ideal: facingMode } }),
       aspectRatio: { ideal: 9 / 16 },
       resizeMode: 'none',
-      width: { ideal: isMobile ? 1080 : 720, max: isMobile ? 1440 : 1080 },
-      height: { ideal: isMobile ? 1920 : 1280, max: isMobile ? 2560 : 1920 },
+      width: { ideal: isMobile ? 720 : 720, max: isMobile ? 1080 : 1080 },
+      height: { ideal: isMobile ? 1280 : 1280, max: isMobile ? 1920 : 1920 },
       frameRate: { ideal: 30, max: 30 },
     };
 
@@ -691,7 +705,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       }
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
+        video: {
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          aspectRatio: 9 / 16,
+        }, 
         audio: true 
       });
       mediaStream.getTracks().forEach(track => track.stop());
@@ -1002,26 +1021,18 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     
     setStream(null);
     setIsLive(false);
-    
+    setShowAREffects(false);
+    setShowFilters(false);
+    setPinnedMsg(null);
+    setGiftAnimation(null);
     recordedChunksRef.current = [];
     reachedMilestones.current.clear();
-    setStep('setup');
-    setLiveTitle('');
-    setComments([]);
-    setAllComments([]);
-    setViewers(new Map());
-    setLikeCount(0);
-    setLiveDuration(0);
-    setSelectedAREffect(0);
-    setSelectedFilter(0);
-    setZoomLevel(4);
+    setStep('ended');
     
     toast({
       title: "Live ended",
       description: "Your live stream has ended.",
     });
-    
-    onClose();
   };
 
   // Touch-to-toggle comments visibility (3s hold)
@@ -1052,9 +1063,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     setViewers(new Map());
     setLikeCount(0);
     setLiveDuration(0);
+    setLiveStartTime(null);
+    setLiveSessionId(null);
+    setPinnedMsg(null);
+    setGiftAnimation(null);
+    setGiftLeaderboard([]);
+    setShowDeleteConfirm(false);
+    setShowAREffects(false);
+    setShowFilters(false);
+    setCommentsVisible(true);
+    setIsMuted(false);
+    setIsCameraOn(true);
     setSelectedAREffect(0); // Reset AR effect
     setSelectedFilter(0); // Reset filter
     setZoomLevel(4);
+    setCurrentFacingMode('environment');
     onClose();
   };
 
@@ -1200,7 +1223,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                           playsInline
                           muted
                           webkit-playsinline="true"
-                          className="w-full h-full object-cover bg-black"
+                          className="w-full h-full object-contain bg-black"
                           style={cameraVideoStyle}
                         />
                       </div>
@@ -1402,7 +1425,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                       autoPlay
                       playsInline
                       muted
-                      className="w-full h-full object-cover bg-black"
+                      className="w-full h-full object-contain bg-black"
                       style={cameraVideoStyle}
                     />
                   </div>
@@ -1581,7 +1604,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover bg-black"
+                    className="w-full h-full object-contain bg-black"
                     style={cameraVideoStyle}
                   />
                 </div>

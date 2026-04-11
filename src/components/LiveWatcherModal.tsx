@@ -424,49 +424,51 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[480px] lg:h-auto lg:rounded-2xl overflow-hidden">
-          <div className="flex flex-col items-center justify-center h-full bg-black p-6">
-            <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-destructive/10 flex items-center justify-center">
-              <Power className="w-12 h-12 text-destructive" />
-            </div>
-            <h2 className="text-white text-2xl font-bold mb-2">Live Has Ended</h2>
-            <p className="text-white/60 text-sm mb-1 text-center">
-              {liveStream.broadcaster?.display_name || 'The broadcaster'} has ended this live stream.
-            </p>
-            <p className="text-white/40 text-xs mb-8 text-center">
-              Thanks for watching! You can close this and find another live.
-            </p>
+          <div className="flex h-full w-full flex-col bg-black px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Power className="w-12 h-12 text-destructive" />
+              </div>
+              <h2 className="text-white text-2xl font-bold mb-2">Live Has Ended</h2>
+              <p className="text-white/60 text-sm mb-1 text-center">
+                {liveStream.broadcaster?.display_name || 'The broadcaster'} has ended this live stream.
+              </p>
+              <p className="text-white/40 text-xs mb-8 text-center">
+                Thanks for watching! You can close this and find another live.
+              </p>
 
-            <div className="flex gap-3 w-full max-w-xs mb-6">
-              <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
-                  <Heart className="w-4 h-4 fill-pink-500" />
-                  {likeCount}
+              <div className="flex gap-3 w-full max-w-xs mb-6">
+                <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <div className="text-lg font-bold text-pink-500 flex items-center justify-center gap-1">
+                    <Heart className="w-4 h-4 fill-pink-500" />
+                    {likeCount}
+                  </div>
+                  <span className="text-xs text-white/40">Likes</span>
                 </div>
-                <span className="text-xs text-white/40">Likes</span>
-              </div>
-              <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-lg font-bold text-yellow-500 flex items-center justify-center gap-1">
-                  <Coins className="w-4 h-4" />
-                  {totalGiftCoins}
+                <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <div className="text-lg font-bold text-yellow-500 flex items-center justify-center gap-1">
+                    <Coins className="w-4 h-4" />
+                    {totalGiftCoins}
+                  </div>
+                  <span className="text-xs text-white/40">Coins Gifted</span>
                 </div>
-                <span className="text-xs text-white/40">Coins Gifted</span>
               </div>
+
+              {leaderboard.length > 0 && (
+                <div className="w-full max-w-xs mb-6">
+                  <p className="text-xs text-white/40 mb-2 flex items-center justify-center gap-1">
+                    <Trophy className="w-3 h-3" /> Top Gifters
+                  </p>
+                  <GiftLeaderboard entries={leaderboard} />
+                </div>
+              )}
             </div>
 
-            {leaderboard.length > 0 && (
-              <div className="w-full max-w-xs mb-6">
-                <p className="text-xs text-white/40 mb-2 flex items-center justify-center gap-1">
-                  <Trophy className="w-3 h-3" /> Top Gifters
-                </p>
-                <GiftLeaderboard entries={leaderboard} />
-              </div>
-            )}
-
-            <div className="flex gap-3 w-full max-w-xs">
-              <Button variant="outline" className="flex-1 rounded-xl border-white/20 text-white hover:bg-white/10" onClick={handleClose}>
+            <div className="flex gap-3 w-full max-w-xs self-center">
+              <Button variant="outline" className="flex-1 rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10 font-semibold" onClick={handleClose}>
                 Close
               </Button>
-              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={() => { handleClose(); window.location.href = '/live'; }}>
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90 font-semibold" onClick={() => { handleClose(); window.location.href = '/live'; }}>
                 Find Another Live
               </Button>
             </div>
