@@ -523,9 +523,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const probeConstraints: ExtendedMediaTrackConstraints = {
         deviceId: { exact: device.deviceId },
         facingMode: { ideal: facingMode },
-        width: { ideal: 720, max: 1280 },
-        height: { ideal: 1280, max: 1920 },
-        frameRate: { ideal: 24, max: 30 },
+        width: { ideal: FALLBACK_PORTRAIT_WIDTH, max: PREFERRED_PORTRAIT_WIDTH },
+        height: { ideal: FALLBACK_PORTRAIT_HEIGHT, max: PREFERRED_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
         resizeMode: 'none',
       };
 
@@ -561,11 +562,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
         return -40;
       })();
+      const portraitCaptureBonus =
+        typeof settings.width === 'number' &&
+        typeof settings.height === 'number' &&
+        settings.height > settings.width
+          ? 220
+          : 0;
 
       return {
         deviceId: device.deviceId,
         label,
-        score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus,
+        score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
       if (!device.label.trim()) {
@@ -725,17 +732,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     zoomOverrideLevel?: number;
   }) => {
     const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
-    const baseVideoConstraints: ExtendedMediaTrackConstraints = {
-      ...(preferredDeviceId
-        ? { deviceId: { exact: preferredDeviceId } }
-        : { facingMode: { ideal: facingMode } }),
-      aspectRatio: { ideal: 9 / 16 },
-      resizeMode: 'none',
-      width: { ideal: isMobile ? 720 : 720, max: isMobile ? 1080 : 1080 },
-      height: { ideal: isMobile ? 1280 : 1280, max: isMobile ? 1920 : 1920 },
-      frameRate: { ideal: 30, max: 30 },
-    };
-
     const audioConstraints = withAudio
       ? {
           echoCancellation: true,
@@ -744,25 +740,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         }
       : false;
 
-    let mediaStream: MediaStream;
-
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: baseVideoConstraints,
-        audio: audioConstraints,
-      });
-    } catch (constraintError) {
-      console.log('Falling back to simpler camera constraints...', constraintError);
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: preferredDeviceId
-          ? { deviceId: { exact: preferredDeviceId } }
-          : { facingMode: { ideal: facingMode } },
-        audio: audioConstraints,
-      });
-    }
+    const mediaStream = await requestCameraStreamWithFallbacks({
+      audioConstraints,
+      facingMode,
+      preferredDeviceId,
+    });
 
     const videoTrack = mediaStream.getVideoTracks()[0];
     if (videoTrack) {
+      await enforcePortraitTrackConstraints(videoTrack);
       await applyWidestAvailableZoom(videoTrack, facingMode, zoomOverrideLevel);
     }
 
@@ -825,14 +811,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         throw new Error('Camera API not available');
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: {
-          facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          aspectRatio: 9 / 16,
-        }, 
-        audio: true 
+      const mediaStream = await requestCameraStreamWithFallbacks({
+        audioConstraints: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        facingMode: currentFacingMode,
+        preferredDeviceId: await getPreferredCameraDeviceId(currentFacingMode),
       });
       mediaStream.getTracks().forEach(track => track.stop());
       setPermissionStatus('granted');
@@ -997,6 +983,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         microphoneStream.getTracks().forEach((track) => track.stop());
         throw new Error('No video track available for live stream');
       }
+
+      await enforcePortraitTrackConstraints(liveVideoTrack);
+      await applyWidestAvailableZoom(liveVideoTrack, currentFacingMode, zoomLevel);
 
       const mediaStream = new MediaStream([
         liveVideoTrack,
