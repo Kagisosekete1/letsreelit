@@ -76,6 +76,12 @@ const AR_EFFECTS = [
 
 // Viewer milestones for confetti
 const VIEWER_MILESTONES = [10, 50, 100, 500, 1000];
+const PORTRAIT_STAGE_ASPECT_RATIO = 9 / 16;
+const PREFERRED_PORTRAIT_WIDTH = 1080;
+const PREFERRED_PORTRAIT_HEIGHT = 1920;
+const FALLBACK_PORTRAIT_WIDTH = 720;
+const FALLBACK_PORTRAIT_HEIGHT = 1280;
+const MAX_CAMERA_FRAME_RATE = 30;
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
@@ -127,7 +133,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const viewerCount = viewers.size;
   const portraitStageStyle: React.CSSProperties = {
-    width: 'min(100vw, 420px, calc(100dvh * 9 / 16))',
+    width: `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
   };
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
@@ -136,6 +142,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'black',
+    overflow: 'hidden',
   };
   const cameraVideoStyle: React.CSSProperties = {
     width: '100%',
@@ -377,8 +384,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ].reduce((total, score) => total + score, 0);
     }
 
-    const isUltraWide = /ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|0\.5|0,5|\buw\b/.test(normalizedLabel);
-    const isMainWide = /\bmain\b|\bwide\b|1x|standard|dual\s+wide/.test(normalizedLabel);
+    const isUltraWide = /ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|ultra\s+wide|0\.5|0,5|0\.6|0,6|0\.7|0,7|\buw\b/.test(normalizedLabel);
+    const isMainWide = /\bmain\b|\bwide\b|1x|standard|dual\s+wide|back camera/.test(normalizedLabel);
     const isMultiLensRear = /triple|dual|multi/.test(normalizedLabel);
     const isTeleOrMacro = /tele|zoom|macro|portrait|depth/.test(normalizedLabel);
 
@@ -392,6 +399,120 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     ].reduce((total, score) => total + score, 0);
   };
 
+  const buildPortraitConstraintCandidates = (
+    facingMode: 'user' | 'environment',
+    preferredDeviceId: string | null,
+  ): ExtendedMediaTrackConstraints[] => {
+    const candidates: ExtendedMediaTrackConstraints[] = [];
+
+    if (preferredDeviceId) {
+      candidates.push(
+        {
+          deviceId: { exact: preferredDeviceId },
+          width: { ideal: PREFERRED_PORTRAIT_WIDTH, min: FALLBACK_PORTRAIT_WIDTH },
+          height: { ideal: PREFERRED_PORTRAIT_HEIGHT, min: FALLBACK_PORTRAIT_HEIGHT },
+          aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+          frameRate: { ideal: MAX_CAMERA_FRAME_RATE, max: MAX_CAMERA_FRAME_RATE },
+          resizeMode: 'none',
+        },
+        {
+          deviceId: { exact: preferredDeviceId },
+          width: { ideal: FALLBACK_PORTRAIT_WIDTH },
+          height: { ideal: FALLBACK_PORTRAIT_HEIGHT },
+          aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+          frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
+          resizeMode: 'none',
+        },
+        {
+          deviceId: { exact: preferredDeviceId },
+          frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
+        },
+      );
+    }
+
+    candidates.push(
+      {
+        facingMode: { exact: facingMode },
+        width: { ideal: PREFERRED_PORTRAIT_WIDTH, min: FALLBACK_PORTRAIT_WIDTH },
+        height: { ideal: PREFERRED_PORTRAIT_HEIGHT, min: FALLBACK_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: MAX_CAMERA_FRAME_RATE, max: MAX_CAMERA_FRAME_RATE },
+        resizeMode: 'none',
+      },
+      {
+        facingMode: { ideal: facingMode },
+        width: { ideal: FALLBACK_PORTRAIT_WIDTH },
+        height: { ideal: FALLBACK_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
+        resizeMode: 'none',
+      },
+      {
+        facingMode: { ideal: facingMode },
+        frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
+      },
+    );
+
+    return candidates;
+  };
+
+  const requestCameraStreamWithFallbacks = async ({
+    audioConstraints,
+    facingMode,
+    preferredDeviceId,
+  }: {
+    audioConstraints: MediaTrackConstraints | boolean;
+    facingMode: 'user' | 'environment';
+    preferredDeviceId: string | null;
+  }) => {
+    let lastError: unknown = null;
+
+    for (const videoConstraints of buildPortraitConstraintCandidates(facingMode, preferredDeviceId)) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: audioConstraints,
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error('Unable to access camera');
+  };
+
+  const enforcePortraitTrackConstraints = async (videoTrack: MediaStreamTrack) => {
+    if (!isMobile) {
+      return;
+    }
+
+    const portraitConstraintCandidates: ExtendedMediaTrackConstraints[] = [
+      {
+        width: { ideal: PREFERRED_PORTRAIT_WIDTH, min: FALLBACK_PORTRAIT_WIDTH },
+        height: { ideal: PREFERRED_PORTRAIT_HEIGHT, min: FALLBACK_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: MAX_CAMERA_FRAME_RATE, max: MAX_CAMERA_FRAME_RATE },
+        resizeMode: 'none',
+      },
+      {
+        width: { ideal: FALLBACK_PORTRAIT_WIDTH },
+        height: { ideal: FALLBACK_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
+        resizeMode: 'none',
+      },
+    ];
+
+    for (const constraints of portraitConstraintCandidates) {
+      try {
+        await videoTrack.applyConstraints(constraints);
+        return;
+      } catch {
+        continue;
+      }
+    }
+  };
+
   const inspectCameraDevice = async (
     device: MediaDeviceInfo,
     facingMode: 'user' | 'environment'
@@ -402,9 +523,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const probeConstraints: ExtendedMediaTrackConstraints = {
         deviceId: { exact: device.deviceId },
         facingMode: { ideal: facingMode },
-        width: { ideal: 720, max: 1280 },
-        height: { ideal: 1280, max: 1920 },
-        frameRate: { ideal: 24, max: 30 },
+        width: { ideal: FALLBACK_PORTRAIT_WIDTH, max: PREFERRED_PORTRAIT_WIDTH },
+        height: { ideal: FALLBACK_PORTRAIT_HEIGHT, max: PREFERRED_PORTRAIT_HEIGHT },
+        aspectRatio: { ideal: PORTRAIT_STAGE_ASPECT_RATIO },
+        frameRate: { ideal: 24, max: MAX_CAMERA_FRAME_RATE },
         resizeMode: 'none',
       };
 
@@ -440,11 +562,17 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
         return -40;
       })();
+      const portraitCaptureBonus =
+        typeof settings.width === 'number' &&
+        typeof settings.height === 'number' &&
+        settings.height > settings.width
+          ? 220
+          : 0;
 
       return {
         deviceId: device.deviceId,
         label,
-        score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus,
+        score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
       if (!device.label.trim()) {
@@ -604,17 +732,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     zoomOverrideLevel?: number;
   }) => {
     const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
-    const baseVideoConstraints: ExtendedMediaTrackConstraints = {
-      ...(preferredDeviceId
-        ? { deviceId: { exact: preferredDeviceId } }
-        : { facingMode: { ideal: facingMode } }),
-      aspectRatio: { ideal: 9 / 16 },
-      resizeMode: 'none',
-      width: { ideal: isMobile ? 720 : 720, max: isMobile ? 1080 : 1080 },
-      height: { ideal: isMobile ? 1280 : 1280, max: isMobile ? 1920 : 1920 },
-      frameRate: { ideal: 30, max: 30 },
-    };
-
     const audioConstraints = withAudio
       ? {
           echoCancellation: true,
@@ -623,25 +740,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         }
       : false;
 
-    let mediaStream: MediaStream;
-
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: baseVideoConstraints,
-        audio: audioConstraints,
-      });
-    } catch (constraintError) {
-      console.log('Falling back to simpler camera constraints...', constraintError);
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: preferredDeviceId
-          ? { deviceId: { exact: preferredDeviceId } }
-          : { facingMode: { ideal: facingMode } },
-        audio: audioConstraints,
-      });
-    }
+    const mediaStream = await requestCameraStreamWithFallbacks({
+      audioConstraints,
+      facingMode,
+      preferredDeviceId,
+    });
 
     const videoTrack = mediaStream.getVideoTracks()[0];
     if (videoTrack) {
+      await enforcePortraitTrackConstraints(videoTrack);
       await applyWidestAvailableZoom(videoTrack, facingMode, zoomOverrideLevel);
     }
 
@@ -704,14 +811,14 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         throw new Error('Camera API not available');
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: {
-          facingMode: { ideal: currentFacingMode },
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          aspectRatio: 9 / 16,
-        }, 
-        audio: true 
+      const mediaStream = await requestCameraStreamWithFallbacks({
+        audioConstraints: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        facingMode: currentFacingMode,
+        preferredDeviceId: await getPreferredCameraDeviceId(currentFacingMode),
       });
       mediaStream.getTracks().forEach(track => track.stop());
       setPermissionStatus('granted');
@@ -876,6 +983,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         microphoneStream.getTracks().forEach((track) => track.stop());
         throw new Error('No video track available for live stream');
       }
+
+      await enforcePortraitTrackConstraints(liveVideoTrack);
+      await applyWidestAvailableZoom(liveVideoTrack, currentFacingMode, zoomLevel);
 
       const mediaStream = new MediaStream([
         liveVideoTrack,
