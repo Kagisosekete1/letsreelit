@@ -818,6 +818,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     cameraInspectionsRef.current[facingMode] = inspections.sort((first, second) => second.score - first.score);
 
+    if (facingMode === 'environment') {
+      syncCameraCalibrationProfile(cameraInspectionsRef.current.environment);
+    }
+
     if (rankedDevice?.deviceId) {
       if (facingMode === 'environment') {
         const widestRearDevice = cameraInspectionsRef.current.environment.find(
@@ -849,6 +853,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
 
     await getPreferredCameraDeviceId('environment');
+
+    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[Math.max(0, Math.min(4, level))]?.deviceId;
+    if (calibratedDeviceId) {
+      return calibratedDeviceId;
+    }
 
     const inspections = cameraInspectionsRef.current.environment;
     if (!inspections.length) {
