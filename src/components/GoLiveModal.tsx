@@ -135,6 +135,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     user: null,
     environment: null,
   });
+  const cameraInspectionsRef = useRef<Record<'user' | 'environment', CameraInspection[]>>({
+    user: [],
+    environment: [],
+  });
   const [giftAnimation, setGiftAnimation] = useState<{ id: number; emoji: string; name: string; senderName: string; animation: string } | null>(null);
   const [giftLeaderboard, setGiftLeaderboard] = useState<{ username: string; totalCoins: number }[]>([]);
   const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
@@ -404,28 +408,39 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const classifyCameraLens = (label: string): CameraLensRole => {
+    const normalizedLabel = label.toLowerCase();
+
+    if (/front|user|face|selfie|truedepth/.test(normalizedLabel)) return 'front';
+    if (/tele|zoom|macro|portrait|depth|2x|3x|5x|10x/.test(normalizedLabel)) return 'telephoto';
+    if (/ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|ultra\s+wide|0\.5|0,5|0\.6|0,6|0\.7|0,7|\buw\b/.test(normalizedLabel)) return 'ultraWide';
+    if (/\bmain\b|\bwide\b|1x|standard|dual\s+wide|back camera/.test(normalizedLabel)) return 'wide';
+    if (/back|rear|environment|world/.test(normalizedLabel)) return 'rear';
+
+    return 'unknown';
+  };
+
   const scoreCameraDevice = (label: string, facingMode: 'user' | 'environment') => {
     const normalizedLabel = label.toLowerCase();
+    const lensRole = classifyCameraLens(label);
 
     if (facingMode === 'user') {
       return [
-        /front|user|face|selfie|truedepth/.test(normalizedLabel) ? 100 : 0,
+        lensRole === 'front' ? 100 : 0,
         /back|rear|environment/.test(normalizedLabel) ? -100 : 0,
       ].reduce((total, score) => total + score, 0);
     }
 
-    const isUltraWide = /ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|ultra\s+wide|0\.5|0,5|0\.6|0,6|0\.7|0,7|\buw\b/.test(normalizedLabel);
-    const isMainWide = /\bmain\b|\bwide\b|1x|standard|dual\s+wide|back camera/.test(normalizedLabel);
     const isMultiLensRear = /triple|dual|multi/.test(normalizedLabel);
-    const isTeleOrMacro = /tele|zoom|macro|portrait|depth/.test(normalizedLabel);
 
     return [
       /back|rear|environment|world/.test(normalizedLabel) ? 140 : 0,
-      isUltraWide ? 260 : 0,
-      isMainWide ? 90 : 0,
+      lensRole === 'ultraWide' ? 320 : 0,
+      lensRole === 'wide' ? 120 : 0,
+      lensRole === 'rear' ? 70 : 0,
       isMultiLensRear ? 40 : 0,
-      isTeleOrMacro ? -220 : 0,
-      /front|user|face|selfie|truedepth/.test(normalizedLabel) ? -220 : 0,
+      lensRole === 'telephoto' ? -260 : 0,
+      lensRole === 'front' ? -220 : 0,
     ].reduce((total, score) => total + score, 0);
   };
 
