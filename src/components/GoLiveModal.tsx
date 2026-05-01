@@ -1411,7 +1411,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
-            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+            <div className={cameraStageClassName} style={portraitStageStyle}>
               <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
                 {stream ? (
                   <>
@@ -1611,7 +1611,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
-            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+            <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Camera Preview during countdown */}
             <div 
               className="absolute inset-0"
@@ -1788,7 +1788,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           onMouseDown={handleTouchStart}
           onMouseUp={handleTouchEnd}
         >
-          <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+          <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Confetti Burst for milestones */}
             <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
