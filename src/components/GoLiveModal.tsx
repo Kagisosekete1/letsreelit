@@ -145,6 +145,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     user: null,
     environment: null,
   });
+  const cameraCalibrationRef = useRef<CameraCalibrationProfile | null>(null);
   const cameraInspectionsRef = useRef<Record<'user' | 'environment', CameraInspection[]>>({
     user: [],
     environment: [],
@@ -159,9 +160,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ? '100vw'
       : `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
     height: isMobile ? '100dvh' : undefined,
+    maxWidth: isMobile ? '100vw' : undefined,
+    maxHeight: isMobile ? '100dvh' : undefined,
+    aspectRatio: isMobile ? undefined : '9 / 16',
+    transform: 'none',
   };
   const cameraStageClassName = isMobile
-    ? 'relative h-full w-full overflow-hidden bg-black'
+    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-screen overflow-hidden bg-black contain-layout'
     : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
