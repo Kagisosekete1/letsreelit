@@ -43,6 +43,15 @@ interface CameraInspection {
   minZoom?: number;
   maxZoom?: number;
   score: number;
+  nativeWidth?: number;
+  nativeHeight?: number;
+}
+
+interface CameraCalibrationProfile {
+  deviceSignature: string;
+  platform: 'iphone' | 'samsung' | 'generic';
+  zoomLevels: Record<number, { deviceId: string | null; zoom?: number }>;
+  calibratedAt: number;
 }
 
 type CameraLensRole = 'front' | 'ultraWide' | 'wide' | 'telephoto' | 'rear' | 'unknown';
@@ -89,6 +98,7 @@ const FALLBACK_PORTRAIT_HEIGHT = 1280;
 const MAX_CAMERA_FRAME_RATE = 30;
 const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
 const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
+const CAMERA_CALIBRATION_STORAGE_KEY = 'muvit-live-camera-calibration-v2';
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
