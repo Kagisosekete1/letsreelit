@@ -39,8 +39,13 @@ interface Viewer {
 interface CameraInspection {
   deviceId: string;
   label: string;
+  lensRole: CameraLensRole;
+  minZoom?: number;
+  maxZoom?: number;
   score: number;
 }
+
+type CameraLensRole = 'front' | 'ultraWide' | 'wide' | 'telephoto' | 'rear' | 'unknown';
 
 type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
   resizeMode?: string;
@@ -82,6 +87,8 @@ const PREFERRED_PORTRAIT_HEIGHT = 1920;
 const FALLBACK_PORTRAIT_WIDTH = 720;
 const FALLBACK_PORTRAIT_HEIGHT = 1280;
 const MAX_CAMERA_FRAME_RATE = 30;
+const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
+const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
@@ -114,6 +121,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
+  const [cameraFrameOrientation, setCameraFrameOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -127,14 +135,24 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     user: null,
     environment: null,
   });
+  const cameraInspectionsRef = useRef<Record<'user' | 'environment', CameraInspection[]>>({
+    user: [],
+    environment: [],
+  });
   const [giftAnimation, setGiftAnimation] = useState<{ id: number; emoji: string; name: string; senderName: string; animation: string } | null>(null);
   const [giftLeaderboard, setGiftLeaderboard] = useState<{ username: string; totalCoins: number }[]>([]);
   const [pinnedMsg, setPinnedMsg] = useState<{ username: string; content: string } | null>(null);
 
   const viewerCount = viewers.size;
   const portraitStageStyle: React.CSSProperties = {
-    width: `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
+    width: isMobile
+      ? '100vw'
+      : `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
+    height: isMobile ? '100dvh' : undefined,
   };
+  const cameraStageClassName = isMobile
+    ? 'relative h-full w-full overflow-hidden bg-black'
+    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -145,12 +163,32 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     overflow: 'hidden',
   };
   const cameraVideoStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
+    position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
+    top: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
+    left: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
+    width: cameraFrameOrientation === 'landscape'
+      ? isMobile ? '100dvh' : ROTATED_LANDSCAPE_WIDTH_PERCENT
+      : '100%',
+    height: cameraFrameOrientation === 'landscape'
+      ? isMobile ? '100vw' : ROTATED_LANDSCAPE_HEIGHT_PERCENT
+      : '100%',
+    maxWidth: cameraFrameOrientation === 'landscape' ? 'none' : undefined,
     objectFit: 'contain',
     objectPosition: 'center center',
-    transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
-    WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
+    transform:
+      cameraFrameOrientation === 'landscape'
+        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
+        : currentFacingMode === 'user'
+          ? 'scaleX(-1)'
+          : 'none',
+    transformOrigin: 'center center',
+    WebkitTransform:
+      cameraFrameOrientation === 'landscape'
+        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
+        : currentFacingMode === 'user'
+          ? 'scaleX(-1)'
+          : 'none',
+    WebkitTransformOrigin: 'center center',
   };
 
   const attachStreamToVideoElement = useCallback(
@@ -165,6 +203,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       videoElement.muted = true;
 
       videoElement.onloadedmetadata = async () => {
+        setCameraFrameOrientation(
+          videoElement.videoWidth > videoElement.videoHeight ? 'landscape' : 'portrait',
+        );
+
         try {
           await videoElement.play();
         } catch (error) {
@@ -374,28 +416,39 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const classifyCameraLens = (label: string): CameraLensRole => {
+    const normalizedLabel = label.toLowerCase();
+
+    if (/front|user|face|selfie|truedepth/.test(normalizedLabel)) return 'front';
+    if (/tele|zoom|macro|portrait|depth|2x|3x|5x|10x/.test(normalizedLabel)) return 'telephoto';
+    if (/ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|ultra\s+wide|0\.5|0,5|0\.6|0,6|0\.7|0,7|\buw\b/.test(normalizedLabel)) return 'ultraWide';
+    if (/\bmain\b|\bwide\b|1x|standard|dual\s+wide|back camera/.test(normalizedLabel)) return 'wide';
+    if (/back|rear|environment|world/.test(normalizedLabel)) return 'rear';
+
+    return 'unknown';
+  };
+
   const scoreCameraDevice = (label: string, facingMode: 'user' | 'environment') => {
     const normalizedLabel = label.toLowerCase();
+    const lensRole = classifyCameraLens(label);
 
     if (facingMode === 'user') {
       return [
-        /front|user|face|selfie|truedepth/.test(normalizedLabel) ? 100 : 0,
+        lensRole === 'front' ? 100 : 0,
         /back|rear|environment/.test(normalizedLabel) ? -100 : 0,
       ].reduce((total, score) => total + score, 0);
     }
 
-    const isUltraWide = /ultra[\s-]?wide|super[\s-]?wide|wide[\s-]?angle|ultra\s+wide|0\.5|0,5|0\.6|0,6|0\.7|0,7|\buw\b/.test(normalizedLabel);
-    const isMainWide = /\bmain\b|\bwide\b|1x|standard|dual\s+wide|back camera/.test(normalizedLabel);
     const isMultiLensRear = /triple|dual|multi/.test(normalizedLabel);
-    const isTeleOrMacro = /tele|zoom|macro|portrait|depth/.test(normalizedLabel);
 
     return [
       /back|rear|environment|world/.test(normalizedLabel) ? 140 : 0,
-      isUltraWide ? 260 : 0,
-      isMainWide ? 90 : 0,
+      lensRole === 'ultraWide' ? 320 : 0,
+      lensRole === 'wide' ? 120 : 0,
+      lensRole === 'rear' ? 70 : 0,
       isMultiLensRear ? 40 : 0,
-      isTeleOrMacro ? -220 : 0,
-      /front|user|face|selfie|truedepth/.test(normalizedLabel) ? -220 : 0,
+      lensRole === 'telephoto' ? -260 : 0,
+      lensRole === 'front' ? -220 : 0,
     ].reduce((total, score) => total + score, 0);
   };
 
@@ -572,6 +625,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return {
         deviceId: device.deviceId,
         label,
+        lensRole: classifyCameraLens(label),
+        minZoom: capabilities.zoom?.min,
+        maxZoom: capabilities.zoom?.max,
         score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
@@ -582,6 +638,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return {
         deviceId: device.deviceId,
         label: device.label,
+        lensRole: classifyCameraLens(device.label),
         score: scoreCameraDevice(device.label, facingMode),
       };
     } finally {
@@ -612,18 +669,34 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return null;
     }
 
+    const inspections: CameraInspection[] = [];
     let rankedDevice: CameraInspection | null = null;
 
     for (const device of videoDevices) {
       const inspection = await inspectCameraDevice(device, facingMode);
       if (!inspection) continue;
 
+      inspections.push(inspection);
+
       if (!rankedDevice || inspection.score > rankedDevice.score) {
         rankedDevice = inspection;
       }
     }
 
+    cameraInspectionsRef.current[facingMode] = inspections.sort((first, second) => second.score - first.score);
+
     if (rankedDevice?.deviceId) {
+      if (facingMode === 'environment') {
+        const widestRearDevice = cameraInspectionsRef.current.environment.find(
+          (inspection) =>
+            inspection.lensRole === 'ultraWide' ||
+            (typeof inspection.minZoom === 'number' && inspection.minZoom < 1),
+        );
+
+        preferredCameraIdsRef.current.environment = widestRearDevice?.deviceId ?? rankedDevice.deviceId;
+        return preferredCameraIdsRef.current.environment;
+      }
+
       preferredCameraIdsRef.current[facingMode] = rankedDevice.deviceId;
       return rankedDevice.deviceId;
     }
@@ -635,6 +708,38 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     preferredCameraIdsRef.current[facingMode] = fallbackDevice?.deviceId ?? null;
 
     return fallbackDevice?.deviceId ?? null;
+  };
+
+  const getCameraDeviceIdForZoomLevel = async (level: number, facingMode: 'user' | 'environment') => {
+    if (facingMode !== 'environment') {
+      return getPreferredCameraDeviceId(facingMode);
+    }
+
+    await getPreferredCameraDeviceId('environment');
+
+    const inspections = cameraInspectionsRef.current.environment;
+    if (!inspections.length) {
+      return preferredCameraIdsRef.current.environment;
+    }
+
+    const clampedLevel = Math.max(0, Math.min(4, level));
+    const rolePriority: CameraLensRole[] =
+      clampedLevel >= 3
+        ? ['ultraWide', 'rear', 'wide']
+        : clampedLevel === 2
+          ? ['wide', 'rear', 'ultraWide']
+          : clampedLevel === 1
+            ? ['wide', 'rear', 'telephoto']
+            : ['telephoto', 'wide', 'rear'];
+
+    for (const role of rolePriority) {
+      const match = inspections.find((inspection) => inspection.lensRole === role);
+      if (match) {
+        return match.deviceId;
+      }
+    }
+
+    return inspections[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
   };
 
   const applyZoomLevel = async (
@@ -653,18 +758,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       const hardwareMin = capabilities.zoom.min;
       const hardwareMax = capabilities.zoom.max ?? hardwareMin;
-      const widestZoom = Math.min(hardwareMin, hardwareMax);
-      const portraitNaturalZoom = widestZoom < 1
-        ? Math.min(hardwareMax, 1)
-        : Math.min(hardwareMax, widestZoom);
-      const closestAllowedZoom = Math.max(widestZoom, portraitNaturalZoom);
       const clampedLevel = Math.max(0, Math.min(4, level));
-      const normalizedLevel = (4 - clampedLevel) / 4;
-      const targetZoom = widestZoom + ((closestAllowedZoom - widestZoom) * normalizedLevel);
-
-      if (facingMode === 'environment' && targetZoom > 1) {
-        return;
-      }
+      const clampZoom = (value: number) => Math.max(hardwareMin, Math.min(hardwareMax, value));
+      const rearZoomMap = [
+        clampZoom(hardwareMin < 1 ? 2 : Math.min(hardwareMax, 2)),
+        clampZoom(hardwareMin < 1 ? 1.5 : Math.min(hardwareMax, 1.5)),
+        clampZoom(1),
+        clampZoom(hardwareMin < 0.75 ? 0.75 : hardwareMin),
+        clampZoom(hardwareMin),
+      ];
+      const frontZoomMap = [
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.5)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.35)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.2)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.1)),
+        clampZoom(hardwareMin),
+      ];
+      const targetZoom = facingMode === 'environment' ? rearZoomMap[clampedLevel] : frontZoomMap[clampedLevel];
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
@@ -691,8 +801,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     const videoTrack = stream?.getVideoTracks()[0];
     const currentDeviceId = videoTrack?.getSettings().deviceId;
 
-    if (currentFacingMode === 'environment' && newLevel >= 3) {
-      const preferredDeviceId = await getPreferredCameraDeviceId('environment');
+    if (currentFacingMode === 'environment') {
+      const preferredDeviceId = await getCameraDeviceIdForZoomLevel(newLevel, 'environment');
 
       if (preferredDeviceId && preferredDeviceId !== currentDeviceId) {
         try {
@@ -731,7 +841,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     withAudio: boolean;
     zoomOverrideLevel?: number;
   }) => {
-    const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
+    const preferredDeviceId = await getCameraDeviceIdForZoomLevel(zoomOverrideLevel, facingMode);
     const audioConstraints = withAudio
       ? {
           echoCancellation: true,
@@ -1321,7 +1431,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
-            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+            <div className={cameraStageClassName} style={portraitStageStyle}>
               <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
                 {stream ? (
                   <>
@@ -1521,7 +1631,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
-            <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+            <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Camera Preview during countdown */}
             <div 
               className="absolute inset-0"
@@ -1698,7 +1808,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
           onMouseDown={handleTouchStart}
           onMouseUp={handleTouchEnd}
         >
-          <div className="relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black" style={portraitStageStyle}>
+          <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Confetti Burst for milestones */}
             <ConfettiBurst trigger={confettiTrigger} milestone={currentMilestone} />
 
