@@ -39,8 +39,13 @@ interface Viewer {
 interface CameraInspection {
   deviceId: string;
   label: string;
+  lensRole: CameraLensRole;
+  minZoom?: number;
+  maxZoom?: number;
   score: number;
 }
+
+type CameraLensRole = 'front' | 'ultraWide' | 'wide' | 'telephoto' | 'rear' | 'unknown';
 
 type ExtendedMediaTrackConstraints = MediaTrackConstraints & {
   resizeMode?: string;
@@ -82,6 +87,8 @@ const PREFERRED_PORTRAIT_HEIGHT = 1920;
 const FALLBACK_PORTRAIT_WIDTH = 720;
 const FALLBACK_PORTRAIT_HEIGHT = 1280;
 const MAX_CAMERA_FRAME_RATE = 30;
+const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
+const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
@@ -114,6 +121,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
+  const [cameraFrameOrientation, setCameraFrameOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -133,7 +141,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
   const viewerCount = viewers.size;
   const portraitStageStyle: React.CSSProperties = {
-    width: `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
+    width: isMobile
+      ? `min(100vw, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`
+      : `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
   };
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
@@ -145,12 +155,28 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     overflow: 'hidden',
   };
   const cameraVideoStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
+    position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
+    top: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
+    left: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
+    width: cameraFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_WIDTH_PERCENT : '100%',
+    height: cameraFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_HEIGHT_PERCENT : '100%',
+    maxWidth: cameraFrameOrientation === 'landscape' ? 'none' : undefined,
     objectFit: 'contain',
     objectPosition: 'center center',
-    transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
-    WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
+    transform:
+      cameraFrameOrientation === 'landscape'
+        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
+        : currentFacingMode === 'user'
+          ? 'scaleX(-1)'
+          : 'none',
+    transformOrigin: 'center center',
+    WebkitTransform:
+      cameraFrameOrientation === 'landscape'
+        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
+        : currentFacingMode === 'user'
+          ? 'scaleX(-1)'
+          : 'none',
+    WebkitTransformOrigin: 'center center',
   };
 
   const attachStreamToVideoElement = useCallback(
@@ -165,6 +191,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       videoElement.muted = true;
 
       videoElement.onloadedmetadata = async () => {
+        setCameraFrameOrientation(
+          videoElement.videoWidth > videoElement.videoHeight ? 'landscape' : 'portrait',
+        );
+
         try {
           await videoElement.play();
         } catch (error) {
