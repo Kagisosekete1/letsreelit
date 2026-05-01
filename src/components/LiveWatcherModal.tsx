@@ -6,6 +6,7 @@ import { X, Heart, Send, Users, Radio, Power, Gift, Pin, Coins, Timer, Trophy } 
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useAudio } from '@/contexts/AudioContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useWebRTCViewer } from '@/hooks/useWebRTCSignaling';
 import FloatingHearts from '@/components/ui/FloatingHearts';
@@ -62,6 +63,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const { toast } = useToast();
   const { currentUser, authUser } = useUser();
   const { forceCleanupAll } = useAudio();
+  const isMobile = useIsMobile();
   const [viewerCount, setViewerCount] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
   const [likeTrigger, setLikeTrigger] = useState(0);
@@ -92,8 +94,8 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     position: 'absolute',
     top: remoteFrameOrientation === 'landscape' ? '50%' : 0,
     left: remoteFrameOrientation === 'landscape' ? '50%' : 0,
-    width: remoteFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_WIDTH_PERCENT : '100%',
-    height: remoteFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_HEIGHT_PERCENT : '100%',
+    width: remoteFrameOrientation === 'landscape' ? isMobile ? '100dvh' : ROTATED_LANDSCAPE_WIDTH_PERCENT : '100%',
+    height: remoteFrameOrientation === 'landscape' ? isMobile ? '100vw' : ROTATED_LANDSCAPE_HEIGHT_PERCENT : '100%',
     maxWidth: remoteFrameOrientation === 'landscape' ? 'none' : undefined,
     objectFit: 'contain',
     objectPosition: 'center center',
@@ -124,6 +126,35 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   useEffect(() => {
     if (isOpen) forceCleanupAll();
   }, [isOpen, forceCleanupAll]);
+
+  useEffect(() => {
+    if (!isOpen || !isMobile) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyWidth = body.style.width;
+    const previousBodyHeight = body.style.height;
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (orientation: string) => Promise<void>;
+      unlock?: () => void;
+    };
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.width = '100vw';
+    body.style.height = '100dvh';
+    orientation.lock?.('portrait-primary').catch(() => undefined);
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.width = previousBodyWidth;
+      body.style.height = previousBodyHeight;
+      orientation.unlock?.();
+    };
+  }, [isOpen, isMobile]);
 
   // Check if viewer is a follower of the broadcaster
   useEffect(() => {
