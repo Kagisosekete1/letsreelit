@@ -682,6 +682,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     cameraInspectionsRef.current[facingMode] = inspections.sort((first, second) => second.score - first.score);
 
     if (rankedDevice?.deviceId) {
+      if (facingMode === 'environment') {
+        const widestRearDevice = cameraInspectionsRef.current.environment.find(
+          (inspection) => inspection.lensRole === 'ultraWide' || typeof inspection.minZoom === 'number' && inspection.minZoom < 1,
+        );
+
+        preferredCameraIdsRef.current.environment = widestRearDevice?.deviceId ?? rankedDevice.deviceId;
+        return preferredCameraIdsRef.current.environment;
+      }
+
       preferredCameraIdsRef.current[facingMode] = rankedDevice.deviceId;
       return rankedDevice.deviceId;
     }
