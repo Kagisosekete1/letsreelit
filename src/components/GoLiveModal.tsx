@@ -166,7 +166,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     transform: 'none',
   };
   const cameraStageClassName = isMobile
-    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-screen overflow-hidden bg-black contain-layout'
+    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout'
     : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
