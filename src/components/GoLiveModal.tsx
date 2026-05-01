@@ -269,14 +269,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     body.style.width = '100vw';
     body.style.height = '100dvh';
 
-    screen.orientation?.lock?.('portrait-primary').catch(() => undefined);
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (orientation: string) => Promise<void>;
+      unlock?: () => void;
+    };
+
+    orientation.lock?.('portrait-primary').catch(() => undefined);
 
     return () => {
       html.style.overflow = previousHtmlOverflow;
       body.style.overflow = previousBodyOverflow;
       body.style.width = previousBodyWidth;
       body.style.height = previousBodyHeight;
-      screen.orientation?.unlock?.();
+      orientation.unlock?.();
     };
   }, [isOpen, isMobile]);
 
