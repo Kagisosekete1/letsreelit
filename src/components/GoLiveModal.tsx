@@ -166,8 +166,12 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
     top: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
     left: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
-    width: cameraFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_WIDTH_PERCENT : '100%',
-    height: cameraFrameOrientation === 'landscape' ? ROTATED_LANDSCAPE_HEIGHT_PERCENT : '100%',
+    width: cameraFrameOrientation === 'landscape'
+      ? isMobile ? '100dvh' : ROTATED_LANDSCAPE_WIDTH_PERCENT
+      : '100%',
+    height: cameraFrameOrientation === 'landscape'
+      ? isMobile ? '100vw' : ROTATED_LANDSCAPE_HEIGHT_PERCENT
+      : '100%',
     maxWidth: cameraFrameOrientation === 'landscape' ? 'none' : undefined,
     objectFit: 'contain',
     objectPosition: 'center center',
