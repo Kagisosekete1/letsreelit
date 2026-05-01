@@ -661,16 +661,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return null;
     }
 
+    const inspections: CameraInspection[] = [];
     let rankedDevice: CameraInspection | null = null;
 
     for (const device of videoDevices) {
       const inspection = await inspectCameraDevice(device, facingMode);
       if (!inspection) continue;
 
+      inspections.push(inspection);
+
       if (!rankedDevice || inspection.score > rankedDevice.score) {
         rankedDevice = inspection;
       }
     }
+
+    cameraInspectionsRef.current[facingMode] = inspections.sort((first, second) => second.score - first.score);
 
     if (rankedDevice?.deviceId) {
       preferredCameraIdsRef.current[facingMode] = rankedDevice.deviceId;
@@ -684,6 +689,38 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     preferredCameraIdsRef.current[facingMode] = fallbackDevice?.deviceId ?? null;
 
     return fallbackDevice?.deviceId ?? null;
+  };
+
+  const getCameraDeviceIdForZoomLevel = async (level: number, facingMode: 'user' | 'environment') => {
+    if (facingMode !== 'environment') {
+      return getPreferredCameraDeviceId(facingMode);
+    }
+
+    await getPreferredCameraDeviceId('environment');
+
+    const inspections = cameraInspectionsRef.current.environment;
+    if (!inspections.length) {
+      return preferredCameraIdsRef.current.environment;
+    }
+
+    const clampedLevel = Math.max(0, Math.min(4, level));
+    const rolePriority: CameraLensRole[] =
+      clampedLevel >= 3
+        ? ['ultraWide', 'rear', 'wide']
+        : clampedLevel === 2
+          ? ['wide', 'rear', 'ultraWide']
+          : clampedLevel === 1
+            ? ['wide', 'rear', 'telephoto']
+            : ['telephoto', 'wide', 'rear'];
+
+    for (const role of rolePriority) {
+      const match = inspections.find((inspection) => inspection.lensRole === role);
+      if (match) {
+        return match.deviceId;
+      }
+    }
+
+    return inspections[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
   };
 
   const applyZoomLevel = async (
