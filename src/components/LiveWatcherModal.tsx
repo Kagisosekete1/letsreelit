@@ -518,7 +518,8 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className={`absolute inset-0 w-full h-full object-contain ${hasVideo ? 'opacity-100' : 'opacity-0'}`}
+                className={hasVideo ? 'opacity-100' : 'opacity-0'}
+                style={remoteVideoStyle}
               />
             )}
 
