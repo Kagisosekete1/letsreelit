@@ -663,6 +663,122 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const detectMobileCameraPlatform = (inspections: CameraInspection[]): CameraCalibrationProfile['platform'] => {
+    const ua = navigator.userAgent.toLowerCase();
+    const labels = inspections.map((inspection) => inspection.label.toLowerCase()).join(' ');
+
+    if (/iphone|ipad|ipod/.test(ua)) return 'iphone';
+    if (/samsung|sm-|galaxy/.test(ua) || /samsung|galaxy/.test(labels)) return 'samsung';
+
+    return 'generic';
+  };
+
+  const getCameraDeviceSignature = (inspections: CameraInspection[]) =>
+    inspections
+      .map((inspection) => [
+        inspection.label || 'camera',
+        inspection.lensRole,
+        inspection.minZoom ?? 'no-min',
+        inspection.maxZoom ?? 'no-max',
+        inspection.nativeWidth ?? 'w',
+        inspection.nativeHeight ?? 'h',
+      ].join(':'))
+      .sort()
+      .join('|');
+
+  const getZoomValueForLevel = (
+    level: number,
+    facingMode: 'user' | 'environment',
+    hardwareMin: number,
+    hardwareMax: number,
+  ) => {
+    const clampedLevel = Math.max(0, Math.min(4, level));
+    const clampZoom = (value: number) => Math.max(hardwareMin, Math.min(hardwareMax, value));
+
+    if (facingMode === 'user') {
+      const range = hardwareMax - hardwareMin;
+      return [
+        clampZoom(hardwareMin + range * 0.5),
+        clampZoom(hardwareMin + range * 0.35),
+        clampZoom(hardwareMin + range * 0.2),
+        clampZoom(hardwareMin + range * 0.1),
+        clampZoom(hardwareMin),
+      ][clampedLevel];
+    }
+
+    return [
+      clampZoom(hardwareMin < 1 ? 2 : Math.min(hardwareMax, 2)),
+      clampZoom(hardwareMin < 1 ? 1.5 : Math.min(hardwareMax, 1.5)),
+      clampZoom(1),
+      clampZoom(hardwareMin < 0.75 ? 0.75 : hardwareMin),
+      clampZoom(hardwareMin),
+    ][clampedLevel];
+  };
+
+  const buildCameraCalibrationProfile = (inspections: CameraInspection[]): CameraCalibrationProfile | null => {
+    if (!inspections.length) return null;
+
+    const sorted = [...inspections].sort((first, second) => second.score - first.score);
+    const byMinZoom = [...inspections].sort(
+      (first, second) => (first.minZoom ?? 1) - (second.minZoom ?? 1),
+    );
+    const ultraWide = inspections.find((inspection) => inspection.lensRole === 'ultraWide')
+      ?? byMinZoom.find((inspection) => typeof inspection.minZoom === 'number' && inspection.minZoom < 1);
+    const wide = inspections.find((inspection) => inspection.lensRole === 'wide')
+      ?? inspections.find((inspection) => inspection.lensRole === 'rear')
+      ?? sorted[0];
+    const telephoto = inspections.find((inspection) => inspection.lensRole === 'telephoto');
+    const widest = ultraWide ?? byMinZoom[0] ?? wide;
+    const platform = detectMobileCameraPlatform(inspections);
+    const deviceForLevel = (level: number) => {
+      if (level >= 3) return widest;
+      if (level === 2) return wide ?? widest;
+      if (level === 1) return wide ?? telephoto ?? widest;
+      return telephoto ?? wide ?? widest;
+    };
+
+    const zoomLevels = [0, 1, 2, 3, 4].reduce<CameraCalibrationProfile['zoomLevels']>((levels, level) => {
+      const device = deviceForLevel(level);
+      const hardwareMin = device?.minZoom ?? 1;
+      const hardwareMax = device?.maxZoom ?? Math.max(hardwareMin, level === 0 ? 2 : 1);
+
+      levels[level] = {
+        deviceId: device?.deviceId ?? null,
+        zoom: typeof device?.minZoom === 'number'
+          ? getZoomValueForLevel(level, 'environment', hardwareMin, hardwareMax)
+          : undefined,
+      };
+
+      return levels;
+    }, {});
+
+    return {
+      deviceSignature: getCameraDeviceSignature(inspections),
+      platform,
+      zoomLevels,
+      calibratedAt: Date.now(),
+    };
+  };
+
+  const syncCameraCalibrationProfile = (inspections: CameraInspection[]) => {
+    const nextProfile = buildCameraCalibrationProfile(inspections);
+    if (!nextProfile) return;
+
+    try {
+      const storedProfiles = JSON.parse(localStorage.getItem(CAMERA_CALIBRATION_STORAGE_KEY) ?? '{}') as Record<string, CameraCalibrationProfile>;
+      const cachedProfile = storedProfiles[nextProfile.deviceSignature];
+
+      cameraCalibrationRef.current = cachedProfile ?? nextProfile;
+
+      if (!cachedProfile || cachedProfile.platform !== nextProfile.platform) {
+        storedProfiles[nextProfile.deviceSignature] = nextProfile;
+        localStorage.setItem(CAMERA_CALIBRATION_STORAGE_KEY, JSON.stringify(storedProfiles));
+      }
+    } catch {
+      cameraCalibrationRef.current = nextProfile;
+    }
+  };
+
   const getPreferredCameraDeviceId = async (facingMode: 'user' | 'environment') => {
     const cachedDeviceId = preferredCameraIdsRef.current[facingMode];
     if (cachedDeviceId) {
