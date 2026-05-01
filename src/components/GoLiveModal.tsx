@@ -146,9 +146,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const viewerCount = viewers.size;
   const portraitStageStyle: React.CSSProperties = {
     width: isMobile
-      ? `min(100vw, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`
+      ? '100vw'
       : `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
+    height: isMobile ? '100dvh' : undefined,
   };
+  const cameraStageClassName = isMobile
+    ? 'relative h-full w-full overflow-hidden bg-black'
+    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
