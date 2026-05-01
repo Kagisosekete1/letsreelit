@@ -643,6 +643,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         lensRole: classifyCameraLens(label),
         minZoom: capabilities.zoom?.min,
         maxZoom: capabilities.zoom?.max,
+        nativeWidth: settings.width,
+        nativeHeight: settings.height,
         score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
