@@ -254,6 +254,32 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, forceCleanupAll]);
 
+  useEffect(() => {
+    if (!isOpen || !isMobile) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyWidth = body.style.width;
+    const previousBodyHeight = body.style.height;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.width = '100vw';
+    body.style.height = '100dvh';
+
+    screen.orientation?.lock?.('portrait-primary').catch(() => undefined);
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.width = previousBodyWidth;
+      body.style.height = previousBodyHeight;
+      screen.orientation?.unlock?.();
+    };
+  }, [isOpen, isMobile]);
+
   // Cleanup streams when modal closes
   useEffect(() => {
     if (!isOpen && stream) {
