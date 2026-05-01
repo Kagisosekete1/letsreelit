@@ -43,6 +43,15 @@ interface CameraInspection {
   minZoom?: number;
   maxZoom?: number;
   score: number;
+  nativeWidth?: number;
+  nativeHeight?: number;
+}
+
+interface CameraCalibrationProfile {
+  deviceSignature: string;
+  platform: 'iphone' | 'samsung' | 'generic';
+  zoomLevels: Record<number, { deviceId: string | null; zoom?: number }>;
+  calibratedAt: number;
 }
 
 type CameraLensRole = 'front' | 'ultraWide' | 'wide' | 'telephoto' | 'rear' | 'unknown';
@@ -89,6 +98,7 @@ const FALLBACK_PORTRAIT_HEIGHT = 1280;
 const MAX_CAMERA_FRAME_RATE = 30;
 const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
 const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
+const CAMERA_CALIBRATION_STORAGE_KEY = 'muvit-live-camera-calibration-v2';
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
@@ -135,6 +145,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     user: null,
     environment: null,
   });
+  const cameraCalibrationRef = useRef<CameraCalibrationProfile | null>(null);
   const cameraInspectionsRef = useRef<Record<'user' | 'environment', CameraInspection[]>>({
     user: [],
     environment: [],
@@ -149,9 +160,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       ? '100vw'
       : `min(100vw, 420px, calc(100dvh * ${PORTRAIT_STAGE_ASPECT_RATIO}))`,
     height: isMobile ? '100dvh' : undefined,
+    maxWidth: isMobile ? '100vw' : undefined,
+    maxHeight: isMobile ? '100dvh' : undefined,
+    aspectRatio: isMobile ? undefined : '9 / 16',
+    transform: 'none',
   };
   const cameraStageClassName = isMobile
-    ? 'relative h-full w-full overflow-hidden bg-black'
+    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout'
     : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
@@ -238,6 +253,37 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       forceCleanupAll();
     }
   }, [isOpen, forceCleanupAll]);
+
+  useEffect(() => {
+    if (!isOpen || !isMobile) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyWidth = body.style.width;
+    const previousBodyHeight = body.style.height;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.width = '100vw';
+    body.style.height = '100dvh';
+
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (orientation: string) => Promise<void>;
+      unlock?: () => void;
+    };
+
+    orientation?.lock?.('portrait-primary').catch(() => undefined);
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.width = previousBodyWidth;
+      body.style.height = previousBodyHeight;
+      orientation?.unlock?.();
+    };
+  }, [isOpen, isMobile]);
 
   // Cleanup streams when modal closes
   useEffect(() => {
@@ -628,6 +674,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         lensRole: classifyCameraLens(label),
         minZoom: capabilities.zoom?.min,
         maxZoom: capabilities.zoom?.max,
+        nativeWidth: settings.width,
+        nativeHeight: settings.height,
         score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
@@ -643,6 +691,122 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       };
     } finally {
       probeStream?.getTracks().forEach((track) => track.stop());
+    }
+  };
+
+  const detectMobileCameraPlatform = (inspections: CameraInspection[]): CameraCalibrationProfile['platform'] => {
+    const ua = navigator.userAgent.toLowerCase();
+    const labels = inspections.map((inspection) => inspection.label.toLowerCase()).join(' ');
+
+    if (/iphone|ipad|ipod/.test(ua)) return 'iphone';
+    if (/samsung|sm-|galaxy/.test(ua) || /samsung|galaxy/.test(labels)) return 'samsung';
+
+    return 'generic';
+  };
+
+  const getCameraDeviceSignature = (inspections: CameraInspection[]) =>
+    inspections
+      .map((inspection) => [
+        inspection.label || 'camera',
+        inspection.lensRole,
+        inspection.minZoom ?? 'no-min',
+        inspection.maxZoom ?? 'no-max',
+        inspection.nativeWidth ?? 'w',
+        inspection.nativeHeight ?? 'h',
+      ].join(':'))
+      .sort()
+      .join('|');
+
+  const getZoomValueForLevel = (
+    level: number,
+    facingMode: 'user' | 'environment',
+    hardwareMin: number,
+    hardwareMax: number,
+  ) => {
+    const clampedLevel = Math.max(0, Math.min(4, level));
+    const clampZoom = (value: number) => Math.max(hardwareMin, Math.min(hardwareMax, value));
+
+    if (facingMode === 'user') {
+      const range = hardwareMax - hardwareMin;
+      return [
+        clampZoom(hardwareMin + range * 0.5),
+        clampZoom(hardwareMin + range * 0.35),
+        clampZoom(hardwareMin + range * 0.2),
+        clampZoom(hardwareMin + range * 0.1),
+        clampZoom(hardwareMin),
+      ][clampedLevel];
+    }
+
+    return [
+      clampZoom(hardwareMin < 1 ? 2 : Math.min(hardwareMax, 2)),
+      clampZoom(hardwareMin < 1 ? 1.5 : Math.min(hardwareMax, 1.5)),
+      clampZoom(1),
+      clampZoom(hardwareMin < 0.75 ? 0.75 : hardwareMin),
+      clampZoom(hardwareMin),
+    ][clampedLevel];
+  };
+
+  const buildCameraCalibrationProfile = (inspections: CameraInspection[]): CameraCalibrationProfile | null => {
+    if (!inspections.length) return null;
+
+    const sorted = [...inspections].sort((first, second) => second.score - first.score);
+    const byMinZoom = [...inspections].sort(
+      (first, second) => (first.minZoom ?? 1) - (second.minZoom ?? 1),
+    );
+    const ultraWide = inspections.find((inspection) => inspection.lensRole === 'ultraWide')
+      ?? byMinZoom.find((inspection) => typeof inspection.minZoom === 'number' && inspection.minZoom < 1);
+    const wide = inspections.find((inspection) => inspection.lensRole === 'wide')
+      ?? inspections.find((inspection) => inspection.lensRole === 'rear')
+      ?? sorted[0];
+    const telephoto = inspections.find((inspection) => inspection.lensRole === 'telephoto');
+    const widest = ultraWide ?? byMinZoom[0] ?? wide;
+    const platform = detectMobileCameraPlatform(inspections);
+    const deviceForLevel = (level: number) => {
+      if (level >= 3) return widest;
+      if (level === 2) return wide ?? widest;
+      if (level === 1) return wide ?? telephoto ?? widest;
+      return telephoto ?? wide ?? widest;
+    };
+
+    const zoomLevels = [0, 1, 2, 3, 4].reduce<CameraCalibrationProfile['zoomLevels']>((levels, level) => {
+      const device = deviceForLevel(level);
+      const hardwareMin = device?.minZoom ?? 1;
+      const hardwareMax = device?.maxZoom ?? Math.max(hardwareMin, level === 0 ? 2 : 1);
+
+      levels[level] = {
+        deviceId: device?.deviceId ?? null,
+        zoom: typeof device?.minZoom === 'number'
+          ? getZoomValueForLevel(level, 'environment', hardwareMin, hardwareMax)
+          : undefined,
+      };
+
+      return levels;
+    }, {});
+
+    return {
+      deviceSignature: getCameraDeviceSignature(inspections),
+      platform,
+      zoomLevels,
+      calibratedAt: Date.now(),
+    };
+  };
+
+  const syncCameraCalibrationProfile = (inspections: CameraInspection[]) => {
+    const nextProfile = buildCameraCalibrationProfile(inspections);
+    if (!nextProfile) return;
+
+    try {
+      const storedProfiles = JSON.parse(localStorage.getItem(CAMERA_CALIBRATION_STORAGE_KEY) ?? '{}') as Record<string, CameraCalibrationProfile>;
+      const cachedProfile = storedProfiles[nextProfile.deviceSignature];
+
+      cameraCalibrationRef.current = cachedProfile ?? nextProfile;
+
+      if (!cachedProfile || cachedProfile.platform !== nextProfile.platform) {
+        storedProfiles[nextProfile.deviceSignature] = nextProfile;
+        localStorage.setItem(CAMERA_CALIBRATION_STORAGE_KEY, JSON.stringify(storedProfiles));
+      }
+    } catch {
+      cameraCalibrationRef.current = nextProfile;
     }
   };
 
@@ -685,6 +849,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     cameraInspectionsRef.current[facingMode] = inspections.sort((first, second) => second.score - first.score);
 
+    if (facingMode === 'environment') {
+      syncCameraCalibrationProfile(cameraInspectionsRef.current.environment);
+    }
+
     if (rankedDevice?.deviceId) {
       if (facingMode === 'environment') {
         const widestRearDevice = cameraInspectionsRef.current.environment.find(
@@ -716,6 +884,11 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     }
 
     await getPreferredCameraDeviceId('environment');
+
+    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[Math.max(0, Math.min(4, level))]?.deviceId;
+    if (calibratedDeviceId) {
+      return calibratedDeviceId;
+    }
 
     const inspections = cameraInspectionsRef.current.environment;
     if (!inspections.length) {
@@ -759,22 +932,10 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       const hardwareMin = capabilities.zoom.min;
       const hardwareMax = capabilities.zoom.max ?? hardwareMin;
       const clampedLevel = Math.max(0, Math.min(4, level));
-      const clampZoom = (value: number) => Math.max(hardwareMin, Math.min(hardwareMax, value));
-      const rearZoomMap = [
-        clampZoom(hardwareMin < 1 ? 2 : Math.min(hardwareMax, 2)),
-        clampZoom(hardwareMin < 1 ? 1.5 : Math.min(hardwareMax, 1.5)),
-        clampZoom(1),
-        clampZoom(hardwareMin < 0.75 ? 0.75 : hardwareMin),
-        clampZoom(hardwareMin),
-      ];
-      const frontZoomMap = [
-        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.5)),
-        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.35)),
-        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.2)),
-        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.1)),
-        clampZoom(hardwareMin),
-      ];
-      const targetZoom = facingMode === 'environment' ? rearZoomMap[clampedLevel] : frontZoomMap[clampedLevel];
+      const calibratedZoom = facingMode === 'environment'
+        ? cameraCalibrationRef.current?.zoomLevels[clampedLevel]?.zoom
+        : undefined;
+      const targetZoom = calibratedZoom ?? getZoomValueForLevel(clampedLevel, facingMode, hardwareMin, hardwareMax);
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
@@ -1429,7 +1590,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'setup') {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+        <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
             <div className={cameraStageClassName} style={portraitStageStyle}>
               <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
@@ -1629,7 +1790,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'countdown') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+        <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
             <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Camera Preview during countdown */}
@@ -1800,7 +1961,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+      <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
         <div 
           className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black"
           onTouchStart={handleTouchStart}
