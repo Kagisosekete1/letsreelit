@@ -1585,7 +1585,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'setup') {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+        <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
             <div className={cameraStageClassName} style={portraitStageStyle}>
               <div className="absolute inset-0" style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}>
@@ -1785,7 +1785,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   if (step === 'countdown') {
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+        <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
           <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
             <div className={cameraStageClassName} style={portraitStageStyle}>
             {/* Camera Preview during countdown */}
@@ -1956,7 +1956,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   // LIVE SCREEN
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none bg-black">
+      <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none rounded-none border-0 bg-black p-0 !duration-0">
         <div 
           className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black"
           onTouchStart={handleTouchStart}
