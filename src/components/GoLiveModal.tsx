@@ -617,6 +617,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return {
         deviceId: device.deviceId,
         label,
+        lensRole: classifyCameraLens(label),
+        minZoom: capabilities.zoom?.min,
+        maxZoom: capabilities.zoom?.max,
         score: scoreCameraDevice(label, facingMode) + facingBonus + zoomBonus + portraitCaptureBonus,
       };
     } catch {
@@ -627,6 +630,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       return {
         deviceId: device.deviceId,
         label: device.label,
+        lensRole: classifyCameraLens(device.label),
         score: scoreCameraDevice(device.label, facingMode),
       };
     } finally {
