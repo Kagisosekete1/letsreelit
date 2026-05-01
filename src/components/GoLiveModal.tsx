@@ -754,18 +754,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
       const hardwareMin = capabilities.zoom.min;
       const hardwareMax = capabilities.zoom.max ?? hardwareMin;
-      const widestZoom = Math.min(hardwareMin, hardwareMax);
-      const portraitNaturalZoom = widestZoom < 1
-        ? Math.min(hardwareMax, 1)
-        : Math.min(hardwareMax, widestZoom);
-      const closestAllowedZoom = Math.max(widestZoom, portraitNaturalZoom);
       const clampedLevel = Math.max(0, Math.min(4, level));
-      const normalizedLevel = (4 - clampedLevel) / 4;
-      const targetZoom = widestZoom + ((closestAllowedZoom - widestZoom) * normalizedLevel);
-
-      if (facingMode === 'environment' && targetZoom > 1) {
-        return;
-      }
+      const clampZoom = (value: number) => Math.max(hardwareMin, Math.min(hardwareMax, value));
+      const rearZoomMap = [
+        clampZoom(hardwareMin < 1 ? 2 : Math.min(hardwareMax, 2)),
+        clampZoom(hardwareMin < 1 ? 1.5 : Math.min(hardwareMax, 1.5)),
+        clampZoom(1),
+        clampZoom(hardwareMin < 0.75 ? 0.75 : hardwareMin),
+        clampZoom(hardwareMin),
+      ];
+      const frontZoomMap = [
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.5)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.35)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.2)),
+        clampZoom(Math.min(hardwareMax, hardwareMin + (hardwareMax - hardwareMin) * 0.1)),
+        clampZoom(hardwareMin),
+      ];
+      const targetZoom = facingMode === 'environment' ? rearZoomMap[clampedLevel] : frontZoomMap[clampedLevel];
 
       await videoTrack.applyConstraints({ advanced: [{ zoom: targetZoom }] } as any);
     } catch (error) {
