@@ -684,7 +684,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (rankedDevice?.deviceId) {
       if (facingMode === 'environment') {
         const widestRearDevice = cameraInspectionsRef.current.environment.find(
-          (inspection) => inspection.lensRole === 'ultraWide' || typeof inspection.minZoom === 'number' && inspection.minZoom < 1,
+          (inspection) =>
+            inspection.lensRole === 'ultraWide' ||
+            (typeof inspection.minZoom === 'number' && inspection.minZoom < 1),
         );
 
         preferredCameraIdsRef.current.environment = widestRearDevice?.deviceId ?? rankedDevice.deviceId;
@@ -790,8 +792,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     const videoTrack = stream?.getVideoTracks()[0];
     const currentDeviceId = videoTrack?.getSettings().deviceId;
 
-    if (currentFacingMode === 'environment' && newLevel >= 3) {
-      const preferredDeviceId = await getPreferredCameraDeviceId('environment');
+    if (currentFacingMode === 'environment') {
+      const preferredDeviceId = await getCameraDeviceIdForZoomLevel(newLevel, 'environment');
 
       if (preferredDeviceId && preferredDeviceId !== currentDeviceId) {
         try {
@@ -830,7 +832,7 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     withAudio: boolean;
     zoomOverrideLevel?: number;
   }) => {
-    const preferredDeviceId = await getPreferredCameraDeviceId(facingMode);
+    const preferredDeviceId = await getCameraDeviceIdForZoomLevel(zoomOverrideLevel, facingMode);
     const audioConstraints = withAudio
       ? {
           echoCancellation: true,
