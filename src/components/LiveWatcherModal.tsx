@@ -475,7 +475,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   if (liveEnded && !isOwner) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[480px] lg:h-auto lg:rounded-2xl overflow-hidden">
+        <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none overflow-hidden rounded-none border-0 bg-black p-0 !duration-0 lg:left-[50%] lg:top-[50%] lg:h-auto lg:w-full lg:max-w-[480px] lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-2xl">
           <div className="flex h-full w-full flex-col bg-black px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <div className="flex flex-1 flex-col items-center justify-center">
               <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -532,7 +532,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-full h-[100dvh] p-0 border-0 rounded-none lg:max-w-[420px] lg:h-[90vh] lg:rounded-2xl lg:flex lg:flex-row overflow-hidden">
+      <DialogContent className="fixed inset-0 !left-0 !top-0 h-[100dvh] w-screen max-w-none !translate-x-0 !translate-y-0 !transform-none !animate-none overflow-hidden rounded-none border-0 bg-black p-0 !duration-0 lg:left-[50%] lg:top-[50%] lg:h-[90vh] lg:w-full lg:max-w-[420px] lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-2xl lg:flex lg:flex-row">
         {/* Main video + chat area */}
         <div 
           className="relative h-full bg-black flex flex-col lg:flex-1 lg:min-w-0"
