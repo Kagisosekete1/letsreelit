@@ -145,14 +145,14 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     body.style.overflow = 'hidden';
     body.style.width = '100vw';
     body.style.height = '100dvh';
-    orientation.lock?.('portrait-primary').catch(() => undefined);
+    orientation?.lock?.('portrait-primary').catch(() => undefined);
 
     return () => {
       html.style.overflow = previousHtmlOverflow;
       body.style.overflow = previousBodyOverflow;
       body.style.width = previousBodyWidth;
       body.style.height = previousBodyHeight;
-      orientation.unlock?.();
+      orientation?.unlock?.();
     };
   }, [isOpen, isMobile]);
 
