@@ -163,11 +163,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     maxWidth: isMobile ? '100vw' : undefined,
     maxHeight: isMobile ? '100dvh' : undefined,
     aspectRatio: isMobile ? undefined : '9 / 16',
+    // Full-screen stage guard: neutralize any inherited transforms / scaling
+    // so a parent container can never reintroduce the horizontal zoomed framing.
     transform: 'none',
+    WebkitTransform: 'none',
+    filter: 'none',
+    WebkitFilter: 'none',
+    zoom: 1 as unknown as number,
+    isolation: 'isolate',
+    contain: 'layout paint size style',
+    willChange: 'auto',
+    transformOrigin: 'center center',
   };
   const cameraStageClassName = isMobile
-    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout'
-    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
+    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout transform-none !transform-none'
+    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black transform-none';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -176,6 +186,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     justifyContent: 'center',
     backgroundColor: 'black',
     overflow: 'hidden',
+    // Guard against ancestor scaling/transforms reaching the video element.
+    transform: 'none',
+    WebkitTransform: 'none',
+    filter: 'none',
+    WebkitFilter: 'none',
+    contain: 'layout paint size style',
+    isolation: 'isolate',
   };
   const cameraVideoStyle: React.CSSProperties = {
     position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
@@ -885,20 +902,48 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     await getPreferredCameraDeviceId('environment');
 
-    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[Math.max(0, Math.min(4, level))]?.deviceId;
-    if (calibratedDeviceId) {
+    const inspections = cameraInspectionsRef.current.environment;
+    const clampedLevel = Math.max(0, Math.min(4, level));
+
+    // Helper: best widest available 9:16-capable lens (auto portrait fallback).
+    const pickWidestPortraitLens = (): string | null => {
+      if (!inspections.length) return preferredCameraIdsRef.current.environment;
+      const portraitCapable = inspections.filter(
+        (i) =>
+          // Native portrait sensor reading OR a wide/ultraWide lens we trust for 9:16.
+          (typeof i.nativeWidth === 'number' &&
+            typeof i.nativeHeight === 'number' &&
+            i.nativeHeight >= i.nativeWidth) ||
+          i.lensRole === 'ultraWide' ||
+          i.lensRole === 'wide' ||
+          i.lensRole === 'rear',
+      );
+      const pool = portraitCapable.length ? portraitCapable : inspections;
+      const sorted = [...pool].sort((a, b) => {
+        const minA = a.minZoom ?? 1;
+        const minB = b.minZoom ?? 1;
+        if (minA !== minB) return minA - minB; // smaller min zoom => wider
+        return b.score - a.score;
+      });
+      return sorted[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
+    };
+
+    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[clampedLevel]?.deviceId;
+    const calibratedAvailable =
+      calibratedDeviceId &&
+      inspections.some((i) => i.deviceId === calibratedDeviceId);
+
+    if (calibratedAvailable) {
       return calibratedDeviceId;
     }
 
-    const inspections = cameraInspectionsRef.current.environment;
     if (!inspections.length) {
       return preferredCameraIdsRef.current.environment;
     }
 
-    const clampedLevel = Math.max(0, Math.min(4, level));
     const rolePriority: CameraLensRole[] =
       clampedLevel >= 3
-        ? ['ultraWide', 'rear', 'wide']
+        ? ['ultraWide', 'wide', 'rear']
         : clampedLevel === 2
           ? ['wide', 'rear', 'ultraWide']
           : clampedLevel === 1
@@ -912,7 +957,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       }
     }
 
-    return inspections[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
+    // Final automatic portrait fallback: the widest 9:16-capable lens we have.
+    return pickWidestPortraitLens();
   };
 
   const applyZoomLevel = async (
