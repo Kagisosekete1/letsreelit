@@ -542,7 +542,17 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           onMouseUp={handleTouchEnd}
         >
           {/* Video Area */}
-          <div className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden min-h-0">
+          <div
+            className="flex-1 relative bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden min-h-0 transform-none"
+            style={{
+              transform: 'none',
+              WebkitTransform: 'none',
+              filter: 'none',
+              WebkitFilter: 'none',
+              contain: 'layout paint size style',
+              isolation: 'isolate',
+            }}
+          >
             {/* Remote WebRTC video */}
             {!isOwner && (
               <video
