@@ -163,11 +163,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     maxWidth: isMobile ? '100vw' : undefined,
     maxHeight: isMobile ? '100dvh' : undefined,
     aspectRatio: isMobile ? undefined : '9 / 16',
+    // Full-screen stage guard: neutralize any inherited transforms / scaling
+    // so a parent container can never reintroduce the horizontal zoomed framing.
     transform: 'none',
+    WebkitTransform: 'none',
+    filter: 'none',
+    WebkitFilter: 'none',
+    zoom: 1 as unknown as number,
+    isolation: 'isolate',
+    contain: 'layout paint size style',
+    willChange: 'auto',
+    transformOrigin: 'center center',
   };
   const cameraStageClassName = isMobile
-    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout'
-    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black';
+    ? 'fixed inset-0 h-[100dvh] w-screen min-h-[100dvh] min-w-[100vw] overflow-hidden bg-black contain-layout transform-none !transform-none'
+    : 'relative aspect-[9/16] max-h-[100dvh] overflow-hidden bg-black transform-none';
   const cameraViewportStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -176,6 +186,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     justifyContent: 'center',
     backgroundColor: 'black',
     overflow: 'hidden',
+    // Guard against ancestor scaling/transforms reaching the video element.
+    transform: 'none',
+    WebkitTransform: 'none',
+    filter: 'none',
+    WebkitFilter: 'none',
+    contain: 'layout paint size style',
+    isolation: 'isolate',
   };
   const cameraVideoStyle: React.CSSProperties = {
     position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
