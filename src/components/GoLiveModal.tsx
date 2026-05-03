@@ -96,8 +96,6 @@ const PREFERRED_PORTRAIT_HEIGHT = 1920;
 const FALLBACK_PORTRAIT_WIDTH = 720;
 const FALLBACK_PORTRAIT_HEIGHT = 1280;
 const MAX_CAMERA_FRAME_RATE = 30;
-const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
-const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
 const CAMERA_CALIBRATION_STORAGE_KEY = 'muvit-live-camera-calibration-v2';
 
 const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
@@ -124,14 +122,13 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const [liveStartTime, setLiveStartTime] = useState<Date | null>(null);
   const [liveDuration, setLiveDuration] = useState(0);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
-  const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('environment');
+  const [currentFacingMode, setCurrentFacingMode] = useState<'user' | 'environment'>('user');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAREffect, setSelectedAREffect] = useState(0);
   const [showAREffects, setShowAREffects] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(4); // 4 = widest, 0 = closest
-  const [cameraFrameOrientation, setCameraFrameOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [commentsVisible, setCommentsVisible] = useState(true);
@@ -195,31 +192,15 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     isolation: 'isolate',
   };
   const cameraVideoStyle: React.CSSProperties = {
-    position: cameraFrameOrientation === 'landscape' ? 'absolute' : 'static',
-    top: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
-    left: cameraFrameOrientation === 'landscape' ? '50%' : undefined,
-    width: cameraFrameOrientation === 'landscape'
-      ? isMobile ? '100dvh' : ROTATED_LANDSCAPE_WIDTH_PERCENT
-      : '100%',
-    height: cameraFrameOrientation === 'landscape'
-      ? isMobile ? '100vw' : ROTATED_LANDSCAPE_HEIGHT_PERCENT
-      : '100%',
-    maxWidth: cameraFrameOrientation === 'landscape' ? 'none' : undefined,
+    position: 'static',
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
     objectFit: 'contain',
     objectPosition: 'center center',
-    transform:
-      cameraFrameOrientation === 'landscape'
-        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
-        : currentFacingMode === 'user'
-          ? 'scaleX(-1)'
-          : 'none',
+    transform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     transformOrigin: 'center center',
-    WebkitTransform:
-      cameraFrameOrientation === 'landscape'
-        ? `translate(-50%, -50%) rotate(${currentFacingMode === 'user' ? '-90deg' : '90deg'})${currentFacingMode === 'user' ? ' scaleX(-1)' : ''}`
-        : currentFacingMode === 'user'
-          ? 'scaleX(-1)'
-          : 'none',
+    WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransformOrigin: 'center center',
   };
 
@@ -235,10 +216,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       videoElement.muted = true;
 
       videoElement.onloadedmetadata = async () => {
-        setCameraFrameOrientation(
-          videoElement.videoWidth > videoElement.videoHeight ? 'landscape' : 'portrait',
-        );
-
         try {
           await videoElement.play();
         } catch (error) {

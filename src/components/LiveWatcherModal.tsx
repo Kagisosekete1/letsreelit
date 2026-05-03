@@ -55,9 +55,6 @@ interface LeaderboardEntry {
 }
 
 const QUICK_EMOJIS = ['❤️', '🔥', '😍', '👏', '😂', '🎉', '💯', '🙌'];
-const PORTRAIT_STAGE_ASPECT_RATIO = 9 / 16;
-const ROTATED_LANDSCAPE_WIDTH_PERCENT = `${100 / PORTRAIT_STAGE_ASPECT_RATIO}%`;
-const ROTATED_LANDSCAPE_HEIGHT_PERCENT = `${100 * PORTRAIT_STAGE_ASPECT_RATIO}%`;
 
 const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, liveStream }) => {
   const { toast } = useToast();
@@ -82,7 +79,6 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const [isFollower, setIsFollower] = useState(false);
   const [totalGiftCoins, setTotalGiftCoins] = useState(0);
   const [commentsVisible, setCommentsVisible] = useState(true);
-  const [remoteFrameOrientation, setRemoteFrameOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -92,14 +88,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
   const remoteVideoStyle: React.CSSProperties = {
     position: 'absolute',
-    top: remoteFrameOrientation === 'landscape' ? '50%' : 0,
-    left: remoteFrameOrientation === 'landscape' ? '50%' : 0,
-    width: remoteFrameOrientation === 'landscape' ? isMobile ? '100dvh' : ROTATED_LANDSCAPE_WIDTH_PERCENT : '100%',
-    height: remoteFrameOrientation === 'landscape' ? isMobile ? '100vw' : ROTATED_LANDSCAPE_HEIGHT_PERCENT : '100%',
-    maxWidth: remoteFrameOrientation === 'landscape' ? 'none' : undefined,
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
     objectFit: 'contain',
     objectPosition: 'center center',
-    transform: remoteFrameOrientation === 'landscape' ? 'translate(-50%, -50%) rotate(90deg)' : 'none',
+    transform: 'none',
     transformOrigin: 'center center',
   };
 
@@ -113,11 +108,6 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.onloadedmetadata = () => {
-        const video = remoteVideoRef.current;
-        if (!video) return;
-        setRemoteFrameOrientation(video.videoWidth > video.videoHeight ? 'landscape' : 'portrait');
-      };
       remoteVideoRef.current.play().catch(console.log);
     }
   }, [remoteStream]);
