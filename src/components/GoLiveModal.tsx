@@ -902,20 +902,48 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
     await getPreferredCameraDeviceId('environment');
 
-    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[Math.max(0, Math.min(4, level))]?.deviceId;
-    if (calibratedDeviceId) {
+    const inspections = cameraInspectionsRef.current.environment;
+    const clampedLevel = Math.max(0, Math.min(4, level));
+
+    // Helper: best widest available 9:16-capable lens (auto portrait fallback).
+    const pickWidestPortraitLens = (): string | null => {
+      if (!inspections.length) return preferredCameraIdsRef.current.environment;
+      const portraitCapable = inspections.filter(
+        (i) =>
+          // Native portrait sensor reading OR a wide/ultraWide lens we trust for 9:16.
+          (typeof i.nativeWidth === 'number' &&
+            typeof i.nativeHeight === 'number' &&
+            i.nativeHeight >= i.nativeWidth) ||
+          i.lensRole === 'ultraWide' ||
+          i.lensRole === 'wide' ||
+          i.lensRole === 'rear',
+      );
+      const pool = portraitCapable.length ? portraitCapable : inspections;
+      const sorted = [...pool].sort((a, b) => {
+        const minA = a.minZoom ?? 1;
+        const minB = b.minZoom ?? 1;
+        if (minA !== minB) return minA - minB; // smaller min zoom => wider
+        return b.score - a.score;
+      });
+      return sorted[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
+    };
+
+    const calibratedDeviceId = cameraCalibrationRef.current?.zoomLevels[clampedLevel]?.deviceId;
+    const calibratedAvailable =
+      calibratedDeviceId &&
+      inspections.some((i) => i.deviceId === calibratedDeviceId);
+
+    if (calibratedAvailable) {
       return calibratedDeviceId;
     }
 
-    const inspections = cameraInspectionsRef.current.environment;
     if (!inspections.length) {
       return preferredCameraIdsRef.current.environment;
     }
 
-    const clampedLevel = Math.max(0, Math.min(4, level));
     const rolePriority: CameraLensRole[] =
       clampedLevel >= 3
-        ? ['ultraWide', 'rear', 'wide']
+        ? ['ultraWide', 'wide', 'rear']
         : clampedLevel === 2
           ? ['wide', 'rear', 'ultraWide']
           : clampedLevel === 1
@@ -929,7 +957,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
       }
     }
 
-    return inspections[0]?.deviceId ?? preferredCameraIdsRef.current.environment;
+    // Final automatic portrait fallback: the widest 9:16-capable lens we have.
+    return pickWidestPortraitLens();
   };
 
   const applyZoomLevel = async (
