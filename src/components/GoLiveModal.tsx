@@ -105,6 +105,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const isMobile = useIsMobile();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const setupBackdropRef = useRef<HTMLVideoElement>(null);
+  const previewBackdropRef = useRef<HTMLVideoElement>(null);
+  const liveBackdropRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
