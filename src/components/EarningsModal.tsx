@@ -157,12 +157,14 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      // Fetch profile with monetization data
+      // Fetch profile + private financials
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*, country_code, is_monetized, total_watch_hours, lifetime_earnings, created_at')
+        .select('country_code, created_at')
         .eq('user_id', authUser.id)
         .single();
+
+      await supabase.from('creator_financials').select('total_watch_hours, lifetime_earnings, is_monetized').eq('user_id', authUser.id).maybeSingle();
 
       // Fetch VAT rate for country
       const countryCode = profile?.country_code || 'US';
