@@ -2048,16 +2048,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="absolute inset-0"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
-              <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 overflow-hidden bg-black">
                 <div style={cameraViewportStyle}>
-                  <video
-                    ref={liveBackdropRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    aria-hidden="true"
-                    style={cameraBackdropStyle}
-                  />
                   <video
                     ref={liveVideoRef}
                     autoPlay
