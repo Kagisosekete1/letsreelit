@@ -192,7 +192,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     isolation: 'isolate',
   };
   const cameraVideoStyle: React.CSSProperties = {
-    position: 'static',
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
     height: '100%',
     maxWidth: '100%',
@@ -202,6 +203,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     transformOrigin: 'center center',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransformOrigin: 'center center',
+  };
+  // Blurred backdrop fills the empty letterbox bars with the same live frame
+  // (no crop/zoom of the main feed — just an ambient fill behind it).
+  const cameraBackdropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center center',
+    filter: 'blur(40px) saturate(140%)',
+    WebkitFilter: 'blur(40px) saturate(140%)',
+    transform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
+    WebkitTransform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
+    opacity: 0.85,
+    pointerEvents: 'none',
+    zIndex: 0,
   };
 
   const attachStreamToVideoElement = useCallback(
