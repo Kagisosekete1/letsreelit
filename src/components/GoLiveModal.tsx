@@ -462,12 +462,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (step === 'live' && stream && liveVideoRef.current) {
       attachStreamToVideoElement(liveVideoRef.current, stream);
     }
+    if (step === 'live' && stream && liveBackdropRef.current) {
+      attachStreamToVideoElement(liveBackdropRef.current, stream);
+    }
   }, [attachStreamToVideoElement, step, stream]);
 
   // Attach stream to preview video - ensure it works on mobile
   useEffect(() => {
     if ((step === 'setup' || step === 'countdown') && stream && previewVideoRef.current) {
       attachStreamToVideoElement(previewVideoRef.current, stream);
+    }
+    if (step === 'setup' && stream && setupBackdropRef.current) {
+      attachStreamToVideoElement(setupBackdropRef.current, stream);
+    }
+    if (step === 'countdown' && stream && previewBackdropRef.current) {
+      attachStreamToVideoElement(previewBackdropRef.current, stream);
     }
   }, [attachStreamToVideoElement, step, stream]);
 
