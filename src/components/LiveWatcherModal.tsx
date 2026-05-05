@@ -568,13 +568,24 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           >
             {/* Remote WebRTC video */}
             {!isOwner && (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className={hasVideo ? 'opacity-100' : 'opacity-0'}
-                style={remoteVideoStyle}
-              />
+              <>
+                <video
+                  ref={remoteBackdropRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  aria-hidden="true"
+                  className={hasVideo ? 'opacity-100' : 'opacity-0'}
+                  style={remoteBackdropStyle}
+                />
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className={hasVideo ? 'opacity-100' : 'opacity-0'}
+                  style={remoteVideoStyle}
+                />
+              </>
             )}
 
             {/* Fallback avatar when no video */}
