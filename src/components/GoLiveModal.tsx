@@ -462,9 +462,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (step === 'live' && stream && liveVideoRef.current) {
       attachStreamToVideoElement(liveVideoRef.current, stream);
     }
-    if (step === 'live' && stream && liveBackdropRef.current) {
-      attachStreamToVideoElement(liveBackdropRef.current, stream);
-    }
   }, [attachStreamToVideoElement, step, stream]);
 
   // Attach stream to preview video - ensure it works on mobile
