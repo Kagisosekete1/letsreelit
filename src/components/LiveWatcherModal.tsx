@@ -120,11 +120,18 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     authUser?.id ?? null
   );
 
+  const remoteBackdropRef = useRef<HTMLVideoElement>(null);
+
   // Attach remote stream to video element
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(console.log);
+    }
+    if (remoteStream && remoteBackdropRef.current) {
+      remoteBackdropRef.current.srcObject = remoteStream;
+      remoteBackdropRef.current.muted = true;
+      remoteBackdropRef.current.play().catch(console.log);
     }
   }, [remoteStream]);
 
