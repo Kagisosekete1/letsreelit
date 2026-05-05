@@ -105,6 +105,9 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   const isMobile = useIsMobile();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const setupBackdropRef = useRef<HTMLVideoElement>(null);
+  const previewBackdropRef = useRef<HTMLVideoElement>(null);
+  const liveBackdropRef = useRef<HTMLVideoElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -192,7 +195,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     isolation: 'isolate',
   };
   const cameraVideoStyle: React.CSSProperties = {
-    position: 'static',
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
     height: '100%',
     maxWidth: '100%',
@@ -202,6 +206,23 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     transformOrigin: 'center center',
     WebkitTransform: currentFacingMode === 'user' ? 'scaleX(-1)' : 'none',
     WebkitTransformOrigin: 'center center',
+  };
+  // Blurred backdrop fills the empty letterbox bars with the same live frame
+  // (no crop/zoom of the main feed — just an ambient fill behind it).
+  const cameraBackdropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center center',
+    filter: 'blur(40px) saturate(140%)',
+    WebkitFilter: 'blur(40px) saturate(140%)',
+    transform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
+    WebkitTransform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
+    opacity: 0.85,
+    pointerEvents: 'none',
+    zIndex: 0,
   };
 
   const attachStreamToVideoElement = useCallback(
@@ -441,12 +462,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     if (step === 'live' && stream && liveVideoRef.current) {
       attachStreamToVideoElement(liveVideoRef.current, stream);
     }
+    if (step === 'live' && stream && liveBackdropRef.current) {
+      attachStreamToVideoElement(liveBackdropRef.current, stream);
+    }
   }, [attachStreamToVideoElement, step, stream]);
 
   // Attach stream to preview video - ensure it works on mobile
   useEffect(() => {
     if ((step === 'setup' || step === 'countdown') && stream && previewVideoRef.current) {
       attachStreamToVideoElement(previewVideoRef.current, stream);
+    }
+    if (step === 'setup' && stream && setupBackdropRef.current) {
+      attachStreamToVideoElement(setupBackdropRef.current, stream);
+    }
+    if (step === 'countdown' && stream && previewBackdropRef.current) {
+      attachStreamToVideoElement(previewBackdropRef.current, stream);
     }
   }, [attachStreamToVideoElement, step, stream]);
 
@@ -1622,12 +1652,21 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                     <div className="absolute inset-0 overflow-hidden">
                       <div style={cameraViewportStyle}>
                         <video
+                          ref={setupBackdropRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          webkit-playsinline="true"
+                          aria-hidden="true"
+                          style={cameraBackdropStyle}
+                        />
+                        <video
                           ref={previewVideoRef}
                           autoPlay
                           playsInline
                           muted
                           webkit-playsinline="true"
-                          className="w-full h-full object-contain bg-black"
+                          className="w-full h-full object-contain"
                           style={cameraVideoStyle}
                         />
                       </div>
@@ -1825,11 +1864,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 <div className="absolute inset-0 overflow-hidden">
                   <div style={cameraViewportStyle}>
                     <video
+                      ref={previewBackdropRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      aria-hidden="true"
+                      style={cameraBackdropStyle}
+                    />
+                    <video
                       ref={previewVideoRef}
                       autoPlay
                       playsInline
                       muted
-                      className="w-full h-full object-contain bg-black"
+                      className="w-full h-full object-contain"
                       style={cameraVideoStyle}
                     />
                   </div>
@@ -2004,11 +2051,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               <div className="absolute inset-0 overflow-hidden">
                 <div style={cameraViewportStyle}>
                   <video
+                    ref={liveBackdropRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    aria-hidden="true"
+                    style={cameraBackdropStyle}
+                  />
+                  <video
                     ref={liveVideoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-contain bg-black"
+                    className="w-full h-full object-contain"
                     style={cameraVideoStyle}
                   />
                 </div>

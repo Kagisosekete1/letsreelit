@@ -96,6 +96,22 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     objectPosition: 'center center',
     transform: 'none',
     transformOrigin: 'center center',
+    zIndex: 1,
+  };
+  const remoteBackdropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center center',
+    filter: 'blur(40px) saturate(140%)',
+    WebkitFilter: 'blur(40px) saturate(140%)',
+    transform: 'scale(1.15)',
+    WebkitTransform: 'scale(1.15)',
+    opacity: 0.85,
+    pointerEvents: 'none',
+    zIndex: 0,
   };
 
   // WebRTC viewer - connect to broadcaster's video
@@ -104,11 +120,18 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     authUser?.id ?? null
   );
 
+  const remoteBackdropRef = useRef<HTMLVideoElement>(null);
+
   // Attach remote stream to video element
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(console.log);
+    }
+    if (remoteStream && remoteBackdropRef.current) {
+      remoteBackdropRef.current.srcObject = remoteStream;
+      remoteBackdropRef.current.muted = true;
+      remoteBackdropRef.current.play().catch(console.log);
     }
   }, [remoteStream]);
 
@@ -545,13 +568,24 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
           >
             {/* Remote WebRTC video */}
             {!isOwner && (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className={hasVideo ? 'opacity-100' : 'opacity-0'}
-                style={remoteVideoStyle}
-              />
+              <>
+                <video
+                  ref={remoteBackdropRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  aria-hidden="true"
+                  className={hasVideo ? 'opacity-100' : 'opacity-0'}
+                  style={remoteBackdropStyle}
+                />
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className={hasVideo ? 'opacity-100' : 'opacity-0'}
+                  style={remoteVideoStyle}
+                />
+              </>
             )}
 
             {/* Fallback avatar when no video */}
