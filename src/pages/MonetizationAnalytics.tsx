@@ -210,9 +210,15 @@ const MonetizationAnalytics: React.FC = () => {
       // Check eligibility
       const { data: profile } = await supabase
         .from('profiles')
-        .select('followers_count, total_watch_hours, created_at')
+        .select('followers_count, created_at')
         .eq('user_id', authUser.id)
         .single();
+
+      const { data: financials } = await supabase
+        .from('creator_financials')
+        .select('total_watch_hours')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
 
       const { count: reelsCount } = await supabase
         .from('reels')
@@ -222,7 +228,7 @@ const MonetizationAnalytics: React.FC = () => {
       if (profile) {
         const eligibilityResult = checkEligibility({
           followers: profile.followers_count || 0,
-          watchHours: Number(profile.total_watch_hours) || 0,
+          watchHours: Number(financials?.total_watch_hours) || 0,
           reelsCount: reelsCount || 0,
           accountCreatedAt: new Date(profile.created_at),
         });
