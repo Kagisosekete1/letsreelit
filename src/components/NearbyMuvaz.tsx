@@ -18,8 +18,6 @@ interface NearbyProfile {
   display_name: string;
   avatar_url: string;
   followers_count: number;
-  latitude: number;
-  longitude: number;
   distance: number;
 }
 
@@ -125,13 +123,13 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
 
     try {
       await supabase
-        .from('profiles')
-        .update({
+        .from('user_locations')
+        .upsert({
+          user_id: authUser.id,
           latitude: lat,
           longitude: lng,
-          location_updated_at: new Date().toISOString()
-        })
-        .eq('user_id', authUser.id);
+          updated_at: new Date().toISOString(),
+        });
     } catch (error) {
       console.error('Error updating location:', error);
     }
@@ -152,36 +150,50 @@ const NearbyMuvaz: React.FC<NearbyMuvazProps> = ({ maxDistance = 50, limit = 10 
 
   const fetchNearbyAccounts = async (userLat: number, userLng: number) => {
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null);
+      const { data: nearby } = await supabase.rpc('find_nearby_users', {
+        _lat: userLat,
+        _lng: userLng,
+        _radius_km: maxDistance,
+        _limit: limit * 3,
+      });
 
-      if (data) {
-        const nearbyProfiles = data
-          .filter(profile => {
-            if (!profile.latitude || !profile.longitude) return false;
-            if (profile.user_id === authUser?.id) return false;
-            if (followingIds.has(profile.user_id || '')) return false;
-            return true;
-          })
-          .map(profile => ({
-            ...profile,
-            user_id: profile.user_id || '',
-            distance: calculateDistance(
-              userLat,
-              userLng,
-              profile.latitude!,
-              profile.longitude!
-            )
-          }))
-          .filter(profile => profile.distance <= maxDistance)
-          .sort((a, b) => a.distance - b.distance)
-          .slice(0, limit) as NearbyProfile[];
-
-        setAccounts(nearbyProfiles);
+      if (!nearby || nearby.length === 0) {
+        setAccounts([]);
+        return;
       }
+
+      const userIds = nearby
+        .map((n: any) => n.user_id as string)
+        .filter((id: string) => id !== authUser?.id && !followingIds.has(id));
+
+      if (userIds.length === 0) {
+        setAccounts([]);
+        return;
+      }
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, user_id, username, display_name, avatar_url, followers_count')
+        .in('user_id', userIds);
+
+      const distanceMap = new Map<string, number>(
+        nearby.map((n: any) => [n.user_id as string, Number(n.distance_km)])
+      );
+
+      const result: NearbyProfile[] = (profiles || [])
+        .map(p => ({
+          id: p.id,
+          user_id: p.user_id || '',
+          username: p.username,
+          display_name: p.display_name,
+          avatar_url: p.avatar_url || '',
+          followers_count: p.followers_count || 0,
+          distance: distanceMap.get(p.user_id || '') || 0,
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit);
+
+      setAccounts(result);
     } catch (error) {
       console.error('Error fetching nearby accounts:', error);
     }

@@ -240,6 +240,33 @@ export type Database = {
           },
         ]
       }
+      creator_financials: {
+        Row: {
+          is_monetized: boolean
+          lifetime_earnings: number
+          monetization_date: string | null
+          total_watch_hours: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          is_monetized?: boolean
+          lifetime_earnings?: number
+          monetization_date?: string | null
+          total_watch_hours?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          is_monetized?: boolean
+          lifetime_earnings?: number
+          monetization_date?: string | null
+          total_watch_hours?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       creator_onboarding: {
         Row: {
           completed_at: string | null
@@ -619,14 +646,7 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           id: string
-          is_monetized: boolean | null
-          latitude: number | null
-          lifetime_earnings: number | null
-          location_updated_at: string | null
-          longitude: number | null
-          monetization_date: string | null
           reels_count: number | null
-          total_watch_hours: number | null
           updated_at: string | null
           user_id: string | null
           username: string
@@ -641,14 +661,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
-          is_monetized?: boolean | null
-          latitude?: number | null
-          lifetime_earnings?: number | null
-          location_updated_at?: string | null
-          longitude?: number | null
-          monetization_date?: string | null
           reels_count?: number | null
-          total_watch_hours?: number | null
           updated_at?: string | null
           user_id?: string | null
           username: string
@@ -663,14 +676,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
-          is_monetized?: boolean | null
-          latitude?: number | null
-          lifetime_earnings?: number | null
-          location_updated_at?: string | null
-          longitude?: number | null
-          monetization_date?: string | null
           reels_count?: number | null
-          total_watch_hours?: number | null
           updated_at?: string | null
           user_id?: string | null
           username?: string
@@ -885,6 +891,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_locations: {
+        Row: {
+          latitude: number
+          longitude: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          latitude: number
+          longitude: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          latitude?: number
+          longitude?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -958,6 +985,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_badge_if_earned: {
+        Args: { _badge_type: string; _milestone: number }
+        Returns: boolean
+      }
+      ensure_user_coins: { Args: never; Returns: undefined }
+      find_nearby_users: {
+        Args: {
+          _lat: number
+          _limit?: number
+          _lng: number
+          _radius_km?: number
+        }
+        Returns: {
+          distance_km: number
+          user_id: string
+        }[]
+      }
       get_creator_watch_hours: { Args: { creator_id: string }; Returns: number }
       has_role: {
         Args: {
@@ -967,6 +1011,7 @@ export type Database = {
         Returns: boolean
       }
       increment_view_count: { Args: { reel_id: string }; Returns: undefined }
+      spend_coins: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

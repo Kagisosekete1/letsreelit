@@ -221,13 +221,12 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     let awardedCount = 0;
 
     for (const badge of badgesToAward) {
-      const { error } = await supabase.from('user_badges').insert({
-        user_id: authUser.id,
-        badge_type: badge.badge_type,
-        milestone: badge.milestone,
+      const { data, error } = await supabase.rpc('award_badge_if_earned', {
+        _badge_type: badge.badge_type,
+        _milestone: badge.milestone,
       });
 
-      if (!error) awardedCount += 1;
+      if (!error && data === true) awardedCount += 1;
     }
 
     if (awardedCount > 0) {

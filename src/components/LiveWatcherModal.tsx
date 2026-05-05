@@ -365,12 +365,13 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       return;
     }
 
-    const newBalance = coinBalance - gift.cost;
+    const { data: newBalanceData, error: spendError } = await supabase.rpc('spend_coins', { _amount: gift.cost });
+    if (spendError || newBalanceData == null) {
+      toast({ title: 'Could not send gift', description: spendError?.message || 'Insufficient balance', variant: 'destructive' });
+      return;
+    }
+    const newBalance = newBalanceData as number;
     setCoinBalance(newBalance);
-    await supabase.from('user_coins').update({
-      balance: newBalance,
-      total_spent: coinBalance - newBalance,
-    }).eq('user_id', authUser.id);
 
     await supabase.from('live_gifts').insert({
       session_id: liveStream.session_id,
