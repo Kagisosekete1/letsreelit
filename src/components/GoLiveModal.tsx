@@ -1864,11 +1864,19 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 <div className="absolute inset-0 overflow-hidden">
                   <div style={cameraViewportStyle}>
                     <video
+                      ref={previewBackdropRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      aria-hidden="true"
+                      style={cameraBackdropStyle}
+                    />
+                    <video
                       ref={previewVideoRef}
                       autoPlay
                       playsInline
                       muted
-                      className="w-full h-full object-contain bg-black"
+                      className="w-full h-full object-contain"
                       style={cameraVideoStyle}
                     />
                   </div>
