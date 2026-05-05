@@ -96,6 +96,22 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     objectPosition: 'center center',
     transform: 'none',
     transformOrigin: 'center center',
+    zIndex: 1,
+  };
+  const remoteBackdropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center center',
+    filter: 'blur(40px) saturate(140%)',
+    WebkitFilter: 'blur(40px) saturate(140%)',
+    transform: 'scale(1.15)',
+    WebkitTransform: 'scale(1.15)',
+    opacity: 0.85,
+    pointerEvents: 'none',
+    zIndex: 0,
   };
 
   // WebRTC viewer - connect to broadcaster's video
