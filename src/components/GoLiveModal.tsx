@@ -216,8 +216,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
     height: '100%',
     objectFit: 'cover',
     objectPosition: 'center center',
-    filter: 'blur(40px) saturate(140%)',
-    WebkitFilter: 'blur(40px) saturate(140%)',
+    filter: 'blur(24px) saturate(130%)',
+    WebkitFilter: 'blur(24px) saturate(130%)',
     transform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
     WebkitTransform: `${currentFacingMode === 'user' ? 'scaleX(-1) ' : ''}scale(1.15)`,
     opacity: 0.85,
@@ -461,9 +461,6 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (step === 'live' && stream && liveVideoRef.current) {
       attachStreamToVideoElement(liveVideoRef.current, stream);
-    }
-    if (step === 'live' && stream && liveBackdropRef.current) {
-      attachStreamToVideoElement(liveBackdropRef.current, stream);
     }
   }, [attachStreamToVideoElement, step, stream]);
 
@@ -2048,16 +2045,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
               className="absolute inset-0"
               style={{ filter: BEAUTY_FILTERS[selectedFilter].class }}
             >
-              <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 overflow-hidden bg-black">
                 <div style={cameraViewportStyle}>
-                  <video
-                    ref={liveBackdropRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    aria-hidden="true"
-                    style={cameraBackdropStyle}
-                  />
                   <video
                     ref={liveVideoRef}
                     autoPlay
