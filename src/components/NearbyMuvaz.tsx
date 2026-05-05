@@ -18,8 +18,6 @@ interface NearbyProfile {
   display_name: string;
   avatar_url: string;
   followers_count: number;
-  latitude: number;
-  longitude: number;
   distance: number;
 }
 
