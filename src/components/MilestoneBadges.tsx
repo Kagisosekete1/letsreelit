@@ -219,6 +219,7 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
     });
 
     let awardedCount = 0;
+    let lastError: string | null = null;
 
     for (const badge of badgesToAward) {
       const { data, error } = await supabase.rpc('award_badge_if_earned', {
@@ -226,13 +227,23 @@ const MilestoneBadges: React.FC<MilestoneBadgesProps> = ({ isOpen, onClose, user
         _milestone: badge.milestone,
       });
 
-      if (!error && data === true) awardedCount += 1;
+      if (error) {
+        lastError = error.message;
+        continue;
+      }
+      if (data === true) awardedCount += 1;
     }
 
     if (awardedCount > 0) {
       // Celebrate once per awarding batch (even if multiple badges unlock at once)
       setConfettiTrigger((t) => t + 1);
       fetchBadges();
+    } else if (lastError && badgesToAward.length > 0) {
+      toast({
+        title: 'Could not award badge',
+        description: lastError,
+        variant: 'destructive',
+      });
     }
   };
 

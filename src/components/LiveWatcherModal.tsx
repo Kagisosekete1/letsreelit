@@ -367,7 +367,15 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
     const { data: newBalanceData, error: spendError } = await supabase.rpc('spend_coins', { _amount: gift.cost });
     if (spendError || newBalanceData == null) {
-      toast({ title: 'Could not send gift', description: spendError?.message || 'Insufficient balance', variant: 'destructive' });
+      const msg = spendError?.message || '';
+      const isInsufficient = /insufficient/i.test(msg) || newBalanceData == null;
+      toast({
+        title: isInsufficient ? 'Not enough coins' : 'Could not send gift',
+        description: isInsufficient
+          ? `You need ${gift.cost} coins to send ${gift.name}.`
+          : msg || 'Please try again in a moment.',
+        variant: 'destructive',
+      });
       return;
     }
     const newBalance = newBalanceData as number;
