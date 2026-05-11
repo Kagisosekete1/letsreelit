@@ -324,9 +324,20 @@ const Activity = () => {
               ) : (
                 <div className="flex items-center justify-between px-4 mb-6">
                   <h1 className="text-xl font-bold text-foreground">Activity</h1>
-                  <Button variant="ghost" size="sm" onClick={handleSearchClick}>
-                    <Search className="w-5 h-5 text-foreground" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleMarkAllRead}
+                      disabled={!notifications.some((n) => !n.is_read)}
+                      title="Mark all as read"
+                    >
+                      <CheckCheck className="w-5 h-5 text-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleSearchClick}>
+                      <Search className="w-5 h-5 text-foreground" />
+                    </Button>
+                  </div>
                 </div>
               )}
 
