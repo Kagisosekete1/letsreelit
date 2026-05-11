@@ -227,11 +227,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
         { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `session_id=eq.${liveStream.session_id}` },
         (payload) => {
           if (payload.new && (payload.new as any).is_active === false) {
-            toast({
-              title: 'Stream ended',
-              description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
-            });
-            setLiveEnded(true);
+            notifyStreamEnded();
           }
         }
       )
