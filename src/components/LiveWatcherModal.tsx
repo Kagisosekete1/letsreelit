@@ -382,7 +382,11 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   }, [newComment, currentUser, canInteract, slowMode, slowModeCooldown, isOwner]);
 
   const handleSendGift = useCallback(async (gift: GiftDefinition) => {
-    if (!authUser || !currentUser || !channelRef.current || !canInteract) return;
+    if (!authUser || !currentUser || !channelRef.current) return;
+    if (!canSendGift) {
+      toast({ title: 'Follow to send gifts', description: 'Only followers can send gifts.', variant: 'destructive' });
+      return;
+    }
     if (coinBalance < gift.cost) {
       toast({ title: 'Not enough coins', variant: 'destructive' });
       return;
