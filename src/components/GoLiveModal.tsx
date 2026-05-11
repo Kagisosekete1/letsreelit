@@ -1480,6 +1480,38 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         })
         .eq('session_id', liveSessionId);
     }
+
+    // Persist a "stream_ended" alert in followers' notifications (respects live_alerts pref)
+    try {
+      if (authUser) {
+        const { data: followers } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', authUser.id)
+          .limit(500);
+        const followerIds = (followers ?? []).map((f: { follower_id: string }) => f.follower_id);
+        if (followerIds.length > 0) {
+          const { data: optedOut } = await supabase
+            .from('notification_preferences')
+            .select('user_id')
+            .in('user_id', followerIds)
+            .eq('live_alerts', false);
+          const optedOutSet = new Set((optedOut ?? []).map((p: { user_id: string }) => p.user_id));
+          const allowedIds = followerIds.filter((id) => !optedOutSet.has(id));
+          if (allowedIds.length > 0) {
+            const rows = allowedIds.map((followerId) => ({
+              user_id: followerId,
+              from_user_id: authUser.id,
+              type: 'stream_ended',
+              message: `ended their live${liveTitle?.trim() ? `: ${liveTitle.trim()}` : ''}`,
+            }));
+            await supabase.from('notifications').insert(rows);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to persist stream_ended notifications:', err);
+    }
     
     setStream(null);
     setIsLive(false);
