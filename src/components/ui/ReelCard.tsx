@@ -257,6 +257,67 @@ const ReelCard: React.FC<ReelCardProps> = ({
     setRepostCount(repostCountData || 0);
   };
 
+  // Realtime engagement counts: when anyone likes/comments/reposts/saves this reel,
+  // update the local counters immediately for everyone watching.
+  useEffect(() => {
+    if (!reel?.id) return;
+    const channel = supabase
+      .channel(`reel-engagement:${reel.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
+        (payload) => {
+          if ((payload.new as any)?.user_id === authUser?.id) return;
+          setLikeCount((c) => c + 1);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'likes', filter: `reel_id=eq.${reel.id}` },
+        (payload) => {
+          if ((payload.old as any)?.user_id === authUser?.id) return;
+          setLikeCount((c) => Math.max(0, c - 1));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'comments', filter: `reel_id=eq.${reel.id}` },
+        () => setCommentCount((c) => c + 1)
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'comments', filter: `reel_id=eq.${reel.id}` },
+        () => setCommentCount((c) => Math.max(0, c - 1))
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'reposts', filter: `reel_id=eq.${reel.id}` },
+        (payload) => {
+          if ((payload.new as any)?.user_id === authUser?.id) return;
+          setRepostCount((c) => c + 1);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'reposts', filter: `reel_id=eq.${reel.id}` },
+        (payload) => {
+          if ((payload.old as any)?.user_id === authUser?.id) return;
+          setRepostCount((c) => Math.max(0, c - 1));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'reels', filter: `id=eq.${reel.id}` },
+        (payload) => {
+          const next = payload.new as any;
+          if (typeof next?.shares_count === 'number') setShareCount(next.shares_count);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [reel?.id, authUser?.id]);
+
   // Watch time tracking for monetization
   useWatchTimeTracker({
     reelId: reel.id,
