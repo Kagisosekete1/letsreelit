@@ -219,6 +219,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   // Listen for live stream ending
   useEffect(() => {
+    if (!isOpen) return;
+    endedNotifiedRef.current = false;
+    setLiveEnded(false);
+  }, [isOpen, liveStream.session_id]);
+
+  useEffect(() => {
     if (!isOpen || isOwner) return;
     const channel = supabase
       .channel(`live-end-watch:${liveStream.session_id}`)
