@@ -790,12 +790,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             )}
 
             {!canInteract && !isOwner && (
-              <p className="text-white/40 text-xs text-center mb-2">Follow to chat and react</p>
+              <p className="text-white/40 text-xs text-center mb-2">Sign in to chat and react</p>
             )}
 
             <div className="flex items-center gap-1.5">
               <Input
-                placeholder={canInteract ? (slowModeCooldown > 0 ? `Wait ${slowModeCooldown}s...` : "Say something...") : "Follow to chat..."}
+                placeholder={canInteract ? (slowModeCooldown > 0 ? `Wait ${slowModeCooldown}s...` : "Say something...") : "Sign in to chat..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendComment()}
