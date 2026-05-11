@@ -84,6 +84,20 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endedNotifiedRef = useRef(false);
+
+  const notifyStreamEnded = useCallback(() => {
+    if (endedNotifiedRef.current || isOwner) {
+      setLiveEnded(true);
+      return;
+    }
+    endedNotifiedRef.current = true;
+    toast({
+      title: 'Stream ended',
+      description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
+    });
+    setLiveEnded(true);
+  }, [isOwner, liveStream.broadcaster?.display_name, toast]);
 
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
   const remoteVideoStyle: React.CSSProperties = {
