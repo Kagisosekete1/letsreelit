@@ -4,7 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft, Radio, CheckCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -153,6 +153,8 @@ const Activity = () => {
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
       case 'comment_reply': return 'Reply to Comment';
+      case 'live_started': return 'Live Now';
+      case 'stream_ended': return 'Stream Ended';
       default: return 'Notification';
     }
   };
@@ -163,6 +165,8 @@ const Activity = () => {
       case 'like': return 'liked your Muv';
       case 'comment': return 'commented on your Muv';
       case 'comment_reply': return 'replied to your comment';
+      case 'live_started': return 'is live now';
+      case 'stream_ended': return 'ended their live';
       default: return 'interacted with you';
     }
   };
@@ -173,7 +177,24 @@ const Activity = () => {
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
       case 'comment_reply': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'live_started': return <Radio className="w-4 h-4 text-destructive" />;
+      case 'stream_ended': return <Radio className="w-4 h-4 text-muted-foreground" />;
       default: return <Heart className="w-4 h-4" />;
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!authUser) return;
+    const hadUnread = notifications.some((n) => !n.is_read);
+    if (!hadUnread) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', authUser.id)
+      .eq('is_read', false);
+    if (error) {
+      toast({ title: 'Could not mark all as read', variant: 'destructive' });
     }
   };
 
@@ -223,8 +244,11 @@ const Activity = () => {
         reelId: notif.reel_id, 
         notificationType: notif.type 
       });
-    } else if (notif.type === 'follow' && notif.from_user?.username) {
-      // Navigate to full user profile page
+    } else if (
+      (notif.type === 'follow' || notif.type === 'live_started' || notif.type === 'stream_ended') &&
+      notif.from_user?.username
+    ) {
+      // Navigate to the related user's profile
       navigate(`/user/${notif.from_user.username}`);
     }
   };
@@ -300,9 +324,20 @@ const Activity = () => {
               ) : (
                 <div className="flex items-center justify-between px-4 mb-6">
                   <h1 className="text-xl font-bold text-foreground">Activity</h1>
-                  <Button variant="ghost" size="sm" onClick={handleSearchClick}>
-                    <Search className="w-5 h-5 text-foreground" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleMarkAllRead}
+                      disabled={!notifications.some((n) => !n.is_read)}
+                      title="Mark all as read"
+                    >
+                      <CheckCheck className="w-5 h-5 text-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleSearchClick}>
+                      <Search className="w-5 h-5 text-foreground" />
+                    </Button>
+                  </div>
                 </div>
               )}
 

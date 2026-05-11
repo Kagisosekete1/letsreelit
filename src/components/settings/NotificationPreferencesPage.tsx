@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Bell, Heart, MessageCircle, UserPlus, Video, AtSign, Mail, AlertCircle, Settings, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bell, Heart, MessageCircle, UserPlus, Video, AtSign, Mail, AlertCircle, Settings, ExternalLink, Loader2, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
@@ -16,6 +16,7 @@ interface Preferences {
   new_reels: boolean;
   mentions: boolean;
   messages: boolean;
+  live_alerts: boolean;
 }
 
 const NotificationPreferencesPage: React.FC = () => {
@@ -33,6 +34,7 @@ const NotificationPreferencesPage: React.FC = () => {
     new_reels: true,
     mentions: true,
     messages: true,
+    live_alerts: true,
   });
 
   useEffect(() => {
@@ -67,6 +69,7 @@ const NotificationPreferencesPage: React.FC = () => {
         new_reels: data.new_reels,
         mentions: data.mentions,
         messages: data.messages,
+        live_alerts: (data as any).live_alerts ?? true,
       });
     } else if (!error || error.code === 'PGRST116') {
       // No record exists, create default preferences
@@ -211,6 +214,12 @@ const NotificationPreferencesPage: React.FC = () => {
       icon: Mail,
       label: 'Direct Messages',
       description: 'When you receive a new message',
+    },
+    {
+      key: 'live_alerts' as const,
+      icon: Radio,
+      label: 'Live Alerts',
+      description: "When creators you follow go live or end their stream",
     },
   ];
 

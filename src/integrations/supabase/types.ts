@@ -536,6 +536,7 @@ export type Database = {
           follows: boolean
           id: string
           likes: boolean
+          live_alerts: boolean
           mentions: boolean
           messages: boolean
           new_reels: boolean
@@ -549,6 +550,7 @@ export type Database = {
           follows?: boolean
           id?: string
           likes?: boolean
+          live_alerts?: boolean
           mentions?: boolean
           messages?: boolean
           new_reels?: boolean
@@ -562,6 +564,7 @@ export type Database = {
           follows?: boolean
           id?: string
           likes?: boolean
+          live_alerts?: boolean
           mentions?: boolean
           messages?: boolean
           new_reels?: boolean

@@ -84,8 +84,22 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endedNotifiedRef = useRef(false);
 
   const isOwner = !!authUser && authUser.id === liveStream.user_id;
+
+  const notifyStreamEnded = useCallback(() => {
+    if (endedNotifiedRef.current || isOwner) {
+      setLiveEnded(true);
+      return;
+    }
+    endedNotifiedRef.current = true;
+    toast({
+      title: 'Stream ended',
+      description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
+    });
+    setLiveEnded(true);
+  }, [isOwner, liveStream.broadcaster?.display_name, toast]);
   const remoteVideoStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -205,6 +219,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
   // Listen for live stream ending
   useEffect(() => {
+    if (!isOpen) return;
+    endedNotifiedRef.current = false;
+    setLiveEnded(false);
+  }, [isOpen, liveStream.session_id]);
+
+  useEffect(() => {
     if (!isOpen || isOwner) return;
     const channel = supabase
       .channel(`live-end-watch:${liveStream.session_id}`)
@@ -213,11 +233,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
         { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `session_id=eq.${liveStream.session_id}` },
         (payload) => {
           if (payload.new && (payload.new as any).is_active === false) {
-            toast({
-              title: 'Stream ended',
-              description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
-            });
-            setLiveEnded(true);
+            notifyStreamEnded();
           }
         }
       )
@@ -272,13 +288,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
         setSlowMode((payload as any).enabled);
       })
       .on('broadcast', { event: 'live-ended' }, () => {
-        if (!isOwner) {
-          toast({
-            title: 'Stream ended',
-            description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
-          });
-        }
-        setLiveEnded(true);
+        notifyStreamEnded();
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -319,7 +329,10 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     }
   }, [slowModeCooldown]);
 
-  const canInteract = isOwner || isFollower;
+  // Anyone signed in can like, react with emojis, and comment.
+  // Gifts remain restricted to followers via canSendGift below.
+  const canInteract = !!authUser;
+  const canSendGift = isOwner || isFollower;
 
   const handleLike = useCallback(() => {
     if (!channelRef.current || hasLiked || !canInteract) return;
@@ -369,7 +382,11 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
   }, [newComment, currentUser, canInteract, slowMode, slowModeCooldown, isOwner]);
 
   const handleSendGift = useCallback(async (gift: GiftDefinition) => {
-    if (!authUser || !currentUser || !channelRef.current || !canInteract) return;
+    if (!authUser || !currentUser || !channelRef.current) return;
+    if (!canSendGift) {
+      toast({ title: 'Follow to send gifts', description: 'Only followers can send gifts.', variant: 'destructive' });
+      return;
+    }
     if (coinBalance < gift.cost) {
       toast({ title: 'Not enough coins', variant: 'destructive' });
       return;
@@ -432,7 +449,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
     setShowGiftPanel(false);
     toast({ title: `${gift.emoji} ${gift.name} sent!` });
-  }, [authUser, currentUser, coinBalance, liveStream, canInteract]);
+  }, [authUser, currentUser, coinBalance, liveStream, canSendGift]);
 
   const handlePinMessage = useCallback((comment: Comment) => {
     if (!isOwner || !channelRef.current) return;
@@ -773,12 +790,12 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
             )}
 
             {!canInteract && !isOwner && (
-              <p className="text-white/40 text-xs text-center mb-2">Follow to chat and react</p>
+              <p className="text-white/40 text-xs text-center mb-2">Sign in to chat and react</p>
             )}
 
             <div className="flex items-center gap-1.5">
               <Input
-                placeholder={canInteract ? (slowModeCooldown > 0 ? `Wait ${slowModeCooldown}s...` : "Say something...") : "Follow to chat..."}
+                placeholder={canInteract ? (slowModeCooldown > 0 ? `Wait ${slowModeCooldown}s...` : "Say something...") : "Sign in to chat..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendComment()}
