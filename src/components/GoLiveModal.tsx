@@ -1355,6 +1355,26 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         console.error('Error creating live stream:', error);
       }
 
+      // Notify followers in-app that this user just went live
+      try {
+        const { data: followers } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', authUser!.id)
+          .limit(500);
+        if (followers && followers.length > 0) {
+          const rows = followers.map((f: { follower_id: string }) => ({
+            user_id: f.follower_id,
+            from_user_id: authUser!.id,
+            type: 'live_started',
+            message: `is live now: ${liveTitle.trim()}`,
+          }));
+          await supabase.from('notifications').insert(rows);
+        }
+      } catch (notifyErr) {
+        console.error('Failed to notify followers about live:', notifyErr);
+      }
+
       setStep('live');
       setIsLive(true);
       setLiveStartTime(new Date());
