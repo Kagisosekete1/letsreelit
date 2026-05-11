@@ -1355,21 +1355,32 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
         console.error('Error creating live stream:', error);
       }
 
-      // Notify followers in-app that this user just went live
+      // Notify followers in-app that this user just went live (respects each follower's `live_alerts` preference)
       try {
         const { data: followers } = await supabase
           .from('follows')
           .select('follower_id')
           .eq('following_id', authUser!.id)
           .limit(500);
-        if (followers && followers.length > 0) {
-          const rows = followers.map((f: { follower_id: string }) => ({
-            user_id: f.follower_id,
-            from_user_id: authUser!.id,
-            type: 'live_started',
-            message: `is live now: ${liveTitle.trim()}`,
-          }));
-          await supabase.from('notifications').insert(rows);
+        const followerIds = (followers ?? []).map((f: { follower_id: string }) => f.follower_id);
+        if (followerIds.length > 0) {
+          // Exclude followers who disabled live alerts
+          const { data: optedOut } = await supabase
+            .from('notification_preferences')
+            .select('user_id')
+            .in('user_id', followerIds)
+            .eq('live_alerts', false);
+          const optedOutSet = new Set((optedOut ?? []).map((p: { user_id: string }) => p.user_id));
+          const allowedIds = followerIds.filter((id) => !optedOutSet.has(id));
+          if (allowedIds.length > 0) {
+            const rows = allowedIds.map((followerId) => ({
+              user_id: followerId,
+              from_user_id: authUser!.id,
+              type: 'live_started',
+              message: `is live now: ${liveTitle.trim()}`,
+            }));
+            await supabase.from('notifications').insert(rows);
+          }
         }
       } catch (notifyErr) {
         console.error('Failed to notify followers about live:', notifyErr);
