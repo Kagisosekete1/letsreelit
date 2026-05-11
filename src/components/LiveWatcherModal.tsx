@@ -329,7 +329,10 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     }
   }, [slowModeCooldown]);
 
-  const canInteract = isOwner || isFollower;
+  // Anyone signed in can like, react with emojis, and comment.
+  // Gifts remain restricted to followers via canSendGift below.
+  const canInteract = !!authUser;
+  const canSendGift = isOwner || isFollower;
 
   const handleLike = useCallback(() => {
     if (!channelRef.current || hasLiked || !canInteract) return;
