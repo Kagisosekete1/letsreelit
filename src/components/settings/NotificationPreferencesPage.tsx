@@ -34,6 +34,7 @@ const NotificationPreferencesPage: React.FC = () => {
     new_reels: true,
     mentions: true,
     messages: true,
+    live_alerts: true,
   });
 
   useEffect(() => {
