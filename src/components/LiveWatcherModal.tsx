@@ -449,7 +449,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
 
     setShowGiftPanel(false);
     toast({ title: `${gift.emoji} ${gift.name} sent!` });
-  }, [authUser, currentUser, coinBalance, liveStream, canInteract]);
+  }, [authUser, currentUser, coinBalance, liveStream, canSendGift]);
 
   const handlePinMessage = useCallback((comment: Comment) => {
     if (!isOwner || !channelRef.current) return;
