@@ -4,7 +4,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft } from 'lucide-react';
+import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft, Radio, CheckCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import SettingsModal from '@/components/SettingsModal';
