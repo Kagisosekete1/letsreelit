@@ -215,6 +215,12 @@ const NotificationPreferencesPage: React.FC = () => {
       label: 'Direct Messages',
       description: 'When you receive a new message',
     },
+    {
+      key: 'live_alerts' as const,
+      icon: Radio,
+      label: 'Live Alerts',
+      description: "When creators you follow go live or end their stream",
+    },
   ];
 
   const handleBack = () => {
