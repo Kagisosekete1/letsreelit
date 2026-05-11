@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Bell, Heart, MessageCircle, UserPlus, Video, AtSign, Mail, AlertCircle, Settings, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bell, Heart, MessageCircle, UserPlus, Video, AtSign, Mail, AlertCircle, Settings, ExternalLink, Loader2, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
