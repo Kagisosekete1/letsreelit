@@ -282,13 +282,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
         setSlowMode((payload as any).enabled);
       })
       .on('broadcast', { event: 'live-ended' }, () => {
-        if (!isOwner) {
-          toast({
-            title: 'Stream ended',
-            description: `${liveStream.broadcaster?.display_name || 'The host'} ended the live.`,
-          });
-        }
-        setLiveEnded(true);
+        notifyStreamEnded();
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
