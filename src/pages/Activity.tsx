@@ -153,6 +153,8 @@ const Activity = () => {
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
       case 'comment_reply': return 'Reply to Comment';
+      case 'live_started': return 'Live Now';
+      case 'stream_ended': return 'Stream Ended';
       default: return 'Notification';
     }
   };
@@ -163,6 +165,8 @@ const Activity = () => {
       case 'like': return 'liked your Muv';
       case 'comment': return 'commented on your Muv';
       case 'comment_reply': return 'replied to your comment';
+      case 'live_started': return 'is live now';
+      case 'stream_ended': return 'ended their live';
       default: return 'interacted with you';
     }
   };
@@ -173,7 +177,24 @@ const Activity = () => {
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
       case 'comment_reply': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'live_started': return <Radio className="w-4 h-4 text-destructive" />;
+      case 'stream_ended': return <Radio className="w-4 h-4 text-muted-foreground" />;
       default: return <Heart className="w-4 h-4" />;
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!authUser) return;
+    const hadUnread = notifications.some((n) => !n.is_read);
+    if (!hadUnread) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', authUser.id)
+      .eq('is_read', false);
+    if (error) {
+      toast({ title: 'Could not mark all as read', variant: 'destructive' });
     }
   };
 
