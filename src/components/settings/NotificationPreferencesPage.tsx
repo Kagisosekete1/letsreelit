@@ -69,6 +69,7 @@ const NotificationPreferencesPage: React.FC = () => {
         new_reels: data.new_reels,
         mentions: data.mentions,
         messages: data.messages,
+        live_alerts: (data as any).live_alerts ?? true,
       });
     } else if (!error || error.code === 'PGRST116') {
       // No record exists, create default preferences
