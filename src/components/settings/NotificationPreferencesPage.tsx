@@ -16,6 +16,7 @@ interface Preferences {
   new_reels: boolean;
   mentions: boolean;
   messages: boolean;
+  live_alerts: boolean;
 }
 
 const NotificationPreferencesPage: React.FC = () => {
