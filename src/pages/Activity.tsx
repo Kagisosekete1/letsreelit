@@ -244,8 +244,11 @@ const Activity = () => {
         reelId: notif.reel_id, 
         notificationType: notif.type 
       });
-    } else if (notif.type === 'follow' && notif.from_user?.username) {
-      // Navigate to full user profile page
+    } else if (
+      (notif.type === 'follow' || notif.type === 'live_started' || notif.type === 'stream_ended') &&
+      notif.from_user?.username
+    ) {
+      // Navigate to the related user's profile
       navigate(`/user/${notif.from_user.username}`);
     }
   };
