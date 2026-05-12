@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import DesktopSidebar from '@/components/DesktopSidebar';
@@ -50,6 +50,7 @@ const Activity = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { authUser } = useUser();
+  const notifiedIdsRef = useRef<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -121,6 +122,10 @@ const Activity = () => {
           filter: `user_id=eq.${authUser.id}`
         },
         async (payload) => {
+          const notifId = payload.new.id as string;
+          if (notifiedIdsRef.current.has(notifId)) return;
+          notifiedIdsRef.current.add(notifId);
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('user_id, username, display_name, avatar_url')
