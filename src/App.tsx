@@ -89,6 +89,7 @@ const AppRoutes = () => {
         <Route path="/user/:username" element={<UserProfile />} />
         <Route path="/search" element={<Search />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/about" element={<About />} />
