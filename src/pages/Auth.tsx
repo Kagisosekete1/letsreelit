@@ -240,6 +240,35 @@ const Auth = () => {
             </Button>
           </form>
 
+          {!isSignUp && (
+            <div className="text-center -mt-2">
+              <Button
+                type="button"
+                variant="link"
+                className="text-sm h-auto p-0"
+                onClick={async () => {
+                  const result = authSchema.shape.email.safeParse(email);
+                  if (!result.success) {
+                    setErrors({ email: 'Enter your email above first' });
+                    return;
+                  }
+                  setLoading(true);
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  setLoading(false);
+                  if (error) {
+                    toast({ title: 'Could not send email', description: error.message, variant: 'destructive' });
+                  } else {
+                    toast({ title: 'Check your email', description: 'We sent a password reset link.' });
+                  }
+                }}
+              >
+                Forgot password?
+              </Button>
+            </div>
+          )}
+
           <div className="text-center">
             <Button
               type="button"
