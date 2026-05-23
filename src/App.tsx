@@ -17,6 +17,7 @@ import Inbox from "./pages/Inbox";
 import Activity from "./pages/Activity";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
