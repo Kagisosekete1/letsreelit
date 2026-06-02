@@ -1166,6 +1166,46 @@ export type Database = {
       }
       increment_view_count: { Args: { reel_id: string }; Returns: undefined }
       spend_coins: { Args: { _amount: number }; Returns: number }
+      submit_battle_response: {
+        Args: {
+          _battle_id: string
+          _caption?: string
+          _thumbnail_url?: string
+          _video_url: string
+        }
+        Returns: {
+          bonus_coins: number
+          challenger_caption: string | null
+          challenger_id: string
+          challenger_reel_id: string | null
+          challenger_thumbnail_url: string | null
+          challenger_video_url: string | null
+          challenger_votes: number
+          created_at: string
+          ends_at: string
+          id: string
+          opponent_caption: string | null
+          opponent_id: string | null
+          opponent_reel_id: string | null
+          opponent_thumbnail_url: string | null
+          opponent_video_url: string | null
+          opponent_votes: number
+          prompt: string | null
+          results_recorded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          winner_id: string | null
+          winner_side: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_battle_vote: {
         Args: { _battle_id: string; _voted_side: string }
         Returns: {
