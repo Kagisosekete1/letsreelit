@@ -15,6 +15,8 @@ import { useAudio } from '@/contexts/AudioContext';
 import { useVideoQuality } from '@/contexts/VideoQualityContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
+import LikerAvatars from '@/components/ui/LikerAvatars';
+import FloatingCommentBubble from '@/components/ui/FloatingCommentBubble';
 
 import EditReelModal from '@/components/EditReelModal';
 import ProfileLink from '@/components/ui/ProfileLink';
