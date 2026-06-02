@@ -51,6 +51,9 @@ const Index = () => {
         }
         setIsCreateReelOpen(true);
         break;
+      case 'battles':
+        navigate('/battles');
+        break;
       case 'notifications':
         navigate('/activity');
         break;

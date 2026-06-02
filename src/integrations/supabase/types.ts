@@ -44,6 +44,122 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_votes: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          voted_for_user_id: string
+          voted_side: string
+          voter_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          voted_for_user_id: string
+          voted_side: string
+          voter_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          voted_for_user_id?: string
+          voted_side?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_votes_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battles: {
+        Row: {
+          bonus_coins: number
+          challenger_caption: string | null
+          challenger_id: string
+          challenger_reel_id: string | null
+          challenger_thumbnail_url: string | null
+          challenger_video_url: string | null
+          challenger_votes: number
+          created_at: string
+          ends_at: string
+          id: string
+          opponent_caption: string | null
+          opponent_id: string | null
+          opponent_reel_id: string | null
+          opponent_thumbnail_url: string | null
+          opponent_video_url: string | null
+          opponent_votes: number
+          prompt: string | null
+          results_recorded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          winner_id: string | null
+          winner_side: string | null
+        }
+        Insert: {
+          bonus_coins?: number
+          challenger_caption?: string | null
+          challenger_id: string
+          challenger_reel_id?: string | null
+          challenger_thumbnail_url?: string | null
+          challenger_video_url?: string | null
+          challenger_votes?: number
+          created_at?: string
+          ends_at?: string
+          id?: string
+          opponent_caption?: string | null
+          opponent_id?: string | null
+          opponent_reel_id?: string | null
+          opponent_thumbnail_url?: string | null
+          opponent_video_url?: string | null
+          opponent_votes?: number
+          prompt?: string | null
+          results_recorded_at?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          winner_id?: string | null
+          winner_side?: string | null
+        }
+        Update: {
+          bonus_coins?: number
+          challenger_caption?: string | null
+          challenger_id?: string
+          challenger_reel_id?: string | null
+          challenger_thumbnail_url?: string | null
+          challenger_video_url?: string | null
+          challenger_votes?: number
+          created_at?: string
+          ends_at?: string
+          id?: string
+          opponent_caption?: string | null
+          opponent_id?: string | null
+          opponent_reel_id?: string | null
+          opponent_thumbnail_url?: string | null
+          opponent_video_url?: string | null
+          opponent_votes?: number
+          prompt?: string | null
+          results_recorded_at?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          winner_id?: string | null
+          winner_side?: string | null
+        }
+        Relationships: []
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -993,6 +1109,41 @@ export type Database = {
         Returns: boolean
       }
       ensure_user_coins: { Args: never; Returns: undefined }
+      finalize_battle: {
+        Args: { _battle_id: string }
+        Returns: {
+          bonus_coins: number
+          challenger_caption: string | null
+          challenger_id: string
+          challenger_reel_id: string | null
+          challenger_thumbnail_url: string | null
+          challenger_video_url: string | null
+          challenger_votes: number
+          created_at: string
+          ends_at: string
+          id: string
+          opponent_caption: string | null
+          opponent_id: string | null
+          opponent_reel_id: string | null
+          opponent_thumbnail_url: string | null
+          opponent_video_url: string | null
+          opponent_votes: number
+          prompt: string | null
+          results_recorded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          winner_id: string | null
+          winner_side: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       find_nearby_users: {
         Args: {
           _lat: number
@@ -1015,6 +1166,81 @@ export type Database = {
       }
       increment_view_count: { Args: { reel_id: string }; Returns: undefined }
       spend_coins: { Args: { _amount: number }; Returns: number }
+      submit_battle_response: {
+        Args: {
+          _battle_id: string
+          _caption?: string
+          _thumbnail_url?: string
+          _video_url: string
+        }
+        Returns: {
+          bonus_coins: number
+          challenger_caption: string | null
+          challenger_id: string
+          challenger_reel_id: string | null
+          challenger_thumbnail_url: string | null
+          challenger_video_url: string | null
+          challenger_votes: number
+          created_at: string
+          ends_at: string
+          id: string
+          opponent_caption: string | null
+          opponent_id: string | null
+          opponent_reel_id: string | null
+          opponent_thumbnail_url: string | null
+          opponent_video_url: string | null
+          opponent_votes: number
+          prompt: string | null
+          results_recorded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          winner_id: string | null
+          winner_side: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_battle_vote: {
+        Args: { _battle_id: string; _voted_side: string }
+        Returns: {
+          bonus_coins: number
+          challenger_caption: string | null
+          challenger_id: string
+          challenger_reel_id: string | null
+          challenger_thumbnail_url: string | null
+          challenger_video_url: string | null
+          challenger_votes: number
+          created_at: string
+          ends_at: string
+          id: string
+          opponent_caption: string | null
+          opponent_id: string | null
+          opponent_reel_id: string | null
+          opponent_thumbnail_url: string | null
+          opponent_video_url: string | null
+          opponent_votes: number
+          prompt: string | null
+          results_recorded_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          winner_id: string | null
+          winner_side: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "battles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

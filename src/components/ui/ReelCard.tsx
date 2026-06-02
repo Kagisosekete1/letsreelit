@@ -1635,6 +1635,23 @@ const ReelCard: React.FC<ReelCardProps> = ({
         reelId={reel.id}
         reelTitle={reel.title}
       />
+
+      <CommentsModal
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+        reelId={reel.id}
+        reelOwnerId={reel.user.id}
+        onCommentCountChange={setCommentCount}
+      />
+
+      <ShareReelModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        reelId={reel.id}
+        reelTitle={reel.title}
+        username={reel.user.username}
+        videoUrl={reel.videoUrl}
+      />
     </div>
   );
 };

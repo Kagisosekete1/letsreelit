@@ -40,7 +40,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
   reelOwnerId,
   onCommentCountChange,
 }) => {
-  const { authUser } = useUser();
+  const { authUser, currentUser } = useUser();
   const { toast } = useToast();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -150,7 +150,11 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
       insertData.reply_to_username = replyingTo.username;
     }
 
-    const { error } = await supabase.from('comments').insert(insertData);
+    const { data: insertedComment, error } = await supabase
+      .from('comments')
+      .insert(insertData)
+      .select('*')
+      .single();
 
     if (error) {
       toast({
@@ -160,9 +164,25 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
       });
     } else {
       const savedReplyingTo = replyingTo; // Save before clearing
+      if (insertedComment) {
+        const optimisticComment: Comment = {
+          ...insertedComment,
+          profile: {
+            username: currentUser?.username || 'user',
+            display_name: currentUser?.displayName || 'User',
+            avatar_url: currentUser?.avatarUrl || null,
+          },
+          isLiked: false,
+        };
+        setComments(prev => {
+          const next = [...prev, optimisticComment];
+          onCommentCountChange?.(next.length);
+          return next;
+        });
+      }
       setNewComment('');
       setReplyingTo(null);
-      await fetchComments();
+      void fetchComments();
       
       // Update reel comments_count and get owner id
       const { data: reel } = await supabase
