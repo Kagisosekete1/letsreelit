@@ -27,6 +27,9 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
   const [busySide, setBusySide] = useState<BattleSide | null>(null);
   const [showResponseUpload, setShowResponseUpload] = useState(false);
 
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error ? error.message : fallback;
+
   useEffect(() => setLocalBattle(battle), [battle]);
 
   useEffect(() => {
@@ -73,11 +76,11 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
       });
       if (error) throw error;
       setVotedSide(side);
-      if (data) setLocalBattle({ ...current, ...(data as any) });
+      if (data) setLocalBattle({ ...current, ...(data as unknown as Partial<Battle>) });
       toast({ title: 'Vote counted', description: 'Your vote is locked in.' });
       onChanged();
-    } catch (error: any) {
-      toast({ title: 'Could not vote', description: error.message || 'Try again.', variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not vote', description: getErrorMessage(error, 'Try again.'), variant: 'destructive' });
     } finally {
       setBusySide(null);
     }
@@ -88,11 +91,11 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
     try {
       const { data, error } = await supabase.rpc('finalize_battle', { _battle_id: current.id });
       if (error) throw error;
-      if (data) setLocalBattle({ ...current, ...(data as any) });
+      if (data) setLocalBattle({ ...current, ...(data as unknown as Partial<Battle>) });
       toast({ title: 'Winner crowned 🏆', description: `Winner received ${current.bonus_coins} bonus coins.` });
       onChanged();
-    } catch (error: any) {
-      toast({ title: 'Results not ready', description: error.message || 'This battle is still active.' });
+    } catch (error: unknown) {
+      toast({ title: 'Results not ready', description: getErrorMessage(error, 'This battle is still active.') });
     }
   };
 
