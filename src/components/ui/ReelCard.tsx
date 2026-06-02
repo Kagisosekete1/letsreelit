@@ -1265,6 +1265,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
         likerAvatarUrl={realtimeLiker?.avatarUrl}
         likerUsername={realtimeLiker?.username}
       />
+
+      {/* Realtime Comment Bubble (from other users) */}
+      <FloatingCommentBubble
+        show={!!realtimeComment}
+        avatarUrl={realtimeComment?.avatarUrl}
+        username={realtimeComment?.username}
+        content={realtimeComment?.content}
+      />
       
       {/* Removed: Big play button overlay - videos now auto-play seamlessly */}
 
