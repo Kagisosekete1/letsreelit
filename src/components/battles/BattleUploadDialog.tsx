@@ -23,6 +23,9 @@ interface BattleUploadDialogProps {
 
 const MAX_BATTLE_SECONDS = 15.5;
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 const BattleUploadDialog: React.FC<BattleUploadDialogProps> = ({ open, onOpenChange, mode, battle, onComplete }) => {
   const { authUser, currentUser } = useUser();
   const { toast } = useToast();
@@ -141,8 +144,8 @@ const BattleUploadDialog: React.FC<BattleUploadDialogProps> = ({ open, onOpenCha
       setProgress(100);
       onComplete();
       onOpenChange(false);
-    } catch (error: any) {
-      toast({ title: 'Battle upload failed', description: error.message || 'Please try again.', variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Battle upload failed', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally {
       setBusy(false);
     }
