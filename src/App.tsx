@@ -32,6 +32,7 @@ import MonetizationAnalytics from "./pages/MonetizationAnalytics";
 import Settings from "./pages/Settings";
 import LiveDiscovery from "./pages/LiveDiscovery";
 import Studio from "./pages/Studio";
+import Battles from "./pages/Battles";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ const AppRoutes = () => {
         } />
         <Route path="/user/:username" element={<UserProfile />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/battles" element={<Battles />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />
