@@ -42,6 +42,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       case 'create':
         setIsCreateReelOpen(true);
         break;
+      case 'battles':
+        navigate('/battles');
+        break;
       case 'notifications':
         setIsNotificationsOpen(true);
         break;
