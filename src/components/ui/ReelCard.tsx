@@ -214,6 +214,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [realtimeLiker, setRealtimeLiker] = useState<{ avatarUrl: string; username: string } | null>(null);
+  const [realtimeComment, setRealtimeComment] = useState<{ avatarUrl: string; username: string; content: string } | null>(null);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
   const [isFollowPending, setIsFollowPending] = useState(false);
