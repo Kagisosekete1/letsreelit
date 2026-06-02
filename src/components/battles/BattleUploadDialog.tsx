@@ -116,15 +116,12 @@ const BattleUploadDialog: React.FC<BattleUploadDialogProps> = ({ open, onOpenCha
       setProgress(72);
 
       if (isResponding && battle) {
-        const { error } = await supabase
-          .from('battles')
-          .update({
-            opponent_video_url: videoUrl,
-            opponent_thumbnail_url: thumbnailUrl,
-            opponent_caption: caption.trim() || null,
-            status: 'open',
-          })
-          .eq('id', battle.id);
+        const { error } = await supabase.rpc('submit_battle_response', {
+          _battle_id: battle.id,
+          _video_url: videoUrl,
+          _thumbnail_url: thumbnailUrl,
+          _caption: caption.trim() || null,
+        });
         if (error) throw error;
         toast({ title: 'Battle joined', description: 'Your 15-second response is live.' });
       } else {
