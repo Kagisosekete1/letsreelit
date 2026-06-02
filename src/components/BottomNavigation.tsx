@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, User, Heart, Play } from 'lucide-react';
+import { Search, Plus, User, Heart, Play, Swords } from 'lucide-react';
 import { NotificationBadge, useNotificationCounts } from '@/components/ui/NotificationBadge';
 
 
@@ -16,6 +16,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   const tabs = [
     { id: 'home', icon: Play, label: "Muv'z" },
     { id: 'tutorials', icon: Search, label: 'Search' },
+    { id: 'battles', icon: Swords, label: 'Battles' },
     { id: 'create', icon: Plus, label: 'Upload', special: true },
     { id: 'notifications', icon: Heart, label: 'Activity', badge: hasUnreadActivity },
     { id: 'profile', icon: User, label: 'Profile' },
