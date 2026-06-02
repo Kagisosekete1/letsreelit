@@ -15,6 +15,8 @@ import { useAudio } from '@/contexts/AudioContext';
 import { useVideoQuality } from '@/contexts/VideoQualityContext';
 import CommentsModal from '@/components/CommentsModal';
 import ShareReelModal from '@/components/ShareReelModal';
+import LikerAvatars from '@/components/ui/LikerAvatars';
+import FloatingCommentBubble from '@/components/ui/FloatingCommentBubble';
 
 import EditReelModal from '@/components/EditReelModal';
 import ProfileLink from '@/components/ui/ProfileLink';
@@ -191,12 +193,32 @@ const ReelCard: React.FC<ReelCardProps> = ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comments', filter: `reel_id=eq.${reel.id}` },
-        async () => {
+        async (payload) => {
           const { count } = await supabase
             .from('comments')
             .select('*', { count: 'exact', head: true })
             .eq('reel_id', reel.id);
           setCommentCount(count || 0);
+
+          // Floating bubble for live comments from other users
+          if (payload.eventType === 'INSERT' && isActive) {
+            const row = payload.new as { user_id: string; content: string };
+            if (row.user_id && row.user_id !== authUser?.id) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('user_id', row.user_id)
+                .single();
+              if (profile) {
+                setRealtimeComment({
+                  avatarUrl: profile.avatar_url || '',
+                  username: profile.username,
+                  content: row.content,
+                });
+                setTimeout(() => setRealtimeComment(null), 3500);
+              }
+            }
+          }
         }
       )
       .subscribe();
@@ -204,7 +226,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [reel.id]);
+  }, [reel.id, isActive, authUser?.id]);
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   
@@ -212,6 +234,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [realtimeLiker, setRealtimeLiker] = useState<{ avatarUrl: string; username: string } | null>(null);
+  const [realtimeComment, setRealtimeComment] = useState<{ avatarUrl: string; username: string; content: string } | null>(null);
   const [progress, setProgress] = useState(0);
   const [isClearScreen, setIsClearScreen] = useState(false);
   const [isFollowPending, setIsFollowPending] = useState(false);
@@ -1242,6 +1265,14 @@ const ReelCard: React.FC<ReelCardProps> = ({
         likerAvatarUrl={realtimeLiker?.avatarUrl}
         likerUsername={realtimeLiker?.username}
       />
+
+      {/* Realtime Comment Bubble (from other users) */}
+      <FloatingCommentBubble
+        show={!!realtimeComment}
+        avatarUrl={realtimeComment?.avatarUrl}
+        username={realtimeComment?.username}
+        content={realtimeComment?.content}
+      />
       
       {/* Removed: Big play button overlay - videos now auto-play seamlessly */}
 
@@ -1351,7 +1382,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
           {/* Like */}
           <button
-            className="flex flex-col items-center"
+            type="button"
+            className="flex flex-col items-center p-1.5 -m-1.5"
+            style={{ touchAction: 'manipulation' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               handleLike();
@@ -1361,11 +1395,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
               <Heart className={`${iconSize} ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
             </div>
             <span className="text-[10px] text-white mt-0.5">{formatCount(likeCount)}</span>
+            <LikerAvatars reelId={reel.id} count={likeCount} refreshKey={likeCount} />
           </button>
 
           {/* Comment */}
           <button
-            className="flex flex-col items-center"
+            type="button"
+            className="flex flex-col items-center p-1.5 -m-1.5"
+            style={{ touchAction: 'manipulation' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               handleComment();
