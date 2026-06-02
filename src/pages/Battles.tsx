@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Swords, Trophy, Upload, Vote, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { formatBattleTimeLeft } from '@/lib/battleUtils';
@@ -22,6 +23,8 @@ interface LeaderboardRow {
   votes: number;
   profile?: BattleProfile | null;
 }
+
+type BattleRow = Database['public']['Tables']['battles']['Row'];
 
 const Battles = () => {
   const { authUser } = useUser();
@@ -47,7 +50,7 @@ const Battles = () => {
     };
   }, []);
 
-  const hydrateBattles = async (rows: any[]): Promise<Battle[]> => {
+  const hydrateBattles = async (rows: BattleRow[]): Promise<Battle[]> => {
     if (!rows.length) return [];
     const userIds = [...new Set(rows.flatMap(row => [row.challenger_id, row.opponent_id, row.winner_id]).filter(Boolean))];
     const { data: profiles } = await supabase
