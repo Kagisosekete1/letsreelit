@@ -16,7 +16,8 @@ import {
   BarChart3,
   Settings,
   Users,
-  Clapperboard
+  Clapperboard,
+  Swords
 } from 'lucide-react';
 import { useSavedAccounts } from '@/hooks/useSavedAccounts';
 import SwitchAccountsModal from '@/components/settings/SwitchAccountsModal';
@@ -51,6 +52,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const mainNavItems = [
     { id: 'home', icon: Film, label: "Muv'z", path: '/' },
     { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
+    { id: 'battles', icon: Swords, label: 'Battles', path: '/battles' },
     { id: 'notifications', icon: Heart, label: 'Activity', path: '/activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
     { id: 'create', icon: Plus, label: 'Create' },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox', path: '/inbox', badge: hasUnreadMessages, badgeCount: counts.messages },
