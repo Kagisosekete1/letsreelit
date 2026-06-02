@@ -1382,7 +1382,10 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
           {/* Like */}
           <button
-            className="flex flex-col items-center"
+            type="button"
+            className="flex flex-col items-center p-1.5 -m-1.5"
+            style={{ touchAction: 'manipulation' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               handleLike();
@@ -1392,11 +1395,15 @@ const ReelCard: React.FC<ReelCardProps> = ({
               <Heart className={`${iconSize} ${isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
             </div>
             <span className="text-[10px] text-white mt-0.5">{formatCount(likeCount)}</span>
+            <LikerAvatars reelId={reel.id} count={likeCount} refreshKey={likeCount} />
           </button>
 
           {/* Comment */}
           <button
-            className="flex flex-col items-center"
+            type="button"
+            className="flex flex-col items-center p-1.5 -m-1.5"
+            style={{ touchAction: 'manipulation' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               handleComment();
