@@ -203,7 +203,7 @@ const Profile = () => {
               <img src={currentUser.avatarUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-border" />
             </div>
             <h2 className="text-xl font-bold mb-1">{currentUser.displayName}</h2>
-            <p className="text-muted-foreground text-sm mb-4">{currentUser.bio}</p>
+            <p className="text-muted-foreground text-sm mb-4 text-center max-w-md whitespace-pre-wrap break-words">{currentUser.bio}</p>
             
             <div className="flex items-center gap-4 mb-4 flex-wrap justify-center">
               <Button variant="ghost" className="text-center flex flex-col items-center p-2 hover:bg-secondary/50 rounded-lg" onClick={() => setFollowingModal(true)}>

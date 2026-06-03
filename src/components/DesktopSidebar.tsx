@@ -52,9 +52,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
   const mainNavItems = [
     { id: 'home', icon: Film, label: "Muv'z", path: '/' },
     { id: 'tutorials', icon: Search, label: 'Search', path: '/tutorials' },
-    { id: 'battles', icon: Swords, label: 'Battles', path: '/battles' },
     { id: 'notifications', icon: Heart, label: 'Activity', path: '/activity', badge: hasUnreadNotifications, badgeCount: counts.notifications },
     { id: 'create', icon: Plus, label: 'Create' },
+    { id: 'battles', icon: Swords, label: 'Battles', path: '/battles' },
     { id: 'inbox', icon: MessageSquare, label: 'Inbox', path: '/inbox', badge: hasUnreadMessages, badgeCount: counts.messages },
   ];
 
@@ -187,20 +187,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
           <span className="hidden xl:block text-base">Profile</span>
         </Button>
 
-        {/* Settings - under Profile */}
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-center xl:justify-start gap-4 px-3 py-6 rounded-xl transition-all relative",
-            activeTab === 'settings'
-              ? "bg-accent text-foreground font-semibold before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-r-full"
-              : "text-foreground hover:bg-accent/50"
-          )}
-          onClick={handleSettingsClick}
-        >
-          <Settings className="w-6 h-6 shrink-0" />
-          <span className="hidden xl:block text-base">Settings</span>
-        </Button>
       </nav>
 
       {/* More Menu at bottom */}
@@ -221,6 +207,16 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
             className="w-64 p-2 rounded-2xl shadow-lg"
           >
             <div className="space-y-1">
+              {/* Settings */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 rounded-xl"
+                onClick={() => { setMoreOpen(false); handleSettingsClick(); }}
+              >
+                <Settings className="w-5 h-5" />
+                <span>Settings</span>
+              </Button>
+
               {/* Theme Toggle */}
               <Button
                 variant="ghost"

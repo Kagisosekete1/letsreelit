@@ -5,6 +5,7 @@ import DesktopSidebar from '@/components/DesktopSidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Search, MessageCircle, Heart, UserPlus, Play, ArrowLeft, Radio, CheckCheck } from 'lucide-react';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { useToast } from '@/hooks/use-toast';
 import CreateReelModal from '@/components/CreateReelModal';
 import SettingsModal from '@/components/SettingsModal';
@@ -30,6 +31,7 @@ interface Notification {
     username: string;
     display_name: string;
     avatar_url: string | null;
+    verified?: boolean | null;
   };
   followStatus?: 'follows_you' | 'mutual' | null;
 }
@@ -68,7 +70,7 @@ const Activity = () => {
       const userIds = [...new Set(notifs.map(n => n.from_user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, username, display_name, avatar_url')
+        .select('user_id, username, display_name, avatar_url, verified')
         .in('user_id', userIds);
 
       // Check follow relationships for follow-type notifications
@@ -128,7 +130,7 @@ const Activity = () => {
 
           const { data: profile } = await supabase
             .from('profiles')
-            .select('user_id, username, display_name, avatar_url')
+            .select('user_id, username, display_name, avatar_url, verified')
             .eq('user_id', payload.new.from_user_id)
             .single();
 
@@ -390,7 +392,7 @@ const Activity = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm">
                             <span 
-                              className="font-semibold hover:underline cursor-pointer"
+                              className="font-semibold hover:underline cursor-pointer inline-flex items-center gap-1 align-middle"
                               onClick={(e) => {
                                 if (notif.from_user?.username) {
                                   handleUsernameClick(notif.from_user.username, e);
@@ -398,6 +400,7 @@ const Activity = () => {
                               }}
                             >
                               {notif.from_user?.display_name || 'Someone'}
+                              {notif.from_user?.verified && <VerifiedBadge size="sm" />}
                             </span>
                             {' '}{getNotificationAction(notif.type)}
                             {notif.followStatus === 'mutual' && (
