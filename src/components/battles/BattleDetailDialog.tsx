@@ -93,8 +93,14 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
     try {
       const { data, error } = await supabase.rpc('finalize_battle', { _battle_id: current.id });
       if (error) throw error;
-      if (data) setLocalBattle({ ...current, ...(data as unknown as Partial<Battle>) });
-      toast({ title: 'Winner crowned 🏆', description: `Winner received ${current.bonus_coins} bonus coins.` });
+      const updated = data ? ({ ...current, ...(data as unknown as Partial<Battle>) }) : current;
+      if (data) setLocalBattle(updated);
+      const winnerProfile = updated.winner_side === 'challenger' ? updated.challenger : updated.opponent;
+      setWinnerCelebration({
+        coins: updated.bonus_coins,
+        isMe: Boolean(authUser && updated.winner_id === authUser.id),
+        username: winnerProfile?.username || 'Winner',
+      });
       onChanged();
     } catch (error: unknown) {
       toast({ title: 'Results not ready', description: getErrorMessage(error, 'This battle is still active.') });
