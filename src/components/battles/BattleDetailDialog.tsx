@@ -225,6 +225,30 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
           onChanged();
         }}
       />
+
+      <Dialog open={!!winnerCelebration} onOpenChange={(o) => !o && setWinnerCelebration(null)}>
+        <DialogContent className="max-w-sm rounded-3xl text-center">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Battle result</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="text-7xl animate-bounce">🏆</div>
+            <div>
+              <p className="text-2xl font-black">
+                {winnerCelebration?.isMe ? 'You won!' : `@${winnerCelebration?.username} wins!`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {winnerCelebration?.isMe
+                  ? `+${winnerCelebration?.coins} bonus coins added to your balance`
+                  : `Awarded ${winnerCelebration?.coins} bonus coins`}
+              </p>
+            </div>
+            <Button className="w-full rounded-2xl" onClick={() => setWinnerCelebration(null)}>
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
