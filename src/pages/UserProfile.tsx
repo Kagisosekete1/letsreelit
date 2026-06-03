@@ -462,7 +462,7 @@ const UserProfile = () => {
             </div>
             
             <h2 className="text-xl font-bold mb-1">{user.display_name || `@${user.username}`}</h2>
-            <p className="text-muted-foreground text-sm mb-4">{user.bio || 'Dance Creator'}</p>
+            <p className="text-muted-foreground text-sm mb-4 text-center max-w-md whitespace-pre-wrap break-words">{user.bio || 'Dance Creator'}</p>
             
             {/* Stats */}
             <div className="flex items-center gap-6 mb-4">
