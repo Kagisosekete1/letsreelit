@@ -26,6 +26,8 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
   const [localBattle, setLocalBattle] = useState<Battle | null>(battle);
   const [busySide, setBusySide] = useState<BattleSide | null>(null);
   const [showResponseUpload, setShowResponseUpload] = useState(false);
+  const [winnerCelebration, setWinnerCelebration] = useState<{ coins: number; isMe: boolean; username: string } | null>(null);
+
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
