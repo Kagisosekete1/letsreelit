@@ -26,6 +26,8 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
   const [localBattle, setLocalBattle] = useState<Battle | null>(battle);
   const [busySide, setBusySide] = useState<BattleSide | null>(null);
   const [showResponseUpload, setShowResponseUpload] = useState(false);
+  const [winnerCelebration, setWinnerCelebration] = useState<{ coins: number; isMe: boolean; username: string } | null>(null);
+
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
@@ -91,8 +93,14 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
     try {
       const { data, error } = await supabase.rpc('finalize_battle', { _battle_id: current.id });
       if (error) throw error;
-      if (data) setLocalBattle({ ...current, ...(data as unknown as Partial<Battle>) });
-      toast({ title: 'Winner crowned 🏆', description: `Winner received ${current.bonus_coins} bonus coins.` });
+      const updated = data ? ({ ...current, ...(data as unknown as Partial<Battle>) }) : current;
+      if (data) setLocalBattle(updated);
+      const winnerProfile = updated.winner_side === 'challenger' ? updated.challenger : updated.opponent;
+      setWinnerCelebration({
+        coins: updated.bonus_coins,
+        isMe: Boolean(authUser && updated.winner_id === authUser.id),
+        username: winnerProfile?.username || 'Winner',
+      });
       onChanged();
     } catch (error: unknown) {
       toast({ title: 'Results not ready', description: getErrorMessage(error, 'This battle is still active.') });
@@ -217,6 +225,30 @@ const BattleDetailDialog: React.FC<BattleDetailDialogProps> = ({ battle, open, o
           onChanged();
         }}
       />
+
+      <Dialog open={!!winnerCelebration} onOpenChange={(o) => !o && setWinnerCelebration(null)}>
+        <DialogContent className="max-w-sm rounded-3xl text-center">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Battle result</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="text-7xl animate-bounce">🏆</div>
+            <div>
+              <p className="text-2xl font-black">
+                {winnerCelebration?.isMe ? 'You won!' : `@${winnerCelebration?.username} wins!`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {winnerCelebration?.isMe
+                  ? `+${winnerCelebration?.coins} bonus coins added to your balance`
+                  : `Awarded ${winnerCelebration?.coins} bonus coins`}
+              </p>
+            </div>
+            <Button className="w-full rounded-2xl" onClick={() => setWinnerCelebration(null)}>
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

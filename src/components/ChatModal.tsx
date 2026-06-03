@@ -310,18 +310,20 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
                 >
                   <div
                     className={`flex ${isMe ? 'justify-end' : 'justify-start'} group select-none`}
+                    onClick={() => {
+                      if (isMe) {
+                        setSelectedMessageId(selectedMessageId === message.id ? null : message.id);
+                      }
+                    }}
                     onTouchStart={() => handleMessageLongPressStart(message.id)}
                     onTouchEnd={handleMessageLongPressEnd}
                     onTouchCancel={handleMessageLongPressEnd}
-                    onMouseDown={() => handleMessageLongPressStart(message.id)}
-                    onMouseUp={handleMessageLongPressEnd}
-                    onMouseLeave={handleMessageLongPressEnd}
                   >
                     <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                       <div
                         className={`max-w-[75%] px-4 py-2 rounded-2xl ${
                           isMe
-                            ? 'bg-primary text-primary-foreground rounded-br-sm'
+                            ? 'bg-primary text-primary-foreground rounded-br-sm cursor-pointer'
                             : 'bg-secondary text-foreground rounded-bl-sm'
                         }`}
                       >
