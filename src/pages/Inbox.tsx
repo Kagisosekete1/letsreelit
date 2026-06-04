@@ -480,53 +480,44 @@ const Inbox = () => {
               </div>
             ) : (
             <div className="space-y-2">
-                {filteredConversations.map((conv) => {
-                  let pressTimer: ReturnType<typeof setTimeout> | null = null;
-                  
-                  const handleLongPressStart = () => {
-                    pressTimer = setTimeout(() => {
-                      handleDeleteConversation(conv.id);
-                    }, 600);
-                  };
-                  
-                  const handleLongPressEnd = () => {
-                    if (pressTimer) {
-                      clearTimeout(pressTimer);
-                      pressTimer = null;
-                    }
-                  };
-                  
-                  return (
+                {filteredConversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="flex items-center gap-2 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors select-none"
+                  >
                     <div
-                      key={conv.id}
                       onClick={() => handleConversationClick(conv)}
-                      onTouchStart={handleLongPressStart}
-                      onTouchEnd={handleLongPressEnd}
-                      onTouchCancel={handleLongPressEnd}
-                      onMouseDown={handleLongPressStart}
-                      onMouseUp={handleLongPressEnd}
-                      onMouseLeave={handleLongPressEnd}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary cursor-pointer transition-colors select-none"
+                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                     >
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={conv.other_user?.avatar_url || ''} />
                         <AvatarFallback>{conv.other_user?.display_name?.[0] || '?'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <p className="font-semibold truncate">{conv.other_user?.display_name}</p>
-                          <span className="text-xs text-muted-foreground">{formatTime(conv.last_message_at)}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{formatTime(conv.last_message_at)}</span>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{conv.last_message || 'No messages'}</p>
                       </div>
                       {(conv.unread_count ?? 0) > 0 && (
-                        <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center shrink-0">
                           <span className="text-xs text-primary-foreground font-bold">{conv.unread_count}</span>
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteConversation(conv.id);
+                      }}
+                      aria-label="Delete chat"
+                      className="shrink-0 p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )
           ) : (
