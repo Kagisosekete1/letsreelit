@@ -297,49 +297,45 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
               const isMe = message.sender_id === authUser?.id;
 
               return (
-                <MessageDeletePopover
+                <div
                   key={message.id}
-                  open={selectedMessageId === message.id}
-                  onOpenChange={(open) => {
-                    if (!open) setSelectedMessageId(null);
-                  }}
-                  onDelete={() => handleDeleteMessage(message.id)}
-                  side={isMe ? 'left' : 'right'}
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'} group select-none`}
                 >
-                  <div
-                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} group select-none`}
-                    onClick={() => {
-                      if (isMe) {
-                        setSelectedMessageId(selectedMessageId === message.id ? null : message.id);
-                      }
-                    }}
-                    onTouchStart={() => handleMessageLongPressStart(message.id)}
-                    onTouchEnd={handleMessageLongPressEnd}
-                    onTouchCancel={handleMessageLongPressEnd}
-                  >
-                    <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <div
-                        className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                          isMe
-                            ? 'bg-primary text-primary-foreground rounded-br-sm cursor-pointer'
-                            : 'bg-secondary text-foreground rounded-bl-sm'
-                        }`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
-                          {isMe && (
-                            message.is_read ? (
-                              <CheckCheck className="w-3 h-3 text-primary" />
-                            ) : (
-                              <Check className="w-3 h-3 opacity-70" />
-                            )
-                          )}
-                        </div>
+                  <div className={`flex items-end gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'} max-w-[85%]`}>
+                    <div
+                      className={`px-4 py-2 rounded-2xl ${
+                        isMe
+                          ? 'bg-primary text-primary-foreground rounded-br-sm'
+                          : 'bg-secondary text-foreground rounded-bl-sm'
+                      }`}
+                    >
+                      <p className="text-sm break-words">{message.content}</p>
+                      <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <span className="text-[10px] opacity-70">{formatTime(message.created_at)}</span>
+                        {isMe && (
+                          message.is_read ? (
+                            <CheckCheck className="w-3 h-3" />
+                          ) : (
+                            <Check className="w-3 h-3 opacity-70" />
+                          )
+                        )}
                       </div>
                     </div>
+                    {isMe && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this message for both users?')) {
+                            handleDeleteMessage(message.id);
+                          }
+                        }}
+                        aria-label="Delete message"
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-70"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                </MessageDeletePopover>
+                </div>
               );
             })
           )}
