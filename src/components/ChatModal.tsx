@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import MessageDeletePopover from './MessageDeletePopover';
+import MentionInput from '@/components/ui/MentionInput';
 
 interface ChatModalProps {
   isOpen: boolean;
