@@ -8,6 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
 import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
+import MentionInput from '@/components/ui/MentionInput';
 
 interface Comment {
   id: string;
