@@ -126,8 +126,8 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!newComment.trim() || !authUser) return;
 
     setLoading(true);
