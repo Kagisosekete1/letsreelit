@@ -256,31 +256,29 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <MessageDeletePopover
-            open={showDeleteConversation}
-            onOpenChange={setShowDeleteConversation}
-            onDelete={handleDeleteConversation}
-            side="bottom"
-          >
-            <div 
-              className="flex items-center gap-3 flex-1 cursor-pointer select-none"
-              onTouchStart={handleHeaderLongPressStart}
-              onTouchEnd={handleHeaderLongPressEnd}
-              onTouchCancel={handleHeaderLongPressEnd}
-              onMouseDown={handleHeaderLongPressStart}
-              onMouseUp={handleHeaderLongPressEnd}
-              onMouseLeave={handleHeaderLongPressEnd}
-            >
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={otherUser.avatar_url || ''} />
-                <AvatarFallback>{otherUser.display_name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <DialogTitle className="text-base font-semibold">{otherUser.display_name}</DialogTitle>
-                <p className="text-xs text-muted-foreground">@{otherUser.username}</p>
-              </div>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={otherUser.avatar_url || ''} />
+              <AvatarFallback>{otherUser.display_name[0]}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base font-semibold truncate">{otherUser.display_name}</DialogTitle>
+              <p className="text-xs text-muted-foreground truncate">@{otherUser.username}</p>
             </div>
-          </MessageDeletePopover>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (window.confirm('Delete this entire chat for both users? This cannot be undone.')) {
+                handleDeleteConversation();
+              }
+            }}
+            aria-label="Delete chat"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="w-5 h-5" />
+          </Button>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
