@@ -66,7 +66,7 @@ const MentionInput = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, Me
         const builder = supabase
           .from('profiles')
           .select('user_id, username, display_name, avatar_url')
-          .order('followers_count', { ascending: false, nullsFirst: false })
+          .order('username', { ascending: true })
           .limit(6);
         const { data } = q.length === 0
           ? await builder
