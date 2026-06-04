@@ -371,25 +371,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ setScreen, currentScreen, onReg
             <span className="text-white font-bold text-lg opacity-80 drop-shadow-md lg:hidden">Muv'it</span>
             <span className="hidden lg:block w-16" /> {/* Spacer for desktop */}
             
-          {/* For You / Following Tabs */}
-            <div className="flex items-center gap-2">
-              <div className="flex bg-black/30 rounded-full p-0.5 backdrop-blur-sm">
-                <button
-                  className="px-3 py-1.5 text-xs text-white font-semibold rounded-full bg-white/20"
-                >
-                  For You
-                </button>
-                <button
-                  onClick={() => setScreen('following')}
-                  className="px-3 py-1.5 text-xs text-white/70 font-medium rounded-full hover:text-white transition-colors"
-                >
-                  Following
-                </button>
-              </div>
-              {/* Live button */}
+          {/* Feed mode tabs */}
+            <div className="flex items-center gap-1.5 bg-black/30 rounded-full p-0.5 backdrop-blur-sm">
+              <button
+                className="px-3 py-1.5 text-xs text-white font-semibold rounded-full bg-white/20"
+              >
+                For You
+              </button>
+              <button
+                onClick={() => setScreen('following')}
+                className="px-3 py-1.5 text-xs text-white/70 font-medium rounded-full hover:text-white transition-colors"
+              >
+                Following
+              </button>
+              <button
+                onClick={() => navigate('/battles')}
+                className="px-3 py-1.5 text-xs text-white/90 font-semibold rounded-full bg-primary/80 hover:bg-primary transition-colors"
+              >
+                Battles
+              </button>
               <button
                 onClick={() => navigate('/live')}
-                className="flex items-center gap-1 bg-destructive px-3 py-1.5 rounded-full"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-destructive hover:bg-destructive/90 transition-colors"
               >
                 <Radio className="w-3 h-3 text-white animate-pulse" />
                 <span className="text-white text-xs font-semibold">Live</span>
