@@ -8,6 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
 import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
+import MentionInput from '@/components/ui/MentionInput';
 
 interface Comment {
   id: string;
@@ -126,8 +127,8 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!newComment.trim() || !authUser) return;
 
     setLoading(true);
@@ -494,13 +495,14 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
             )}
             
             <form onSubmit={handleSubmit} className="p-4 flex gap-2">
-              <Input
-                ref={inputRef}
+              <MentionInput
+                ref={inputRef as any}
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={setNewComment}
+                onSubmit={() => handleSubmit()}
                 placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
-                className="flex-1 rounded-full"
                 disabled={loading}
+                className="w-full rounded-full bg-background border border-input px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <Button
                 type="submit"

@@ -8,6 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
 import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
+import MentionInput from '@/components/ui/MentionInput';
 
 interface Comment {
   id: string;
@@ -125,8 +126,8 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!newComment.trim() || !authUser) return;
 
     setLoading(true);
@@ -510,13 +511,14 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
                   <AvatarFallback className="text-xs">You</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 relative">
-                  <Input
-                    ref={inputRef}
+                  <MentionInput
+                    ref={inputRef as any}
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={setNewComment}
+                    onSubmit={() => handleSubmit()}
                     placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Write a comment...'}
-                    className="pr-12 rounded-full border-border/50 bg-secondary/50 focus:bg-background transition-colors"
                     disabled={loading}
+                    className="w-full pr-12 rounded-full border border-border/50 bg-secondary/50 focus:bg-background transition-colors px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <Button
                     type="submit"

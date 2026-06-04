@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import MessageDeletePopover from './MessageDeletePopover';
+import MentionInput from '@/components/ui/MentionInput';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -343,12 +344,12 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, conversationId, 
         </div>
 
         <div className="p-4 border-t flex gap-2">
-          <Input
+          <MentionInput
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={setNewMessage}
+            onSubmit={handleSend}
             placeholder="Type a message..."
-            className="flex-1"
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <Button onClick={handleSend} disabled={!newMessage.trim()}>
             <Send className="w-4 h-4" />
