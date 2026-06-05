@@ -180,6 +180,8 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           onCommentCountChange?.(next.length);
           return next;
         });
+        // Fire-and-forget @mention notifications
+        void notifyMentions({ text: commentText, fromUserId: authUser.id, context: 'comment', reelId });
       }
       setNewComment('');
       setReplyingTo(null);
