@@ -126,11 +126,11 @@ const Inbox = () => {
           
           const { data: lastMsg } = await supabase
             .from('messages')
-            .select('content')
+            .select('content, media_type')
             .eq('conversation_id', c.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           const { count } = await supabase
             .from('messages')
