@@ -126,11 +126,11 @@ const Inbox = () => {
           
           const { data: lastMsg } = await supabase
             .from('messages')
-            .select('content')
+            .select('content, media_type')
             .eq('conversation_id', c.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           const { count } = await supabase
             .from('messages')
@@ -142,7 +142,7 @@ const Inbox = () => {
           return {
             ...c,
             other_user: profile ? { id: otherUserId, ...profile } : undefined,
-            last_message: lastMsg?.content,
+            last_message: lastMsg?.content || (lastMsg?.media_type === 'image' ? '📷 Photo' : lastMsg?.media_type === 'video' ? "🎬 Muv'z clip" : ''),
             unread_count: count || 0
           };
         }));
@@ -225,6 +225,11 @@ const Inbox = () => {
       case 'follow': return 'New Follower';
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
+      case 'mention': return 'New Mention';
+      case 'repost': return 'New Repost';
+      case 'battle_challenge': return 'Battle Challenge';
+      case 'battle_win': return 'You Won! 🏆';
+      case 'battle_loss': return 'Battle Ended';
       default: return 'Notification';
     }
   };
@@ -234,6 +239,11 @@ const Inbox = () => {
       case 'follow': return 'started following you';
       case 'like': return 'liked your Muv';
       case 'comment': return 'commented on your Muv';
+      case 'mention': return 'mentioned you';
+      case 'repost': return 'reposted your Muv';
+      case 'battle_challenge': return 'challenged you to a battle';
+      case 'battle_win': return 'you won the battle';
+      case 'battle_loss': return 'battle ended';
       default: return 'interacted with you';
     }
   };
@@ -242,7 +252,8 @@ const Inbox = () => {
     switch (type) {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
-      case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'comment':
+      case 'mention': return <MessageCircle className="w-4 h-4 text-primary" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };

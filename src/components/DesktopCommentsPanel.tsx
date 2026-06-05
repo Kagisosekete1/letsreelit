@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
 import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
 import MentionInput from '@/components/ui/MentionInput';
+import { notifyMentions } from '@/lib/mentions';
 
 interface Comment {
   id: string;
@@ -162,6 +163,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
       const savedReplyingTo = replyingTo; // Save before clearing
       setNewComment('');
       setReplyingTo(null);
+      void notifyMentions({ text: commentText, fromUserId: authUser.id, context: 'comment', reelId });
       await fetchComments();
       
       // Update reel comments_count and get owner id

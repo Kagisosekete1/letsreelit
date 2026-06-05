@@ -257,6 +257,10 @@ const ReelUploadModal: React.FC<ReelUploadModalProps> = ({ isOpen, onClose, vide
       // Notify followers about the new reel
       if (reelData?.id) {
         sendNewReelNotification(authUser.id, reelData.id, title.trim());
+        // @mention notifications from title + description
+        const captionText = `${title} ${description || ''}`;
+        const { notifyMentions } = await import('@/lib/mentions');
+        void notifyMentions({ text: captionText, fromUserId: authUser.id, context: 'post', reelId: reelData.id });
       }
 
       setUploadProgress(100);

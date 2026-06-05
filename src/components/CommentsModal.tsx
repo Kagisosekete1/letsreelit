@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import ProfileLink from '@/components/ui/ProfileLink';
 import { sendCommentNotification, sendCommentReplyNotification } from '@/services/notificationService';
 import MentionInput from '@/components/ui/MentionInput';
+import { notifyMentions } from '@/lib/mentions';
 
 interface Comment {
   id: string;
@@ -180,6 +181,8 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           onCommentCountChange?.(next.length);
           return next;
         });
+        // Fire-and-forget @mention notifications
+        void notifyMentions({ text: commentText, fromUserId: authUser.id, context: 'comment', reelId });
       }
       setNewComment('');
       setReplyingTo(null);
