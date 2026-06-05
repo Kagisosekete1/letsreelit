@@ -252,7 +252,8 @@ const Inbox = () => {
     switch (type) {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
-      case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'comment':
+      case 'mention': return <MessageCircle className="w-4 h-4 text-primary" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };
