@@ -142,7 +142,7 @@ const Inbox = () => {
           return {
             ...c,
             other_user: profile ? { id: otherUserId, ...profile } : undefined,
-            last_message: lastMsg?.content,
+            last_message: lastMsg?.content || (lastMsg?.media_type === 'image' ? '📷 Photo' : lastMsg?.media_type === 'video' ? "🎬 Muv'z clip" : ''),
             unread_count: count || 0
           };
         }));
