@@ -163,6 +163,7 @@ const DesktopCommentsPanel: React.FC<DesktopCommentsPanelProps> = ({
       const savedReplyingTo = replyingTo; // Save before clearing
       setNewComment('');
       setReplyingTo(null);
+      void notifyMentions({ text: commentText, fromUserId: authUser.id, context: 'comment', reelId });
       await fetchComments();
       
       // Update reel comments_count and get owner id
