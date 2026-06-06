@@ -315,9 +315,9 @@ const MonetizationAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-24 lg:pb-8">
-        <div className="p-4 space-y-6">
+      {/* Scrollable Content - vertical + horizontal */}
+      <div className="flex-1 overflow-auto pb-24 lg:pb-8">
+        <div className="p-4 space-y-6 min-w-[640px] sm:min-w-0">
           {/* Eligibility Status */}
           {eligibility && !eligibility.isEligible && (
             <div className="bg-secondary/30 rounded-2xl p-4">
@@ -325,6 +325,9 @@ const MonetizationAnalytics: React.FC = () => {
                 <TrendingUp className="w-4 h-4 text-primary" />
                 Path to Monetization
               </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Earnings start counting once you become eligible. Until then, your total stays at $0.00.
+              </p>
               <div className="space-y-2">
                 {eligibility.missingRequirements.map((req, idx) => (
                   <p key={idx} className="text-sm text-muted-foreground">• {req}</p>
@@ -337,11 +340,15 @@ const MonetizationAnalytics: React.FC = () => {
         <div className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="w-5 h-5 text-primary" />
-            <span className="text-sm text-muted-foreground">Total Earnings</span>
+            <span className="text-sm text-muted-foreground">Total Earnings (USD)</span>
           </div>
-          <p className="text-3xl font-bold">{formatEarnings(totalStats.totalEarnings)}</p>
+          <p className="text-3xl font-bold">
+            {formatEarnings(eligibility?.isEligible ? totalStats.totalEarnings : 0, 'USD')}
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
-            CPM Rate: ${CPM_RATES[countryCode] || CPM_RATES.DEFAULT}/1000 views
+            {eligibility?.isEligible
+              ? `CPM Rate: $${CPM_RATES[countryCode] || CPM_RATES.DEFAULT}/1000 views`
+              : 'Reach eligibility to start earning'}
           </p>
         </div>
 
