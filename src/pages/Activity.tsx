@@ -160,6 +160,11 @@ const Activity = () => {
       case 'like': return 'New Like';
       case 'comment': return 'New Comment';
       case 'comment_reply': return 'Reply to Comment';
+      case 'mention': return 'New Mention';
+      case 'repost': return 'New Repost';
+      case 'battle_challenge': return 'Battle Challenge';
+      case 'battle_win': return 'Battle Won 🏆';
+      case 'battle_loss': return 'Battle Result';
       case 'live_started': return 'Live Now';
       case 'stream_ended': return 'Stream Ended';
       default: return 'Notification';
@@ -172,6 +177,11 @@ const Activity = () => {
       case 'like': return 'liked your Muv';
       case 'comment': return 'commented on your Muv';
       case 'comment_reply': return 'replied to your comment';
+      case 'mention': return 'mentioned you';
+      case 'repost': return 'reposted your Muv';
+      case 'battle_challenge': return 'challenged you to a battle';
+      case 'battle_win': return 'You won the battle!';
+      case 'battle_loss': return 'Battle ended';
       case 'live_started': return 'is live now';
       case 'stream_ended': return 'ended their live';
       default: return 'interacted with you';
@@ -182,13 +192,19 @@ const Activity = () => {
     switch (type) {
       case 'follow': return <UserPlus className="w-4 h-4 text-primary" />;
       case 'like': return <Heart className="w-4 h-4 text-destructive fill-destructive" />;
-      case 'comment': return <MessageCircle className="w-4 h-4 text-primary" />;
-      case 'comment_reply': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'comment':
+      case 'comment_reply':
+      case 'mention': return <MessageCircle className="w-4 h-4 text-primary" />;
+      case 'repost': return <Play className="w-4 h-4 text-primary" />;
+      case 'battle_challenge':
+      case 'battle_win':
+      case 'battle_loss': return <span className="text-sm">⚔️</span>;
       case 'live_started': return <Radio className="w-4 h-4 text-destructive" />;
       case 'stream_ended': return <Radio className="w-4 h-4 text-muted-foreground" />;
       default: return <Heart className="w-4 h-4" />;
     }
   };
+
 
   const handleMarkAllRead = async () => {
     if (!authUser) return;
