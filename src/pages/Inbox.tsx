@@ -201,11 +201,7 @@ const Inbox = () => {
       .channel('messages-realtime')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages'
-        },
+        { event: '*', schema: 'public', table: 'messages' },
         () => {
           if (inboxTab === 'messages') {
             fetchData();
@@ -213,6 +209,7 @@ const Inbox = () => {
         }
       )
       .subscribe();
+
 
     return () => {
       supabase.removeChannel(notifChannel);
