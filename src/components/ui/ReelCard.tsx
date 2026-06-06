@@ -267,17 +267,32 @@ const ReelCard: React.FC<ReelCardProps> = ({
   const checkUserInteractions = async () => {
     if (!authUser) return;
 
-    const [{ data: likeData }, { data: saveData }, { data: repostData }, { count: repostCountData }] = await Promise.all([
+    const [
+      { data: likeData },
+      { data: saveData },
+      { data: repostData },
+      { count: repostCountData },
+      { count: likesCount },
+      { count: commentsCount },
+      { data: reelRow },
+    ] = await Promise.all([
       supabase.from('likes').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
       supabase.from('saved_reels').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
       supabase.from('reposts').select('id').eq('user_id', authUser.id).eq('reel_id', reel.id).maybeSingle(),
       supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('reel_id', reel.id),
+      supabase.from('likes').select('*', { count: 'exact', head: true }).eq('reel_id', reel.id),
+      supabase.from('comments').select('*', { count: 'exact', head: true }).eq('reel_id', reel.id),
+      supabase.from('reels').select('shares_count').eq('id', reel.id).maybeSingle(),
     ]);
 
     setIsLiked(!!likeData);
     setIsSaved(!!saveData);
     setIsReposted(!!repostData);
     setRepostCount(repostCountData || 0);
+    // Always trust authoritative counts so they don't appear missing after app resume
+    if (typeof likesCount === 'number') setLikeCount((prev) => Math.max(prev, likesCount));
+    if (typeof commentsCount === 'number') setCommentCount((prev) => Math.max(prev, commentsCount));
+    if (typeof reelRow?.shares_count === 'number') setShareCount((prev) => Math.max(prev, reelRow.shares_count));
   };
 
   // Realtime engagement counts: when anyone likes/comments/reposts/saves this reel,
@@ -458,22 +473,23 @@ const ReelCard: React.FC<ReelCardProps> = ({
     }
   }, [isMuted, isActive]);
 
-  // Handle app visibility change - resume playback when coming back to foreground
+  // Handle app visibility change - resume playback + refresh counts when coming back
   useEffect(() => {
     if (!isActive) return;
 
     const handleVisibilityChange = () => {
       const video = videoRef.current;
-      if (!video) return;
 
       if (document.visibilityState === 'visible') {
-        // App came back to foreground - resume playback from current position
-        if (userHasPlayed && !video.ended) {
+        // Re-fetch authoritative engagement counts so they don't appear missing
+        if (authUser) {
+          checkUserInteractions().catch(() => {});
+        }
+        if (video && userHasPlayed && !video.ended) {
           video.play().catch(() => {});
           setIsPlaying(true);
         }
-      } else {
-        // App went to background - pause but keep position
+      } else if (video) {
         video.pause();
         setIsPlaying(false);
       }
@@ -481,7 +497,7 @@ const ReelCard: React.FC<ReelCardProps> = ({
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isActive, userHasPlayed]);
+  }, [isActive, userHasPlayed, authUser?.id, reel.id]);
 
   // Safety net: whenever THIS video plays or is unmuted, ensure it has audio focus
   useEffect(() => {

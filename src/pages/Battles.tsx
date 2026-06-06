@@ -172,25 +172,25 @@ const Battles = () => {
           </div>
         </div>
 
-        <div className="p-4 space-y-3">
-          <div className="flex items-start justify-between gap-3">
+        <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="font-bold truncate">{battle.title}</h2>
-              {battle.prompt && <p className="text-sm text-muted-foreground line-clamp-2">{battle.prompt}</p>}
+              <h2 className="font-bold text-sm sm:text-base truncate">{battle.title}</h2>
+              {battle.prompt && <p className="hidden sm:block text-sm text-muted-foreground line-clamp-2">{battle.prompt}</p>}
             </div>
-            <Badge variant={completed ? 'default' : waiting ? 'outline' : 'secondary'} className="shrink-0">
+            <Badge variant={completed ? 'default' : waiting ? 'outline' : 'secondary'} className="shrink-0 text-[10px] sm:text-xs px-1.5 py-0.5">
               {completed ? 'Winner' : waiting ? 'Pending' : formatBattleTimeLeft(battle.ends_at)}
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs">
             <div>
-              <div className="flex justify-between mb-1"><span>Challenger</span><span>{battle.challenger_votes}</span></div>
-              <Progress value={challengerPercent} className="h-2" />
+              <div className="flex justify-between mb-1"><span className="truncate">Challenger</span><span>{battle.challenger_votes}</span></div>
+              <Progress value={challengerPercent} className="h-1.5 sm:h-2" />
             </div>
             <div>
-              <div className="flex justify-between mb-1"><span>Opponent</span><span>{battle.opponent_votes}</span></div>
-              <Progress value={opponentPercent} className="h-2" />
+              <div className="flex justify-between mb-1"><span className="truncate">Opponent</span><span>{battle.opponent_votes}</span></div>
+              <Progress value={opponentPercent} className="h-1.5 sm:h-2" />
             </div>
           </div>
         </div>
@@ -239,11 +239,11 @@ const Battles = () => {
 
             <TabsContent value="feed" className="space-y-4">
               {loading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[0, 1, 2].map(i => <Skeleton key={i} className="h-96 rounded-3xl" />)}
+                <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2].map(i => <Skeleton key={i} className="h-64 rounded-3xl" />)}
                 </div>
               ) : featuredBattles.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
                   {featuredBattles.map(renderBattleCard)}
                 </div>
               ) : (
