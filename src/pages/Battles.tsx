@@ -239,11 +239,11 @@ const Battles = () => {
 
             <TabsContent value="feed" className="space-y-4">
               {loading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[0, 1, 2].map(i => <Skeleton key={i} className="h-96 rounded-3xl" />)}
+                <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2].map(i => <Skeleton key={i} className="h-64 rounded-3xl" />)}
                 </div>
               ) : featuredBattles.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
                   {featuredBattles.map(renderBattleCard)}
                 </div>
               ) : (
