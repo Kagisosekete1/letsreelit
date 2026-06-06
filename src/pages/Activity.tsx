@@ -260,21 +260,26 @@ const Activity = () => {
       prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
     );
 
-    // Navigate based on type - for comments and replies, pass the notification type to open comments
+    // Navigate based on type
     if (notif.reel_id) {
       setViewState({ 
         type: 'reel', 
         reelId: notif.reel_id, 
         notificationType: notif.type 
       });
+    } else if (notif.type === 'mention') {
+      // Message mention (no reel) → take user to inbox
+      navigate('/inbox');
     } else if (
       (notif.type === 'follow' || notif.type === 'live_started' || notif.type === 'stream_ended') &&
       notif.from_user?.username
     ) {
-      // Navigate to the related user's profile
       navigate(`/user/${notif.from_user.username}`);
+    } else if (notif.type?.startsWith('battle_')) {
+      navigate('/battles');
     }
   };
+
 
   const handleSearchClick = () => {
     setIsSearchOpen(!isSearchOpen);
