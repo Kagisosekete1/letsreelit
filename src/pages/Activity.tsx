@@ -40,11 +40,28 @@ type ViewState =
   | { type: 'list' }
   | { type: 'reel'; reelId: string; notificationType?: string };
 
+interface Conversation {
+  id: string;
+  participant_one: string;
+  participant_two: string;
+  last_message_at: string;
+  other_user?: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  last_message?: string;
+  unread_count?: number;
+}
+
 const Activity = () => {
   const [activeTab, setActiveTab] = useState('notifications');
+  const [section, setSection] = useState<'notifications' | 'inbox'>('notifications');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -53,6 +70,39 @@ const Activity = () => {
   const { toast } = useToast();
   const { authUser } = useUser();
   const notifiedIdsRef = useRef<Set<string>>(new Set());
+
+  const fetchConversations = useCallback(async () => {
+    if (!authUser) return;
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('*')
+      .or(`participant_one.eq.${authUser.id},participant_two.eq.${authUser.id}`)
+      .order('last_message_at', { ascending: false });
+    if (!convs) return;
+    const otherIds = convs.map(c => c.participant_one === authUser.id ? c.participant_two : c.participant_one);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, display_name, avatar_url')
+      .in('user_id', otherIds);
+    const enriched = await Promise.all(convs.map(async (c) => {
+      const otherId = c.participant_one === authUser.id ? c.participant_two : c.participant_one;
+      const profile = profiles?.find(p => p.user_id === otherId);
+      const { data: lastMsg } = await supabase
+        .from('messages')
+        .select('content, sender_id')
+        .eq('conversation_id', c.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return {
+        ...c,
+        other_user: profile ? { id: profile.user_id, ...profile } : undefined,
+        last_message: lastMsg?.content ?? '',
+      } as Conversation;
+    }));
+    setConversations(enriched);
+  }, [authUser]);
+
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -153,6 +203,11 @@ const Activity = () => {
       supabase.removeChannel(notifChannel);
     };
   }, [authUser, fetchData, toast]);
+
+  useEffect(() => {
+    if (section === 'inbox') fetchConversations();
+  }, [section, fetchConversations]);
+
 
   const getNotificationTitle = (type: string) => {
     switch (type) {
@@ -369,8 +424,58 @@ const Activity = () => {
                 </div>
               )}
 
+              {/* Section tabs (mobile: Notifications | Inbox) */}
+              <div className="px-4 mb-4 lg:hidden">
+                <div className="flex bg-secondary/40 rounded-full p-1">
+                  <button
+                    onClick={() => setSection('notifications')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${section === 'notifications' ? 'bg-background text-foreground shadow' : 'text-muted-foreground'}`}
+                  >
+                    Notifications
+                  </button>
+                  <button
+                    onClick={() => setSection('inbox')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-full transition-colors ${section === 'inbox' ? 'bg-background text-foreground shadow' : 'text-muted-foreground'}`}
+                  >
+                    Inbox
+                  </button>
+                </div>
+              </div>
+
               <div className="px-4">
-                {loading ? (
+                {section === 'inbox' ? (
+                  conversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-4">
+                        <MessageCircle className="w-10 h-10 text-muted-foreground" />
+                      </div>
+                      <h2 className="text-lg font-semibold mb-2">No messages yet</h2>
+                      <p className="text-muted-foreground text-center text-sm">
+                        Start a conversation from someone's profile.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {conversations.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => navigate('/inbox', { state: { openConversationId: c.id } })}
+                          className="flex items-center gap-3 p-3 rounded-xl cursor-pointer bg-secondary/50 hover:bg-secondary"
+                        >
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={c.other_user?.avatar_url || ''} />
+                            <AvatarFallback>{c.other_user?.display_name?.[0] || '?'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{c.other_user?.display_name || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{c.last_message || 'Say hi 👋'}</p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{formatTime(c.last_message_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : loading ? (
                   <div className="flex flex-col items-center justify-center py-16">
                     <p className="text-muted-foreground">Loading...</p>
                   </div>
@@ -443,6 +548,7 @@ const Activity = () => {
                   </div>
                 )}
               </div>
+
             </div>
             
             <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
