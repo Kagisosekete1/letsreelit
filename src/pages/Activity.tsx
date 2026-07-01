@@ -204,6 +204,11 @@ const Activity = () => {
     };
   }, [authUser, fetchData, toast]);
 
+  useEffect(() => {
+    if (section === 'inbox') fetchConversations();
+  }, [section, fetchConversations]);
+
+
   const getNotificationTitle = (type: string) => {
     switch (type) {
       case 'follow': return 'New Follower';
