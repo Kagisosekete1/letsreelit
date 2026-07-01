@@ -40,11 +40,28 @@ type ViewState =
   | { type: 'list' }
   | { type: 'reel'; reelId: string; notificationType?: string };
 
+interface Conversation {
+  id: string;
+  participant_one: string;
+  participant_two: string;
+  last_message_at: string;
+  other_user?: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  last_message?: string;
+  unread_count?: number;
+}
+
 const Activity = () => {
   const [activeTab, setActiveTab] = useState('notifications');
+  const [section, setSection] = useState<'notifications' | 'inbox'>('notifications');
   const [isCreateReelOpen, setIsCreateReelOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<ViewState>({ type: 'list' });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -53,6 +70,39 @@ const Activity = () => {
   const { toast } = useToast();
   const { authUser } = useUser();
   const notifiedIdsRef = useRef<Set<string>>(new Set());
+
+  const fetchConversations = useCallback(async () => {
+    if (!authUser) return;
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('*')
+      .or(`participant_one.eq.${authUser.id},participant_two.eq.${authUser.id}`)
+      .order('last_message_at', { ascending: false });
+    if (!convs) return;
+    const otherIds = convs.map(c => c.participant_one === authUser.id ? c.participant_two : c.participant_one);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, display_name, avatar_url')
+      .in('user_id', otherIds);
+    const enriched = await Promise.all(convs.map(async (c) => {
+      const otherId = c.participant_one === authUser.id ? c.participant_two : c.participant_one;
+      const profile = profiles?.find(p => p.user_id === otherId);
+      const { data: lastMsg } = await supabase
+        .from('messages')
+        .select('content, sender_id')
+        .eq('conversation_id', c.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return {
+        ...c,
+        other_user: profile ? { id: profile.user_id, ...profile } : undefined,
+        last_message: lastMsg?.content ?? '',
+      } as Conversation;
+    }));
+    setConversations(enriched);
+  }, [authUser]);
+
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
