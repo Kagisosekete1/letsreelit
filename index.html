@@ -41,6 +41,15 @@
   <meta name="twitter:title" content="Muv&#39;it">
   <meta property="og:description" content="Muv&#39;it is a dance-first Muv video platform built for movers, creators, and rhythm lovers. Post short dance Muv&#39;z, join challenges, and go viral through movement.">
   <meta name="twitter:description" content="Muv&#39;it is a dance-first Muv video platform built for movers, creators, and rhythm lovers. Post short dance Muv&#39;z, join challenges, and go viral through movement.">
+
+  <!-- OneSignal Web Push -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({ appId: "0b049171-0951-40ba-b90e-38fe7e06ae21", allowLocalhostAsSecureOrigin: true });
+    });
+  </script>
 </head>
   <body>
     <div id="root"></div>
