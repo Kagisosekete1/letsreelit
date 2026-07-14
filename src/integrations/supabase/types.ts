@@ -485,6 +485,42 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_catalog: {
+        Row: {
+          active: boolean
+          animation: string
+          cost: number
+          created_at: string
+          emoji: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          animation?: string
+          cost: number
+          created_at?: string
+          emoji: string
+          id: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          animation?: string
+          cost?: number
+          created_at?: string
+          emoji?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -771,6 +807,7 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           id: string
+          onesignal_player_id: string | null
           reels_count: number | null
           updated_at: string | null
           user_id: string | null
@@ -786,6 +823,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          onesignal_player_id?: string | null
           reels_count?: number | null
           updated_at?: string | null
           user_id?: string | null
@@ -801,6 +839,7 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          onesignal_player_id?: string | null
           reels_count?: number | null
           updated_at?: string | null
           user_id?: string | null
@@ -1171,6 +1210,16 @@ export type Database = {
         Returns: boolean
       }
       increment_view_count: { Args: { reel_id: string }; Returns: undefined }
+      send_live_gift: {
+        Args: { _gift_id: string; _session_id: string }
+        Returns: {
+          gift_animation: string
+          gift_cost: number
+          gift_emoji: string
+          gift_name: string
+          new_balance: number
+        }[]
+      }
       spend_coins: { Args: { _amount: number }; Returns: number }
       submit_battle_response: {
         Args: {
