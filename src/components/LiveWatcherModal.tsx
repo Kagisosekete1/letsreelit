@@ -15,6 +15,7 @@ import GiftPanel, { GIFTS, type GiftDefinition } from '@/components/live/GiftPan
 import GiftAnimation from '@/components/live/GiftAnimation';
 import GiftLeaderboard from '@/components/live/GiftLeaderboard';
 import PinnedMessage from '@/components/live/PinnedMessage';
+import { useVideoOrientation } from '@/hooks/useVideoOrientation';
 
 interface LiveWatcherModalProps {
   isOpen: boolean;
@@ -100,17 +101,22 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     });
     setLiveEnded(true);
   }, [isOwner, liveStream.broadcaster?.display_name, toast]);
+  // Orientation-aware video sizing: never crop, never force rotation.
+  // Landscape/square → contain + blurred backdrop. Portrait → cover.
+  const { orientation } = useVideoOrientation(remoteVideoRef);
+  const isPortraitStream = orientation === 'portrait';
   const remoteVideoStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
     width: '100%',
     height: '100%',
     maxWidth: '100%',
-    objectFit: 'contain',
+    objectFit: isPortraitStream ? 'cover' : 'contain',
     objectPosition: 'center center',
     transform: 'none',
     transformOrigin: 'center center',
     zIndex: 1,
+    background: 'transparent',
   };
   const remoteBackdropStyle: React.CSSProperties = {
     position: 'absolute',
@@ -123,7 +129,7 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     WebkitFilter: 'blur(40px) saturate(140%)',
     transform: 'scale(1.15)',
     WebkitTransform: 'scale(1.15)',
-    opacity: 0.85,
+    opacity: isPortraitStream ? 0 : 0.85,
     pointerEvents: 'none',
     zIndex: 0,
   };
