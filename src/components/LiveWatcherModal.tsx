@@ -393,69 +393,69 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
       toast({ title: 'Follow to send gifts', description: 'Only followers can send gifts.', variant: 'destructive' });
       return;
     }
-    if (coinBalance < gift.cost) {
-      toast({ title: 'Not enough coins', variant: 'destructive' });
-      return;
-    }
 
-    const { data: newBalanceData, error: spendError } = await supabase.rpc('spend_coins', { _amount: gift.cost });
-    if (spendError || newBalanceData == null) {
-      const msg = spendError?.message || '';
-      const isInsufficient = /insufficient/i.test(msg) || newBalanceData == null;
+    // Server-validated: send_live_gift RPC re-checks the gift exists in gift_catalog,
+    // enforces the authoritative price, deducts coins atomically, and inserts the gift row.
+    const { data, error } = await supabase.rpc('send_live_gift', {
+      _session_id: liveStream.session_id,
+      _gift_id: gift.id,
+    });
+
+    if (error || !data || (Array.isArray(data) && data.length === 0)) {
+      const msg = error?.message || '';
+      const isInsufficient = /insufficient/i.test(msg);
+      const isInvalid = /invalid gift/i.test(msg);
       toast({
-        title: isInsufficient ? 'Not enough coins' : 'Could not send gift',
-        description: isInsufficient
-          ? `You need ${gift.cost} coins to send ${gift.name}.`
-          : msg || 'Please try again in a moment.',
+        title: isInsufficient ? 'Not enough coins' : isInvalid ? 'Gift unavailable' : 'Could not send gift',
+        description: msg || 'Please try again in a moment.',
         variant: 'destructive',
       });
       return;
     }
-    const newBalance = newBalanceData as number;
-    setCoinBalance(newBalance);
 
-    await supabase.from('live_gifts').insert({
-      session_id: liveStream.session_id,
-      sender_id: authUser.id,
-      receiver_id: liveStream.user_id,
-      gift_type: gift.id,
-      gift_name: gift.name,
-      coin_cost: gift.cost,
-    });
+    const row = Array.isArray(data) ? data[0] : data;
+    const serverGift: GiftDefinition = {
+      id: gift.id,
+      name: row.gift_name,
+      emoji: row.gift_emoji,
+      cost: row.gift_cost,
+      animation: row.gift_animation as GiftDefinition['animation'],
+    };
+    setCoinBalance(row.new_balance);
 
     channelRef.current.send({
       type: 'broadcast',
       event: 'gift',
       payload: {
         senderName: currentUser.username,
-        emoji: gift.emoji,
-        name: gift.name,
-        animation: gift.animation,
-        cost: gift.cost,
+        emoji: serverGift.emoji,
+        name: serverGift.name,
+        animation: serverGift.animation,
+        cost: serverGift.cost,
       },
     });
 
     setGiftAnimation({
       id: Date.now(),
-      emoji: gift.emoji,
-      name: gift.name,
+      emoji: serverGift.emoji,
+      name: serverGift.name,
       senderName: currentUser.username,
-      animation: gift.animation,
+      animation: serverGift.animation,
     });
 
-    setTotalGiftCoins(prev => prev + gift.cost);
+    setTotalGiftCoins(prev => prev + serverGift.cost);
     setLeaderboard(prev => {
       const existing = prev.find(e => e.username === currentUser.username);
       if (existing) {
-        return prev.map(e => e.username === currentUser.username ? { ...e, totalCoins: e.totalCoins + gift.cost } : e)
+        return prev.map(e => e.username === currentUser.username ? { ...e, totalCoins: e.totalCoins + serverGift.cost } : e)
           .sort((a, b) => b.totalCoins - a.totalCoins);
       }
-      return [...prev, { username: currentUser.username, totalCoins: gift.cost }].sort((a, b) => b.totalCoins - a.totalCoins);
+      return [...prev, { username: currentUser.username, totalCoins: serverGift.cost }].sort((a, b) => b.totalCoins - a.totalCoins);
     });
 
     setShowGiftPanel(false);
-    toast({ title: `${gift.emoji} ${gift.name} sent!` });
-  }, [authUser, currentUser, coinBalance, liveStream, canSendGift]);
+    toast({ title: `${serverGift.emoji} ${serverGift.name} sent!` });
+  }, [authUser, currentUser, liveStream, canSendGift]);
 
   const handlePinMessage = useCallback((comment: Comment) => {
     if (!isOwner || !channelRef.current) return;
