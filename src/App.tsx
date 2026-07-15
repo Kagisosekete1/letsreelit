@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { VideoQualityProvider } from "@/contexts/VideoQualityContext";
@@ -42,6 +43,18 @@ const AppRoutes = () => {
   useNativeBackHandler();
   // Persist and restore route across restarts
   useRouteMemory();
+  const navigate = useNavigate();
+
+  // OneSignal notification-click deep-link handler (SPA navigation)
+  useEffect(() => {
+    const onNavigate = (evt: Event) => {
+      const target = (evt as CustomEvent<string>).detail;
+      if (typeof target === 'string' && target.startsWith('/')) navigate(target);
+    };
+    window.addEventListener('onesignal:navigate', onNavigate);
+    return () => window.removeEventListener('onesignal:navigate', onNavigate);
+  }, [navigate]);
+
 
   return (
     <div className="bg-background min-h-screen">

@@ -70,6 +70,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    // Initialize OneSignal once. Safe to call on every mount – internal guards handle re-entry.
+    import('@/services/oneSignalService').then(({ initOneSignal }) => initOneSignal());
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setAuthUser(session?.user ?? null);
       if (session?.user) {
@@ -81,8 +84,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             autoSaveCurrentSession(session);
           }, 500); // small delay to let profile load
         }
+
+        // Register the OneSignal identity + persist player id
+        import('@/services/oneSignalService').then(({ loginOneSignalUser }) =>
+          loginOneSignalUser(session.user.id)
+        );
       } else {
         setCurrentUser(null);
+        import('@/services/oneSignalService').then(({ logoutOneSignalUser }) => logoutOneSignalUser());
       }
       setLoading(false);
     });
@@ -91,12 +100,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        import('@/services/oneSignalService').then(({ loginOneSignalUser }) =>
+          loginOneSignalUser(session.user.id)
+        );
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // Auto-save the current session to localStorage
   const autoSaveCurrentSession = async (session: any) => {

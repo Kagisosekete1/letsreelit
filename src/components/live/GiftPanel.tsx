@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Gift, Coins, X } from 'lucide-react';
+import { Gift, Coins, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface GiftDefinition {
   id: string;
@@ -10,16 +11,12 @@ export interface GiftDefinition {
   animation: 'bounce' | 'spin' | 'pulse' | 'shake';
 }
 
-export const GIFTS: GiftDefinition[] = [
-  { id: 'rose', name: 'Rose', emoji: '🌹', cost: 1, animation: 'bounce' },
-  { id: 'heart', name: 'Heart', emoji: '❤️', cost: 5, animation: 'pulse' },
-  { id: 'fire', name: 'Fire', emoji: '🔥', cost: 10, animation: 'shake' },
-  { id: 'star', name: 'Star', emoji: '⭐', cost: 25, animation: 'spin' },
-  { id: 'diamond', name: 'Diamond', emoji: '💎', cost: 50, animation: 'bounce' },
-  { id: 'crown', name: 'Crown', emoji: '👑', cost: 100, animation: 'spin' },
-  { id: 'rocket', name: 'Rocket', emoji: '🚀', cost: 200, animation: 'bounce' },
-  { id: 'universe', name: 'Universe', emoji: '🌌', cost: 500, animation: 'pulse' },
-];
+/**
+ * Server-validated catalog is the ONLY source of truth for gift prices.
+ * This client-side array is retained as an empty placeholder for typing;
+ * it must NEVER be used to render gifts.
+ */
+export const GIFTS: GiftDefinition[] = [];
 
 interface GiftPanelProps {
   isOpen: boolean;
@@ -29,7 +26,28 @@ interface GiftPanelProps {
 }
 
 const GiftPanel: React.FC<GiftPanelProps> = ({ isOpen, onClose, coinBalance, onSendGift }) => {
+  const [catalog, setCatalog] = useState<GiftDefinition[] | null>(null);
   const [selectedGift, setSelectedGift] = useState<GiftDefinition | null>(null);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || catalog) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('gift_catalog')
+        .select('id, name, emoji, cost, animation')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      if (cancelled) return;
+      if (error || !data) {
+        setCatalog([]);
+        return;
+      }
+      setCatalog(data as GiftDefinition[]);
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, catalog]);
 
   if (!isOpen) return null;
 
@@ -52,39 +70,58 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ isOpen, onClose, coinBalance, onS
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {GIFTS.map(gift => (
-            <button
-              key={gift.id}
-              onClick={() => setSelectedGift(gift)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                selectedGift?.id === gift.id 
-                  ? 'bg-pink-500/30 border border-pink-500/50 scale-105' 
-                  : 'bg-white/5 hover:bg-white/10 border border-transparent'
-              } ${coinBalance < gift.cost ? 'opacity-40' : ''}`}
-              disabled={coinBalance < gift.cost}
-            >
-              <span className="text-2xl">{gift.emoji}</span>
-              <span className="text-white text-[10px]">{gift.name}</span>
-              <div className="flex items-center gap-0.5">
-                <Coins className="w-2.5 h-2.5 text-yellow-400" />
-                <span className="text-yellow-400 text-[10px]">{gift.cost}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        {catalog === null ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 text-white/60 animate-spin" />
+          </div>
+        ) : catalog.length === 0 ? (
+          <div className="py-6 text-center text-white/60 text-xs">
+            Gifts are unavailable right now.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {catalog.map(gift => (
+                <button
+                  key={gift.id}
+                  onClick={() => setSelectedGift(gift)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                    selectedGift?.id === gift.id
+                      ? 'bg-pink-500/30 border border-pink-500/50 scale-105'
+                      : 'bg-white/5 hover:bg-white/10 border border-transparent'
+                  } ${coinBalance < gift.cost ? 'opacity-40' : ''}`}
+                  disabled={coinBalance < gift.cost}
+                >
+                  <span className="text-2xl">{gift.emoji}</span>
+                  <span className="text-white text-[10px]">{gift.name}</span>
+                  <div className="flex items-center gap-0.5">
+                    <Coins className="w-2.5 h-2.5 text-yellow-400" />
+                    <span className="text-yellow-400 text-[10px]">{gift.cost}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
 
-        {selectedGift && (
-          <Button
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white rounded-full"
-            onClick={() => {
-              onSendGift(selectedGift);
-              setSelectedGift(null);
-            }}
-            disabled={coinBalance < selectedGift.cost}
-          >
-            Send {selectedGift.emoji} {selectedGift.name} ({selectedGift.cost} coins)
-          </Button>
+            {selectedGift && (
+              <Button
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white rounded-full"
+                onClick={async () => {
+                  setSending(true);
+                  try {
+                    await onSendGift(selectedGift);
+                    setSelectedGift(null);
+                  } finally {
+                    setSending(false);
+                  }
+                }}
+                disabled={sending || coinBalance < selectedGift.cost}
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  <>Send {selectedGift.emoji} {selectedGift.name} ({selectedGift.cost} coins)</>
+                )}
+              </Button>
+            )}
+          </>
         )}
       </div>
     </div>
