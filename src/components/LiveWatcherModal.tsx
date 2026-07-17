@@ -101,38 +101,25 @@ const LiveWatcherModal: React.FC<LiveWatcherModalProps> = ({ isOpen, onClose, li
     });
     setLiveEnded(true);
   }, [isOwner, liveStream.broadcaster?.display_name, toast]);
-  // Orientation-aware video sizing: never crop, never force rotation.
-  // Landscape/square → contain + blurred backdrop. Portrait → cover.
+  // Portrait-first live: always fill the 9:16 stage. Landscape sources are
+  // cropped with object-cover so nothing is letter-boxed and no zoom sidebar
+  // is needed.
   const { orientation } = useVideoOrientation(remoteVideoRef);
-  const isPortraitStream = orientation === 'portrait';
   const remoteVideoStyle: React.CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    maxWidth: '100%',
-    objectFit: isPortraitStream ? 'cover' : 'contain',
-    objectPosition: 'center center',
-    transform: 'none',
-    transformOrigin: 'center center',
-    zIndex: 1,
-    background: 'transparent',
-  };
-  const remoteBackdropStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
     width: '100%',
     height: '100%',
     objectFit: 'cover',
     objectPosition: 'center center',
-    filter: 'blur(40px) saturate(140%)',
-    WebkitFilter: 'blur(40px) saturate(140%)',
-    transform: 'scale(1.15)',
-    WebkitTransform: 'scale(1.15)',
-    opacity: isPortraitStream ? 0 : 0.85,
-    pointerEvents: 'none',
-    zIndex: 0,
+    transform: 'none',
+    zIndex: 1,
+    background: 'transparent',
   };
+  const remoteBackdropStyle: React.CSSProperties = {
+    display: 'none',
+  };
+
 
   // WebRTC viewer - connect to broadcaster's video
   const { remoteStream, connectionState } = useWebRTCViewer(
