@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,27 +13,30 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import { useNativeBackHandler } from "@/hooks/useNativeBackHandler";
 import { useRouteMemory } from "@/hooks/useRouteMemory";
 import Index from "./pages/Index";
-import Profile from "./pages/Profile";
-import Inbox from "./pages/Inbox";
-import Activity from "./pages/Activity";
-import UserProfile from "./pages/UserProfile";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import About from "./pages/About";
-import Following from "./pages/Following";
-import Search from "./pages/Search";
-import SuggestedMuvaz from "./pages/SuggestedMuvaz";
-import Trending from "./pages/Trending";
-import NotificationPreferencesPage from "./components/settings/NotificationPreferencesPage";
-import NotFound from "./pages/NotFound";
-import AdminPayouts from "./pages/AdminPayouts";
-import MonetizationAnalytics from "./pages/MonetizationAnalytics";
-import Settings from "./pages/Settings";
-import LiveDiscovery from "./pages/LiveDiscovery";
-import Studio from "./pages/Studio";
-import Battles from "./pages/Battles";
+
+// Lazy-loaded routes so pages open instantly (smaller initial bundle)
+const Profile = lazy(() => import("./pages/Profile"));
+const Inbox = lazy(() => import("./pages/Inbox"));
+const Activity = lazy(() => import("./pages/Activity"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const About = lazy(() => import("./pages/About"));
+const Following = lazy(() => import("./pages/Following"));
+const Search = lazy(() => import("./pages/Search"));
+const SuggestedMuvaz = lazy(() => import("./pages/SuggestedMuvaz"));
+const Trending = lazy(() => import("./pages/Trending"));
+const NotificationPreferencesPage = lazy(() => import("./components/settings/NotificationPreferencesPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
+const MonetizationAnalytics = lazy(() => import("./pages/MonetizationAnalytics"));
+const Settings = lazy(() => import("./pages/Settings"));
+const LiveDiscovery = lazy(() => import("./pages/LiveDiscovery"));
+const Studio = lazy(() => import("./pages/Studio"));
+const Battles = lazy(() => import("./pages/Battles"));
+
 
 const queryClient = new QueryClient();
 
