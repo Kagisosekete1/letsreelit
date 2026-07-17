@@ -214,6 +214,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [isMuted]);
 
+  // First-gesture recovery: if browser autoplay policy forced mute,
+  // unmute the active video the instant the user taps/clicks anywhere.
+  useEffect(() => {
+    const recover = () => {
+      const v = activeVideoRef.current;
+      if (!v) return;
+      try {
+        setIsMutedState(false);
+        v.muted = false;
+        v.volume = 1;
+        if (v.paused) v.play().catch(() => {});
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('pointerdown', recover, { once: true, passive: true });
+    window.addEventListener('touchstart', recover, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', recover);
+      window.removeEventListener('touchstart', recover);
+    };
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
