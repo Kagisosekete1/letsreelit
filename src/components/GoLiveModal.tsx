@@ -2246,11 +2246,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
 
             <FloatingHearts trigger={likeTrigger} />
 
-            <LiveZoomControl
-              zoomLevel={zoomLevel}
-              onChange={handleZoomChange}
-              className="absolute right-2 top-1/2 z-20 -translate-y-1/2"
-            />
+
+
 
             {/* Bottom Controls - compact, no comment input for broadcaster */}
             <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black via-black/80 to-transparent">
