@@ -1875,13 +1875,8 @@ const GoLiveModal: React.FC<GoLiveModalProps> = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {stream && (
-                <LiveZoomControl
-                  zoomLevel={zoomLevel}
-                  onChange={handleZoomChange}
-                  className="absolute right-2 top-1/2 z-20 -translate-y-1/2"
-                />
-              )}
+
+
 
               <div className="absolute bottom-0 left-0 right-0 z-10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-2 bg-gradient-to-t from-black via-black/85 to-transparent">
                 <Button 
