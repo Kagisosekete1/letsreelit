@@ -34,13 +34,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Track all registered video elements
   const registeredVideos = useRef<Map<string, HTMLVideoElement>>(new Map());
   
-  // Global mute state - DEFAULT TO FALSE (sound ON)
+  // Global mute state - ALWAYS start unmuted (sound ON) every app open
   const [isMuted, setIsMutedState] = useState(false);
 
-  // Persist mute preference
+  // Do not persist — user preference is "always on"; reset each session
   const setIsMuted = useCallback((muted: boolean) => {
     setIsMutedState(muted);
-    sessionStorage.setItem('reelAudioMuted', String(muted));
   }, []);
 
   // Force mute and pause a single media element (do NOT reset currentTime; we want instant resume when user scrolls back)
@@ -214,6 +213,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return () => clearInterval(interval);
   }, [isMuted]);
+
+  // First-gesture recovery: if browser autoplay policy forced mute,
+  // unmute the active video the instant the user taps/clicks anywhere.
+  useEffect(() => {
+    const recover = () => {
+      const v = activeVideoRef.current;
+      if (!v) return;
+      try {
+        setIsMutedState(false);
+        v.muted = false;
+        v.volume = 1;
+        if (v.paused) v.play().catch(() => {});
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('pointerdown', recover, { once: true, passive: true });
+    window.addEventListener('touchstart', recover, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', recover);
+      window.removeEventListener('touchstart', recover);
+    };
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
