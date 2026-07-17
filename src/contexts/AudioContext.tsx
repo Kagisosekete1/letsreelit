@@ -34,13 +34,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Track all registered video elements
   const registeredVideos = useRef<Map<string, HTMLVideoElement>>(new Map());
   
-  // Global mute state - DEFAULT TO FALSE (sound ON)
+  // Global mute state - ALWAYS start unmuted (sound ON) every app open
   const [isMuted, setIsMutedState] = useState(false);
 
-  // Persist mute preference
+  // Do not persist — user preference is "always on"; reset each session
   const setIsMuted = useCallback((muted: boolean) => {
     setIsMutedState(muted);
-    sessionStorage.setItem('reelAudioMuted', String(muted));
   }, []);
 
   // Force mute and pause a single media element (do NOT reset currentTime; we want instant resume when user scrolls back)
