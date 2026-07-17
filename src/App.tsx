@@ -61,7 +61,9 @@ const AppRoutes = () => {
 
   return (
     <div className="bg-background min-h-screen">
+      <Suspense fallback={<div className="fixed inset-0 bg-background" />}>
       <Routes>
+
         <Route path="/" element={<Index />} />
         <Route path="/following" element={
           <ProtectedRoute>
